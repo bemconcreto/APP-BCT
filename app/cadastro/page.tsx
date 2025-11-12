@@ -9,7 +9,7 @@ export default function CadastroPage() {
   async function handleGoogleLogin() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: "http://localhost:3000/dashboard" },
+      options: { redirectTo: "https://app-bct.vercel.app/dashboard" },
     });
     if (error) alert("Erro ao entrar com Google: " + error.message);
   }
@@ -32,7 +32,7 @@ export default function CadastroPage() {
         return;
       }
 
-      // ✅ Corrigido com o privateKeyProvider
+      // ✅ Configuração correta para Polygon Mainnet + Sapphire Mainnet do Web3Auth
       const privateKeyProvider = new EthereumPrivateKeyProvider({
         config: {
           chainConfig: {
@@ -47,17 +47,17 @@ export default function CadastroPage() {
       });
 
       const web3auth = new Web3Auth({
-  clientId,
-  web3AuthNetwork: "sapphire_mainnet",
-  privateKeyProvider,
-});
+        clientId,
+        web3AuthNetwork: "sapphire_mainnet", // ✅ Rede correta
+        privateKeyProvider,
+      });
 
       const openloginAdapter = new OpenloginAdapter({
-  adapterSettings: {
-    network: "mainnet",
-    uxMode: "popup",
-  },
-});
+        adapterSettings: {
+          network: "sapphire_mainnet", // ✅ Mantém coerência com o projeto
+          uxMode: "popup",
+        },
+      });
 
       web3auth.configureAdapter(openloginAdapter);
       await web3auth.initModal();

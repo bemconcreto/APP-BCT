@@ -21,39 +21,60 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Verificar se o Supabase está configurado
-    if (!supabase) {
-      console.warn('Supabase não configurado')
-      setLoading(false)
-      return
+    const initAuth = async () => {
+      try {
+        // 🔹 1. Verifica se há sessão no Supabase
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session?.user) {
+          setUser(session.user)
+          setLoading(false)
+          return
+        }
+
+        // 🔹 2. Caso não tenha, tenta pegar info do Web3Auth (armazenada no localStorage)
+        const storedUser = localStorage.getItem('web3auth_user')
+        if (storedUser) {
+          const parsed = JSON.parse(storedUser)
+          // Cria um "usuário fake" pro contexto, só pra manter interface igual
+          setUser({
+            id: parsed.id ?? 'web3auth_user',
+            email: parsed.email ?? 'web3auth@bemconcreto.com',
+            role: 'authenticated',
+            aud: 'authenticated',
+            app_metadata: {},
+            user_metadata: parsed,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          } as User)
+        }
+
+        setLoading(false)
+      } catch (error) {
+        console.error('Erro ao inicializar autenticação:', error)
+        setLoading(false)
+      }
     }
 
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    initAuth()
+
+    // 🔹 Escuta eventos de login/logout no Supabase
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
-      setLoading(false)
-    }).catch((error) => {
-      console.error('Erro ao obter sessão:', error)
-      setLoading(false)
     })
 
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null)
-      setLoading(false)
-    })
-
-    return () => subscription.unsubscribe()
+    return () => {
+      listener.subscription.unsubscribe()
+    }
   }, [])
 
   const signOut = async () => {
-    if (!supabase) {
-      console.warn('Supabase não configurado')
-      return
+    try {
+      await supabase.auth.signOut()
+      localStorage.removeItem('web3auth_user') // remove também a sessão Web3Auth
+      window.location.href = 'https://app-bct.vercel.app'
+    } catch (err) {
+      console.error('Erro ao sair:', err)
     }
-    await supabase.auth.signOut()
   }
 
   return (

@@ -74,6 +74,7 @@ export default function CadastroPage() {
 
       // ✅ Login bem-sucedido → redireciona para /início
       console.log("✅ Login Web3Auth realizado com sucesso!");
+      localStorage.setItem('web3auth_user', JSON.stringify(userInfo));
       window.location.href = "https://app-bct.vercel.app/início";
 
     } catch (err: any) {

@@ -1,7 +1,6 @@
 'use client';
 
 import { useBCTPrice } from '@/hooks/useBCTPrice';
-import { useState } from 'react';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CreditCard, ArrowUpRight, Receipt, Building2, TrendingUp, DollarSign } from 'lucide-react';
@@ -28,7 +27,7 @@ export default function InicioPage() {
               {loading ? 'Carregando...' : `$${usd?.toFixed(4)}`}
             </p>
             <p className="text-xs text-[#111827]/60 mt-1">
-              Preço real calculado via Blockchain (Pool WMATIC ⇄ BCT)
+              Preço real via Blockchain (pool WMATIC ⇄ BCT)
             </p>
           </CardContent>
         </Card>
@@ -46,18 +45,17 @@ export default function InicioPage() {
               {loading ? 'Carregando...' : `R$ ${brl?.toFixed(4)}`}
             </p>
             <p className="text-xs text-[#111827]/60 mt-1">
-              Preço real convertido pelo dólar do dia
+              Conversão automática pela cotação USD/BRL
             </p>
           </CardContent>
         </Card>
-
       </div>
 
-      {/* ----- 4 BOTÕES (EXISTENTES) ----- */}
+      {/* ----- 4 BOTÕES ----- */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
 
         <Link href="/comprar">
-          <Card className="border-0 shadow-lg hover:shadow-xl cursor-pointer transition">
+          <Card className="border-0 shadow-lg hover:shadow-xl transition cursor-pointer">
             <CardContent className="p-6 text-center">
               <div className="w-12 h-12 bg-[#12B76A]/10 rounded-full flex items-center justify-center mx-auto mb-2">
                 <CreditCard className="h-6 w-6 text-[#12B76A]" />
@@ -69,7 +67,7 @@ export default function InicioPage() {
         </Link>
 
         <Link href="/vender">
-          <Card className="border-0 shadow-lg hover:shadow-xl cursor-pointer transition">
+          <Card className="border-0 shadow-lg hover:shadow-xl transition cursor-pointer">
             <CardContent className="p-6 text-center">
               <div className="w-12 h-12 bg-[#12B76A]/10 rounded-full flex items-center justify-center mx-auto mb-2">
                 <ArrowUpRight className="h-6 w-6 text-[#12B76A]" />
@@ -81,7 +79,7 @@ export default function InicioPage() {
         </Link>
 
         <Link href="/transacoes">
-          <Card className="border-0 shadow-lg hover:shadow-xl cursor-pointer transition">
+          <Card className="border-0 shadow-lg hover:shadow-xl transition cursor-pointer">
             <CardContent className="p-6 text-center">
               <div className="w-12 h-12 bg-[#12B76A]/10 rounded-full flex items-center justify-center mx-auto mb-2">
                 <Receipt className="h-6 w-6 text-[#12B76A]" />
@@ -93,7 +91,7 @@ export default function InicioPage() {
         </Link>
 
         <Link href="/imoveis">
-          <Card className="border-0 shadow-lg hover:shadow-xl cursor-pointer transition">
+          <Card className="border-0 shadow-lg hover:shadow-xl transition cursor-pointer">
             <CardContent className="p-6 text-center">
               <div className="w-12 h-12 bg-[#12B76A]/10 rounded-full flex items-center justify-center mx-auto mb-2">
                 <Building2 className="h-6 w-6 text-[#12B76A]" />

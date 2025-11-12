@@ -6,16 +6,16 @@ import { supabase } from "../../src/lib/supabaseClient";
 export default function CadastroPage() {
   const router = useRouter();
 
-  // ✅ LOGIN COM GOOGLE → redireciona para /início#
+  // ✅ LOGIN COM GOOGLE → redireciona para /início (sem #)
   async function handleGoogleLogin() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: "https://app-bct.vercel.app/início#" },
+      options: { redirectTo: "https://app-bct.vercel.app/início" },
     });
     if (error) alert("Erro ao entrar com Google: " + error.message);
   }
 
-  // ✅ LOGIN COM WEB3AUTH → redireciona para o mesmo /início#
+  // ✅ LOGIN COM WEB3AUTH → redireciona para o mesmo /início
   async function handleWeb3AuthLogin() {
     try {
       if (typeof window === "undefined") {
@@ -35,7 +35,7 @@ export default function CadastroPage() {
         return;
       }
 
-      // 🔗 Configuração de rede - Polygon Mainnet (Sapphire)
+      // 🔗 Polygon Mainnet (Sapphire)
       const privateKeyProvider = new EthereumPrivateKeyProvider({
         config: {
           chainConfig: {
@@ -72,9 +72,9 @@ export default function CadastroPage() {
         return;
       }
 
-      // ✅ Login bem-sucedido → redireciona para /início#
+      // ✅ Login bem-sucedido → redireciona para /início
       console.log("✅ Login Web3Auth realizado com sucesso!");
-      window.location.href = "https://app-bct.vercel.app/início#";
+      window.location.href = "https://app-bct.vercel.app/início";
 
     } catch (err: any) {
       console.error("Erro no Web3Auth:", err);

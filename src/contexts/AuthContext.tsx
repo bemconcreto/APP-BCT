@@ -23,36 +23,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const initAuth = async () => {
       try {
-        // ⚡ Garantia de segurança — se supabase não estiver definido, aborta
-        if (!supabase) {
-          console.warn('Supabase não configurado corretamente.')
-          setLoading(false)
-          return
-        }
-
-        // 🔹 1. Verifica se há sessão no Supabase
+        // 🔹 1. Tenta obter sessão Supabase (login via Google)
         const { data } = await supabase.auth.getSession()
-        const session = data?.session
-        if (session?.user) {
-          setUser(session.user)
+        const sessionUser = data?.session?.user
+
+        if (sessionUser) {
+          setUser(sessionUser)
           setLoading(false)
           return
         }
 
-        // 🔹 2. Caso não tenha, tenta pegar info do Web3Auth (armazenada no localStorage)
+        // 🔹 2. Caso não exista sessão, tenta buscar Web3Auth no localStorage
         const storedUser = localStorage.getItem('web3auth_user')
         if (storedUser) {
           const parsed = JSON.parse(storedUser)
-          setUser({
-            id: parsed.id ?? 'web3auth_user',
-            email: parsed.email ?? 'web3auth@bemconcreto.com',
+
+          // Cria um objeto "fake" de User compatível com o Supabase
+          const fakeUser = {
+            id: parsed.sub || 'web3auth',
+            email: parsed.email || 'web3auth@bemconcreto.com',
             role: 'authenticated',
             aud: 'authenticated',
             app_metadata: {},
             user_metadata: parsed,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
-          } as User)
+          } as User
+
+          setUser(fakeUser)
         }
 
         setLoading(false)
@@ -64,21 +62,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     initAuth()
 
-    // 🔹 Escuta eventos de login/logout no Supabase
-    const { data: listener } = supabase?.auth.onAuthStateChange((_event, session) => {
+    // Escuta eventos de login/logout do Supabase
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
-    }) ?? { data: { subscription: { unsubscribe: () => {} } } }
+    })
 
     return () => {
-      listener.subscription?.unsubscribe?.()
+      listener.subscription.unsubscribe()
     }
   }, [])
 
   const signOut = async () => {
     try {
-      if (supabase) {
-        await supabase.auth.signOut()
-      }
+      await supabase.auth.signOut()
       localStorage.removeItem('web3auth_user')
       window.location.href = 'https://app-bct.vercel.app'
     } catch (err) {

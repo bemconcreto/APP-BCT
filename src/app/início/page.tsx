@@ -1,5 +1,6 @@
 'use client'
 
+import { useBCTPrice } from '@/hooks/useBCTPrice';
 import { useState, useEffect } from 'react'
 import { useAuthContext } from '@/contexts/AuthContext'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -51,6 +52,7 @@ interface DashboardData {
 }
 
 export default function DashboardPage() {
+  const price = useBCTPrice();
   const { user, signOut } = useAuthContext()
   const [data, setData] = useState<DashboardData>({
     saldoBCT: 3240,
@@ -262,43 +264,22 @@ export default function DashboardPage() {
         </div>
 
         {/* Saldo Principal - Estilo Nubank */}
-        <Card className="border-0 shadow-lg bg-gradient-to-br from-[#12B76A] to-[#0F9A5A] text-white mb-8">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <p className="text-sm opacity-90 mb-1">Saldo disponível</p>
-                <div className="flex items-center space-x-3">
-                  <span className="text-3xl font-bold">
-                    {showBalance ? `${data.saldoBCT.toLocaleString('pt-BR')} BCT` : '••••••'}
-                  </span>
-                  <button
-                    onClick={() => setShowBalance(!showBalance)}
-                    className="opacity-90 hover:opacity-100"
-                  >
-                    {showBalance ? <Eye className="h-5 w-5" /> : <EyeOff className="h-5 w-5" />}
-                  </button>
-                </div>
-                <p className="text-lg opacity-90 mt-1">
-                  ≈ {showBalance ? formatCurrency(data.saldoBRL) : '••••••'}
-                </p>
-              </div>
-              <Wallet className="h-12 w-12 opacity-75" />
-            </div>
-            
-            <div className="flex space-x-3">
-              <Link href="/comprar" className="flex-1">
-                <Button className="w-full bg-white/20 hover:bg-white/30 text-white border-0">
-                  Comprar BCT
-                </Button>
-              </Link>
-              <Link href="/vender" className="flex-1">
-                <Button className="w-full bg-white/20 hover:bg-white/30 text-white border-0">
-                  Vender BCT
-                </Button>
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
+        <Card className="border-0 shadow-lg">
+  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+    <CardTitle className="text-sm font-medium text-[#0C3D2E]">
+      Cotação BCT/USD
+    </CardTitle>
+    <DollarSign className="h-4 w-4 text-[#12B76A]" />
+  </CardHeader>
+  <CardContent>
+    <div className="text-2xl font-bold text-[#0C3D2E]">
+      {price ? `$${price.toFixed(4)}` : 'Carregando...'}
+    </div>
+    <p className="text-xs text-[#111827]/60 mt-1">
+      Preço em dólar
+    </p>
+  </CardContent>
+</Card>
 
         {/* Cotações e Indicadores */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">

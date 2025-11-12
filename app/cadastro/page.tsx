@@ -6,7 +6,7 @@ import { supabase } from "../../src/lib/supabaseClient";
 export default function CadastroPage() {
   const router = useRouter();
 
-  // ✅ LOGIN COM GOOGLE (mantém /dashboard em produção)
+  // ✅ LOGIN COM GOOGLE → redireciona para /início
   async function handleGoogleLogin() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
@@ -15,97 +15,72 @@ export default function CadastroPage() {
     if (error) alert("Erro ao entrar com Google: " + error.message);
   }
 
-  // ✅ LOGIN COM WEB3AUTH (agora com redirecionamento idêntico ao Google)
- async function handleWeb3AuthLogin() {
-  try {
-    if (typeof window === "undefined") {
-      alert("Web3Auth só funciona no navegador.");
-      return;
-    }
+  // ✅ LOGIN COM WEB3AUTH → redireciona para o mesmo /início
+  async function handleWeb3AuthLogin() {
+    try {
+      if (typeof window === "undefined") {
+        alert("Web3Auth só funciona no navegador.");
+        return;
+      }
 
-    const { Web3Auth } = await import("@web3auth/modal");
-    const { OpenloginAdapter } = await import("@web3auth/openlogin-adapter");
-    const { CHAIN_NAMESPACES } = await import("@web3auth/base");
-    const { EthereumPrivateKeyProvider } = await import("@web3auth/ethereum-provider");
+      // Importações dinâmicas
+      const { Web3Auth } = await import("@web3auth/modal");
+      const { OpenloginAdapter } = await import("@web3auth/openlogin-adapter");
+      const { CHAIN_NAMESPACES } = await import("@web3auth/base");
+      const { EthereumPrivateKeyProvider } = await import("@web3auth/ethereum-provider");
 
-    const clientId = process.env.NEXT_PUBLIC_WEB3AUTH_CLIENT_ID;
-    if (!clientId) {
-      alert("Erro: Client ID do Web3Auth não encontrado.");
-      return;
-    }
+      const clientId = process.env.NEXT_PUBLIC_WEB3AUTH_CLIENT_ID;
+      if (!clientId) {
+        alert("Erro: Client ID do Web3Auth não encontrado.");
+        return;
+      }
 
-    // Configuração de rede (Polygon Mainnet)
-    const privateKeyProvider = new EthereumPrivateKeyProvider({
-      config: {
-        chainConfig: {
-          chainNamespace: CHAIN_NAMESPACES.EIP155,
-          chainId: "0x89",
-          rpcTarget: "https://polygon-rpc.com",
-          displayName: "Polygon Mainnet",
-          ticker: "MATIC",
-          tickerName: "Polygon",
+      // 🔗 Conecta com a Polygon Mainnet via Sapphire
+      const privateKeyProvider = new EthereumPrivateKeyProvider({
+        config: {
+          chainConfig: {
+            chainNamespace: CHAIN_NAMESPACES.EIP155,
+            chainId: "0x89",
+            rpcTarget: "https://polygon-rpc.com",
+            displayName: "Polygon Mainnet",
+            ticker: "MATIC",
+            tickerName: "Polygon",
+          },
         },
-      },
-    });
-
-    const web3auth = new Web3Auth({
-      clientId,
-      web3AuthNetwork: "sapphire_mainnet",
-      privateKeyProvider,
-    });
-
-    const openloginAdapter = new OpenloginAdapter({
-      adapterSettings: {
-        network: "sapphire_mainnet",
-        uxMode: "popup",
-      },
-    });
-
-    web3auth.configureAdapter(openloginAdapter);
-    await web3auth.initModal();
-
-    const provider = await web3auth.connect();
-    if (!provider) {
-      alert("Não foi possível conectar ao Web3Auth.");
-      return;
-    }
-
-    const userInfo = await web3auth.getUserInfo();
-    const email = userInfo?.email ?? `user-${Date.now()}@web3auth.io`;
-
-    // 🔐 Garante uma sessão no Supabase (com e-mail e senha fixos)
-    const password = "web3auth-default-password";
-
-    let { error: signInError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (signInError) {
-      // Se o usuário não existir, cria e loga automaticamente
-      const { error: signUpError } = await supabase.auth.signUp({
-        email,
-        password,
       });
-      if (signUpError) throw signUpError;
 
-      // Espera 1 segundo e faz o login real
-      await new Promise((r) => setTimeout(r, 1000));
-      const { error: loginError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      const web3auth = new Web3Auth({
+        clientId,
+        web3AuthNetwork: "sapphire_mainnet",
+        privateKeyProvider,
       });
-      if (loginError) throw loginError;
+
+      const openloginAdapter = new OpenloginAdapter({
+        adapterSettings: {
+          network: "sapphire_mainnet",
+          uxMode: "popup", // 👈 popup em vez de redirect
+        },
+      });
+
+      web3auth.configureAdapter(openloginAdapter);
+      await web3auth.initModal();
+
+      // 🔥 Conecta o usuário via Web3Auth
+      const provider = await web3auth.connect();
+      if (!provider) {
+        alert("Não foi possível conectar ao Web3Auth.");
+        return;
+      }
+
+      // ✅ Login bem-sucedido → redireciona para /início
+      console.log("✅ Login Web3Auth realizado com sucesso!");
+      window.location.href = "https://app-bct.vercel.app/início";
+
+    } catch (err: any) {
+      console.error("Erro no Web3Auth:", err);
+      alert("Erro ao conectar com Web3Auth: " + (err?.message ?? String(err)));
     }
-
-    // ✅ Redireciona e recarrega o contexto (Navbar, sessão, etc.)
-    window.location.href = "https://app-bct.vercel.app/inicio";
-
-  } catch (err: any) {
-    console.error("Erro no Web3Auth:", err);
-    alert("Erro ao conectar com Web3Auth: " + (err?.message ?? String(err)));
   }
-}
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100">

@@ -47,10 +47,10 @@ export default function CadastroPage() {
       });
 
       const web3auth = new Web3Auth({
-        clientId,
-        web3AuthNetwork: "mainnet",
-        privateKeyProvider,
-      });
+  clientId,
+  web3AuthNetwork: "sapphire_mainnet",
+  privateKeyProvider,
+});
 
       const openloginAdapter = new OpenloginAdapter({
         adapterSettings: {

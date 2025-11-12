@@ -216,7 +216,7 @@ export default function DashboardPage() {
               <div className="space-y-2">
                 <Link href="/início" className="flex items-center space-x-3 text-white p-2 rounded">
                   <TrendingUp className="w-5 h-5" />
-                  <span>Dashboard</span>
+                  <span>início</span>
                 </Link>
                 <Link href="/imoveis" className="flex items-center space-x-3 text-white p-2 rounded">
                   <Building2 className="w-5 h-5" />

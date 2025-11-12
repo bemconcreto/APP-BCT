@@ -214,7 +214,7 @@ export default function DashboardPage() {
               </div>
               
               <div className="space-y-2">
-                <Link href="/dashboard" className="flex items-center space-x-3 text-white p-2 rounded">
+                <Link href="/início" className="flex items-center space-x-3 text-white p-2 rounded">
                   <TrendingUp className="w-5 h-5" />
                   <span>Dashboard</span>
                 </Link>
@@ -244,7 +244,7 @@ export default function DashboardPage() {
         <div className="hidden md:flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold text-[#0C3D2E] mb-2">
-              Dashboard
+              início
             </h1>
             <p className="text-[#111827]/60">
               Bem-vindo de volta, {user?.email?.split('@')[0]}!
@@ -484,7 +484,7 @@ export default function DashboardPage() {
       {/* Menu Inferior Mobile */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4">
         <div className="flex justify-around">
-          <Link href="/dashboard" className="flex flex-col items-center space-y-1">
+          <Link href="/início" className="flex flex-col items-center space-y-1">
             <TrendingUp className="w-5 h-5 text-[#12B76A]" />
             <span className="text-xs text-[#12B76A]">Home</span>
           </Link>

@@ -1,8 +1,24 @@
 "use client";
+
 import { useBCTPrice } from "@/hooks/useBCTPrice";
+import { useState, useEffect } from "react";
 
 export default function TestePrecoPage() {
-  const { tokenToWmatic, tokenUSD, error } = useBCTPrice();
+  const [price, setPrice] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchPrice() {
+      try {
+        const value = await useBCTPrice();
+        setPrice(value);
+      } catch (err: any) {
+        console.error(err);
+        setError(err.message || "Erro desconhecido ao buscar preço");
+      }
+    }
+    fetchPrice();
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 text-center p-8">
@@ -16,15 +32,10 @@ export default function TestePrecoPage() {
         </p>
       )}
 
-      {tokenUSD ? (
-        <>
-          <p className="text-xl text-green-600 mb-2">
-            💰 1 BCT ≈ {tokenUSD.toFixed(4)} USD
-          </p>
-          <p className="text-md text-gray-600">
-            (Equivalente a {tokenToWmatic?.toFixed(6)} MATIC)
-          </p>
-        </>
+      {price ? (
+        <p className="text-xl text-green-600 mb-2">
+          💰 1 BCT ≈ {price.toFixed(4)} USD
+        </p>
       ) : (
         <p className="text-gray-500">Carregando preço do token...</p>
       )}

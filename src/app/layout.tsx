@@ -23,9 +23,12 @@ const inter = Inter({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: "Bem Concreto Token - BCT",
-  description: "Plataforma de compra e venda de tokens BCT com PIX e cartão",
+export const metadata = {
+  title: "Bem Concreto Token",
+  description: "Tokenização imobiliária com o Bem Concreto Token",
+  icons: {
+    icon: "/icon-v2.svg",
+  },
 };
 
 export default function RootLayout({

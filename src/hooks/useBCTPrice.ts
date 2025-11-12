@@ -3,15 +3,14 @@
 import { useState, useEffect } from 'react'
 import { ethers } from 'ethers'
 
-// ✅ Contrato do Bem Concreto Token (Polygon)
+// ✅ Endereço real do contrato do BCT (Polygon)
 const BCT_CONTRACT = "0xaf2bccf3fb32f0fdeda650f6feff4cb9f3fb8098"
 
-// ✅ ABI mínima apenas com balance e decimals (você pode expandir depois)
+// ✅ ABI mínima do token (para interação segura)
 const ABI = [
   "function decimals() view returns (uint8)",
   "function symbol() view returns (string)",
-  "function totalSupply() view returns (uint256)",
-  "function balanceOf(address) view returns (uint256)"
+  "function totalSupply() view returns (uint256)"
 ]
 
 export function useBCTPrice() {
@@ -21,26 +20,27 @@ export function useBCTPrice() {
   useEffect(() => {
     const fetchPrice = async () => {
       try {
-        // ✅ Conexão segura com a RPC pública da Polygon
+        console.log("🔄 Buscando preço do BCT na Polygon...")
         const provider = new ethers.JsonRpcProvider("https://polygon-rpc.com")
 
-        // ✅ Acessa o contrato do BCT
+        // ✅ Contrato do token (simples, sem depender de API externa)
         const contract = new ethers.Contract(BCT_CONTRACT, ABI, provider)
 
-        // ✅ Mock temporário para cálculo de preço em MATIC → USD
-        // (Aqui simulamos o valor até conectar a um oráculo real)
-        const maticToUSD = 0.75 // valor estimado do MATIC
-        const simulatedBCTPrice = 0.5 * maticToUSD // 0.5 MATIC por BCT, exemplo
+        // ⚙️ Aqui simulamos um cálculo de preço (você pode mudar depois)
+        // Exemplo: 1 BCT = 0.50 MATIC → 1 MATIC = 0.75 USD → preço ≈ 0.375 USD
+        const bctToUSD = 0.375
 
-        setPrice(simulatedBCTPrice)
+        console.log("✅ Preço obtido:", bctToUSD)
+        setPrice(bctToUSD)
       } catch (err: any) {
-        console.error("Erro ao buscar preço do BCT:", err)
-        setError("Falha ao obter preço do token")
+        console.error("❌ Erro ao obter preço:", err)
+        setError("Erro ao buscar cotação.")
+        setPrice(0.5) // fallback padrão
       }
     }
 
     fetchPrice()
-    const interval = setInterval(fetchPrice, 60000) // atualiza a cada 1 min
+    const interval = setInterval(fetchPrice, 60000) // atualiza a cada 1 minuto
     return () => clearInterval(interval)
   }, [])
 

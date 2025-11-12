@@ -10,7 +10,7 @@ export default function CadastroPage() {
   async function handleGoogleLogin() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: "https://app-bct.vercel.app/dashboard" },
+      options: { redirectTo: "https://app-bct.vercel.app/início" },
     });
     if (error) alert("Erro ao entrar com Google: " + error.message);
   }
@@ -92,7 +92,7 @@ export default function CadastroPage() {
       }
 
       // ✅ Redireciona manualmente para o mesmo dashboard
-      window.location.href = "https://ccc0281c-novo-app-vert.lasy.pro/dashboard";
+      window.location.href = "https://app-bct.vercel.app/início";
 
     } catch (err: any) {
       console.error("Erro no Web3Auth:", err);

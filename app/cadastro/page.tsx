@@ -6,6 +6,7 @@ import { supabase } from "../../src/lib/supabaseClient";
 export default function CadastroPage() {
   const router = useRouter();
 
+  // ✅ LOGIN COM GOOGLE (corrigido para produção)
   async function handleGoogleLogin() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
@@ -14,6 +15,7 @@ export default function CadastroPage() {
     if (error) alert("Erro ao entrar com Google: " + error.message);
   }
 
+  // ✅ LOGIN COM WEB3AUTH (corrigido e sincronizado com Supabase)
   async function handleWeb3AuthLogin() {
     try {
       if (typeof window === "undefined") {
@@ -32,7 +34,7 @@ export default function CadastroPage() {
         return;
       }
 
-      // ✅ Configuração correta para Polygon Mainnet + Sapphire Mainnet do Web3Auth
+      // ✅ Configuração correta para Polygon Mainnet + Sapphire Mainnet
       const privateKeyProvider = new EthereumPrivateKeyProvider({
         config: {
           chainConfig: {
@@ -48,13 +50,13 @@ export default function CadastroPage() {
 
       const web3auth = new Web3Auth({
         clientId,
-        web3AuthNetwork: "sapphire_mainnet", // ✅ Rede correta
+        web3AuthNetwork: "sapphire_mainnet",
         privateKeyProvider,
       });
 
       const openloginAdapter = new OpenloginAdapter({
         adapterSettings: {
-          network: "sapphire_mainnet", // ✅ Mantém coerência com o projeto
+          network: "sapphire_mainnet",
           uxMode: "popup",
         },
       });
@@ -72,15 +74,28 @@ export default function CadastroPage() {
       console.log("✅ Web3Auth conectado:", userInfo);
 
       const email = userInfo?.email ?? `user-${Date.now()}@web3auth.io`;
+      const password = crypto.randomUUID();
 
-      const { error } = await supabase.auth.signUp({
+      // 🔍 Tenta logar o usuário no Supabase
+      const { error: signInError } = await supabase.auth.signInWithPassword({
         email,
-        password: crypto.randomUUID(),
+        password,
       });
 
-      if (error) throw error;
+      if (signInError) {
+        // Se não existir, cria novo cadastro
+        const { error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+        });
+        if (signUpError) throw signUpError;
+      }
 
-      router.push("/dashboard");
+      // ✅ Redireciona após login com leve atraso para garantir sessão carregada
+      setTimeout(() => {
+        router.push("/dashboard");
+      }, 800);
+
     } catch (err: any) {
       console.error("Erro no Web3Auth:", err);
       alert("Erro ao conectar com Web3Auth: " + (err?.message ?? String(err)));

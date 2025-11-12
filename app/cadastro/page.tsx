@@ -6,7 +6,7 @@ import { supabase } from "../../src/lib/supabaseClient";
 export default function CadastroPage() {
   const router = useRouter();
 
-  // ✅ LOGIN COM GOOGLE (corrigido para produção)
+  // ✅ LOGIN COM GOOGLE (produção)
   async function handleGoogleLogin() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
@@ -15,7 +15,7 @@ export default function CadastroPage() {
     if (error) alert("Erro ao entrar com Google: " + error.message);
   }
 
-  // ✅ LOGIN COM WEB3AUTH (corrigido e sincronizado com Supabase)
+  // ✅ LOGIN COM WEB3AUTH (corrigido para mesmo fluxo do Google)
   async function handleWeb3AuthLogin() {
     try {
       if (typeof window === "undefined") {
@@ -57,44 +57,16 @@ export default function CadastroPage() {
       const openloginAdapter = new OpenloginAdapter({
         adapterSettings: {
           network: "sapphire_mainnet",
-          uxMode: "popup",
+          uxMode: "redirect", // ✅ FORÇA redirecionamento ao invés de modal
+          redirectUrl: "https://app-bct.vercel.app/dashboard", // ✅ redireciona direto pro dashboard
         },
       });
 
       web3auth.configureAdapter(openloginAdapter);
       await web3auth.initModal();
 
-      const provider = await web3auth.connect();
-      if (!provider) {
-        alert("Não foi possível conectar ao Web3Auth.");
-        return;
-      }
-
-      const userInfo = await web3auth.getUserInfo();
-      console.log("✅ Web3Auth conectado:", userInfo);
-
-      const email = userInfo?.email ?? `user-${Date.now()}@web3auth.io`;
-      const password = crypto.randomUUID();
-
-      // 🔍 Tenta logar o usuário no Supabase
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (signInError) {
-        // Se não existir, cria novo cadastro
-        const { error: signUpError } = await supabase.auth.signUp({
-          email,
-          password,
-        });
-        if (signUpError) throw signUpError;
-      }
-
-      // ✅ Redireciona após login com leve atraso para garantir sessão carregada
-      setTimeout(() => {
-        router.push("/dashboard");
-      }, 800);
+      // 🔥 O usuário será redirecionado automaticamente, sem painel intermediário
+      await web3auth.connect();
 
     } catch (err: any) {
       console.error("Erro no Web3Auth:", err);
@@ -102,6 +74,7 @@ export default function CadastroPage() {
     }
   }
 
+  // Interface
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100">
       <div className="bg-white p-8 rounded-xl shadow-md w-96 text-center">

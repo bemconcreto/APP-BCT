@@ -16,89 +16,96 @@ export default function CadastroPage() {
   }
 
   // ✅ LOGIN COM WEB3AUTH (agora com redirecionamento idêntico ao Google)
-  async function handleWeb3AuthLogin() {
-    try {
-      if (typeof window === "undefined") {
-        alert("Web3Auth só funciona no navegador.");
-        return;
-      }
+ async function handleWeb3AuthLogin() {
+  try {
+    if (typeof window === "undefined") {
+      alert("Web3Auth só funciona no navegador.");
+      return;
+    }
 
-      // Importações dinâmicas
-      const { Web3Auth } = await import("@web3auth/modal");
-      const { OpenloginAdapter } = await import("@web3auth/openlogin-adapter");
-      const { CHAIN_NAMESPACES } = await import("@web3auth/base");
-      const { EthereumPrivateKeyProvider } = await import("@web3auth/ethereum-provider");
+    const { Web3Auth } = await import("@web3auth/modal");
+    const { OpenloginAdapter } = await import("@web3auth/openlogin-adapter");
+    const { CHAIN_NAMESPACES } = await import("@web3auth/base");
+    const { EthereumPrivateKeyProvider } = await import("@web3auth/ethereum-provider");
 
-      const clientId = process.env.NEXT_PUBLIC_WEB3AUTH_CLIENT_ID;
-      if (!clientId) {
-        alert("Erro: Client ID do Web3Auth não encontrado.");
-        return;
-      }
+    const clientId = process.env.NEXT_PUBLIC_WEB3AUTH_CLIENT_ID;
+    if (!clientId) {
+      alert("Erro: Client ID do Web3Auth não encontrado.");
+      return;
+    }
 
-      // 🔗 Conecta com a Polygon Mainnet via Sapphire
-      const privateKeyProvider = new EthereumPrivateKeyProvider({
-        config: {
-          chainConfig: {
-            chainNamespace: CHAIN_NAMESPACES.EIP155,
-            chainId: "0x89",
-            rpcTarget: "https://polygon-rpc.com",
-            displayName: "Polygon Mainnet",
-            ticker: "MATIC",
-            tickerName: "Polygon",
-          },
+    // Configuração de rede (Polygon Mainnet)
+    const privateKeyProvider = new EthereumPrivateKeyProvider({
+      config: {
+        chainConfig: {
+          chainNamespace: CHAIN_NAMESPACES.EIP155,
+          chainId: "0x89",
+          rpcTarget: "https://polygon-rpc.com",
+          displayName: "Polygon Mainnet",
+          ticker: "MATIC",
+          tickerName: "Polygon",
         },
-      });
+      },
+    });
 
-      const web3auth = new Web3Auth({
-        clientId,
-        web3AuthNetwork: "sapphire_mainnet",
-        privateKeyProvider,
-      });
+    const web3auth = new Web3Auth({
+      clientId,
+      web3AuthNetwork: "sapphire_mainnet",
+      privateKeyProvider,
+    });
 
-      const openloginAdapter = new OpenloginAdapter({
-        adapterSettings: {
-          network: "sapphire_mainnet",
-          uxMode: "popup", // 👈 popup em vez de redirect
-        },
-      });
+    const openloginAdapter = new OpenloginAdapter({
+      adapterSettings: {
+        network: "sapphire_mainnet",
+        uxMode: "popup",
+      },
+    });
 
-      web3auth.configureAdapter(openloginAdapter);
-      await web3auth.initModal();
+    web3auth.configureAdapter(openloginAdapter);
+    await web3auth.initModal();
 
-      // 🔥 Conecta o usuário via Web3Auth
-      const provider = await web3auth.connect();
-      if (!provider) {
-        alert("Não foi possível conectar ao Web3Auth.");
-        return;
-      }
+    const provider = await web3auth.connect();
+    if (!provider) {
+      alert("Não foi possível conectar ao Web3Auth.");
+      return;
+    }
 
-      // ✅ Pega as informações do usuário logado
-      const userInfo = await web3auth.getUserInfo();
-      const email = userInfo?.email ?? `user-${Date.now()}@web3auth.io`;
-      const password = crypto.randomUUID();
+    const userInfo = await web3auth.getUserInfo();
+    const email = userInfo?.email ?? `user-${Date.now()}@web3auth.io`;
 
-      // 🔍 Garante sessão no Supabase (login ou criação)
-      const { error: signInError } = await supabase.auth.signInWithPassword({
+    // 🔐 Garante uma sessão no Supabase (com e-mail e senha fixos)
+    const password = "web3auth-default-password";
+
+    let { error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (signInError) {
+      // Se o usuário não existir, cria e loga automaticamente
+      const { error: signUpError } = await supabase.auth.signUp({
         email,
         password,
       });
+      if (signUpError) throw signUpError;
 
-      if (signInError) {
-        const { error: signUpError } = await supabase.auth.signUp({
-          email,
-          password,
-        });
-        if (signUpError) throw signUpError;
-      }
-
-      // ✅ Redireciona manualmente para o mesmo dashboard
-      window.location.href = "https://app-bct.vercel.app/início";
-
-    } catch (err: any) {
-      console.error("Erro no Web3Auth:", err);
-      alert("Erro ao conectar com Web3Auth: " + (err?.message ?? String(err)));
+      // Espera 1 segundo e faz o login real
+      await new Promise((r) => setTimeout(r, 1000));
+      const { error: loginError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (loginError) throw loginError;
     }
+
+    // ✅ Redireciona e recarrega o contexto (Navbar, sessão, etc.)
+    window.location.href = "https://app-bct.vercel.app/inicio";
+
+  } catch (err: any) {
+    console.error("Erro no Web3Auth:", err);
+    alert("Erro ao conectar com Web3Auth: " + (err?.message ?? String(err)));
   }
+}
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100">

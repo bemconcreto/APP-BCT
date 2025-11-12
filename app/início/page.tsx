@@ -1,44 +1,47 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { supabase } from "../../src/lib/supabaseClient";
+import Link from "next/link";
 
-export default function DashboardPage() {
-  const [user, setUser] = useState<any>(null);
-
-  useEffect(() => {
-    async function getUser() {
-      const { data, error } = await supabase.auth.getUser();
-      if (error) {
-        console.error("Erro ao buscar usuário:", error);
-      } else {
-        setUser(data?.user);
-      }
-    }
-    getUser();
-  }, []);
-
+export default function InicioPage() {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50">
-      <div className="bg-white shadow-md p-8 rounded-xl w-96 text-center">
-        <h1 className="text-2xl font-bold mb-4 text-green-700">
-          🎉 Bem-vindo ao Painel BCT
+    <div className="min-h-screen bg-gray-100 p-8">
+      <div className="max-w-5xl mx-auto bg-white rounded-xl shadow-md p-8">
+        <h1 className="text-3xl font-bold mb-6 text-center text-gray-800">
+          Painel Bem Concreto Token
         </h1>
+        <p className="text-center text-gray-600 mb-10">
+          Selecione uma das opções abaixo para gerenciar seus investimentos.
+        </p>
 
-        {user ? (
-          <>
-            <p className="mb-3 text-gray-700">
-              Você está logado como:
-              <br />
-              <strong>{user.email}</strong>
-            </p>
-            <p className="text-green-600 font-semibold">
-              Login realizado com sucesso via Web3Auth ✅
-            </p>
-          </>
-        ) : (
-          <p className="text-gray-500">Carregando informações do usuário...</p>
-        )}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Link href="/imoveis">
+            <div className="bg-green-600 hover:bg-green-700 text-white rounded-lg p-6 cursor-pointer text-center">
+              <h2 className="text-xl font-semibold">Imóveis</h2>
+              <p className="mt-2 text-sm text-green-100">Ver imóveis tokenizados</p>
+            </div>
+          </Link>
+
+          <Link href="/comprar">
+            <div className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg p-6 cursor-pointer text-center">
+              <h2 className="text-xl font-semibold">Comprar</h2>
+              <p className="mt-2 text-sm text-blue-100">Adquirir tokens BCT</p>
+            </div>
+          </Link>
+
+          <Link href="/vender">
+            <div className="bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg p-6 cursor-pointer text-center">
+              <h2 className="text-xl font-semibold">Vender</h2>
+              <p className="mt-2 text-sm text-yellow-100">Negociar seus tokens</p>
+            </div>
+          </Link>
+
+          <Link href="/extrato">
+            <div className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg p-6 cursor-pointer text-center">
+              <h2 className="text-xl font-semibold">Extrato</h2>
+              <p className="mt-2 text-sm text-indigo-100">Acompanhar histórico</p>
+            </div>
+          </Link>
+        </div>
       </div>
     </div>
   );

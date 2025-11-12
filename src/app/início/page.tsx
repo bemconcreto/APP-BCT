@@ -1,6 +1,5 @@
 'use client'
 
-import { useBCTPrice } from '@/hooks/useBCTPrice';
 import { useState, useEffect } from 'react'
 import { useAuthContext } from '@/contexts/AuthContext'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -29,217 +28,162 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 
-interface DashboardData {
-  saldoBCT: number
-  saldoBRL: number
-  cotacaoBCT: {
-    usd: number
-    brl: number
-    variation24h: number
-  }
-  cotacaoUSD: number
-  ultimasTransacoes: Array<{
-    id: string
-    tipo: 'compra' | 'venda' | 'transferência'
-    valor: number
-    data: string
-    status: 'concluído' | 'pendente' | 'falhou'
-  }>
-  portfolioImoveis: {
-    valorTotal: number
-    valorizacao: number
-  }
-}
+import { useBCTPrice } from '@/hooks/useBCTPrice'
 
 export default function DashboardPage() {
   const { user, signOut } = useAuthContext()
-  const price = useBCTPrice() // ✅ cotação dinâmica do token
-  const [data, setData] = useState<DashboardData>({
-    saldoBCT: 3240,
-    saldoBRL: 1620.00,
-    cotacaoBCT: {
-      usd: 0.48,
-      brl: 2.50,
-      variation24h: 5.2
-    },
-    cotacaoUSD: 5.20,
-    ultimasTransacoes: [
-      {
-        id: '1',
-        tipo: 'compra',
-        valor: 500,
-        data: '2024-01-15T10:30:00Z',
-        status: 'concluído'
-      },
-      {
-        id: '2',
-        tipo: 'venda',
-        valor: 250,
-        data: '2024-01-14T15:45:00Z',
-        status: 'concluído'
-      },
-      {
-        id: '3',
-        tipo: 'compra',
-        valor: 150,
-        data: '2024-01-13T09:15:00Z',
-        status: 'pendente'
-      }
-    ],
-    portfolioImoveis: {
-      valorTotal: 8750000,
-      valorizacao: 32.0
-    }
-  })
+
+  // 🔥 Aqui pegamos o preço REAL vindo do hook
+  const priceUSD = useBCTPrice()
+  const usdToBRL = 5.20
+  const priceBRL = priceUSD ? (priceUSD * usdToBRL) : null
+
   const [showBalance, setShowBalance] = useState(true)
-  const [loading, setLoading] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
-  useEffect(() => {
-    loadData()
-  }, [])
-
-  const loadData = async () => {
-    setLoading(true)
-    try {
-      const priceResponse = await fetch('/api/price')
-      const priceData = await priceResponse.json()
-      const usdResponse = await fetch('/api/usd')
-      const usdData = await usdResponse.json()
-      setData(prev => ({
-        ...prev,
-        cotacaoBCT: {
-          usd: priceData.usd,
-          brl: priceData.brl,
-          variation24h: priceData.variation24h
-        },
-        cotacaoUSD: usdData.usdbrl,
-        saldoBRL: prev.saldoBCT * priceData.brl
-      }))
-    } catch (error) {
-      console.error('Erro ao carregar dados:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
+  const saldoBCT = 3240
 
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat('pt-BR', {
       style: 'currency',
-      currency: 'BRL'
+      currency: 'BRL',
     }).format(value)
-
-  const formatDate = (dateString: string) =>
-    new Intl.DateTimeFormat('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(new Date(dateString))
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'concluído': return 'bg-green-100 text-green-800'
-      case 'pendente': return 'bg-yellow-100 text-yellow-800'
-      case 'falhou': return 'bg-red-100 text-red-800'
-      default: return 'bg-gray-100 text-gray-800'
-    }
-  }
-
-  const getTransactionIcon = (tipo: string) => {
-    switch (tipo) {
-      case 'compra': return <ArrowDownLeft className="w-4 h-4 text-green-600" />
-      case 'venda': return <ArrowUpRight className="w-4 h-4 text-blue-600" />
-      default: return <ArrowUpRight className="w-4 h-4 text-gray-600" />
-    }
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#F3F4F6] to-white">
 
-      {/* HEADER DESKTOP */}
-      <div className="hidden md:flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 p-6">
-        <div>
-          <h1 className="text-3xl font-bold text-[#0C3D2E] mb-2">Início</h1>
-          <p className="text-[#111827]/60">
-            Bem-vindo de volta, {user?.email?.split('@')[0]}!
-          </p>
+      {/* MOBILE HEADER */}
+      <div className="md:hidden bg-[#0C3D2E] p-4 flex items-center justify-between">
+        <div className="flex items-center space-x-2">
+          <div className="w-8 h-8 bg-[#12B76A] rounded-full flex items-center justify-center">
+            <span className="text-white font-bold text-sm">BCT</span>
+          </div>
+          <span className="text-white font-bold text-lg">Bem Concreto Token</span>
         </div>
-        <Button
-          onClick={loadData}
-          disabled={loading}
-          variant="outline"
-          className="border-[#12B76A] text-[#12B76A] hover:bg-[#12B76A] hover:text-white mt-4 sm:mt-0"
-        >
-          <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-          Atualizar
-        </Button>
+        <button onClick={() => setSidebarOpen(true)}>
+          <Menu className="w-6 h-6 text-white" />
+        </button>
       </div>
 
-      {/* CARD DE COTAÇÃO DINÂMICA */}
-      <div className="max-w-4xl mx-auto p-4">
-        <Card className="border-0 shadow-lg">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-[#0C3D2E]">
-              Cotação BCT/USD
-            </CardTitle>
-            <DollarSign className="h-4 w-4 text-[#12B76A]" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-[#0C3D2E]">
-              {price !== null && !isNaN(Number(price))
-                ? `$${Number(price).toFixed(4)}`
-                : 'Carregando...'}
+      {/* MENU MOBILE */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setSidebarOpen(false)} />
+          <div className="absolute right-0 top-0 h-full w-80 bg-[#0C3D2E] p-6">
+            <button className="text-white mb-6" onClick={() => setSidebarOpen(false)}>
+              <X className="w-6 h-6" />
+            </button>
+
+            <div className="space-y-4">
+              <Link href="/início" className="text-white flex items-center space-x-2 text-lg">
+                <TrendingUp /> <span>Início</span>
+              </Link>
+              <Link href="/imoveis" className="text-white flex items-center space-x-2 text-lg">
+                <Building2 /> <span>Imóveis</span>
+              </Link>
+              <Link href="/comprar" className="text-white flex items-center space-x-2 text-lg">
+                <ShoppingCart /> <span>Comprar</span>
+              </Link>
+              <Link href="/vender" className="text-white flex items-center space-x-2 text-lg">
+                <ArrowUpRight /> <span>Vender</span>
+              </Link>
+              <Link href="/extrato" className="text-white flex items-center space-x-2 text-lg">
+                <History /> <span>Extrato</span>
+              </Link>
+              <button onClick={signOut} className="text-white flex items-center space-x-2 text-lg">
+                <LogOut /> <span>Sair</span>
+              </button>
             </div>
-            <p className="text-xs text-[#111827]/60 mt-1">
-              Preço em dólar (dados on-chain)
+          </div>
+        </div>
+      )}
+
+      {/* CONTENT */}
+      <div className="max-w-7xl mx-auto p-6">
+
+        {/* HEADER DESKTOP */}
+        <div className="hidden md:flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold text-[#0C3D2E]">Início</h1>
+          <Button className="border-[#12B76A] text-[#12B76A] hover:bg-[#12B76A] hover:text-white">
+            <RefreshCw className="w-4 h-4 mr-2" /> Atualizar
+          </Button>
+        </div>
+
+        {/* CARD PRINCIPAL — SALDO */}
+        <Card className="border-0 shadow-lg bg-gradient-to-br from-[#12B76A] to-[#0F9A5A] text-white mb-8">
+          <CardContent className="p-6">
+            <p className="text-sm opacity-90">Saldo disponível</p>
+
+            <div className="flex items-center space-x-3 mt-1">
+              <span className="text-3xl font-bold">
+                {showBalance ? `${saldoBCT} BCT` : '•••••'}
+              </span>
+
+              <button onClick={() => setShowBalance(!showBalance)}>
+                {showBalance ? <Eye /> : <EyeOff />}
+              </button>
+            </div>
+
+            <p className="text-lg opacity-90 mt-1">
+              {priceBRL && showBalance
+                ? formatCurrency(saldoBCT * priceBRL)
+                : '••••••'}
             </p>
+
+            <div className="flex space-x-3 mt-4">
+              <Link href="/comprar">
+                <Button className="bg-white/20 text-white">Comprar BCT</Button>
+              </Link>
+              <Link href="/vender">
+                <Button className="bg-white/20 text-white">Vender BCT</Button>
+              </Link>
+            </div>
           </CardContent>
         </Card>
-      </div>
 
-      {/* RESTANTE DO DASHBOARD */}
-      <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
-        {/* Cotações e Indicadores */}
+        {/* CARDS DE COTAÇÃO */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card className="border-0 shadow-lg">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-[#0C3D2E]">Cotação USD/BRL</CardTitle>
-              <TrendingUp className="h-4 w-4 text-[#12B76A]" />
+
+          {/* COTAÇÃO USD */}
+          <Card className="shadow-lg">
+            <CardHeader>
+              <CardTitle>Cotação BCT/USD</CardTitle>
+              <DollarSign className="text-[#12B76A]" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-[#0C3D2E]">
-                R$ {data.cotacaoUSD.toFixed(2)}
+              <div className="text-2xl font-bold">
+                {priceUSD ? `$${priceUSD.toFixed(4)}` : 'Carregando...'}
               </div>
-              <p className="text-xs text-[#111827]/60 mt-1">Dólar comercial</p>
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-lg">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-[#0C3D2E]">Valorização 24h</CardTitle>
-              {data.cotacaoBCT.variation24h >= 0 ? (
-                <TrendingUp className="h-4 w-4 text-green-600" />
-              ) : (
-                <TrendingDown className="h-4 w-4 text-red-600" />
-              )}
+          {/* COTAÇÃO BRL */}
+          <Card className="shadow-lg">
+            <CardHeader>
+              <CardTitle>Cotação BCT/BRL</CardTitle>
+              <TrendingUp className="text-[#12B76A]" />
             </CardHeader>
             <CardContent>
-              <div
-                className={`text-2xl font-bold ${
-                  data.cotacaoBCT.variation24h >= 0
-                    ? 'text-green-600'
-                    : 'text-red-600'
-                }`}
-              >
-                {data.cotacaoBCT.variation24h >= 0 ? '+' : ''}
-                {data.cotacaoBCT.variation24h.toFixed(1)}%
+              <div className="text-2xl font-bold">
+                {priceBRL ? formatCurrency(priceBRL) : 'Carregando...'}
               </div>
-              <p className="text-xs text-[#111827]/60 mt-1">Variação BCT</p>
+            </CardContent>
+          </Card>
+
+          {/* VARIAÇÃO (FAKE) */}
+          <Card className="shadow-lg">
+            <CardHeader>
+              <CardTitle>Variação 24h</CardTitle>
+              <TrendingUp className="text-green-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">
+                +5.2%
+              </div>
             </CardContent>
           </Card>
         </div>
+
       </div>
     </div>
   )

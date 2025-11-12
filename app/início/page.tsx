@@ -6,14 +6,9 @@ export default function InicioPage() {
   return (
     <div className="min-h-screen bg-gray-100 p-8">
       <div className="max-w-5xl mx-auto bg-white rounded-xl shadow-md p-8">
-        import Link from "next/link";
-
-// dentro do return
-<Link href="/inicio">
-  <h1 className="text-xl font-bold text-green-700 cursor-pointer hover:text-green-800 transition-colors">
-    Bem Concreto Token
-  </h1>
-</Link>
+        <h1 className="text-3xl font-bold mb-6 text-center text-gray-800">
+          Painel Bem Concreto Token
+        </h1>
         <p className="text-center text-gray-600 mb-10">
           Selecione uma das opções abaixo para gerenciar seus investimentos.
         </p>

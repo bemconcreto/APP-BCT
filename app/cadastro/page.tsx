@@ -10,7 +10,7 @@ export default function CadastroPage() {
   async function handleGoogleLogin() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: "https://app-bct.vercel.app/início#" },
+      options: { redirectTo: "https://app-bct.vercel.app/início" },
     });
     if (error) alert("Erro ao entrar com Google: " + error.message);
   }

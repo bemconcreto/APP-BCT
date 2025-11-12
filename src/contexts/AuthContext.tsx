@@ -23,7 +23,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const initAuth = async () => {
       try {
-        // 🔹 1. Tenta obter sessão Supabase (login via Google)
+        // ✅ Se o Supabase não existir, aborta
+        if (!supabase || !supabase.auth) {
+          console.warn('Supabase não configurado corretamente.')
+          setLoading(false)
+          return
+        }
+
+        // 🔹 1. Tenta obter sessão do Supabase (login via Google)
         const { data } = await supabase.auth.getSession()
         const sessionUser = data?.session?.user
 
@@ -33,12 +40,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return
         }
 
-        // 🔹 2. Caso não exista sessão, tenta buscar Web3Auth no localStorage
+        // 🔹 2. Caso não tenha sessão, tenta recuperar login Web3Auth
         const storedUser = localStorage.getItem('web3auth_user')
         if (storedUser) {
           const parsed = JSON.parse(storedUser)
-
-          // Cria um objeto "fake" de User compatível com o Supabase
           const fakeUser = {
             id: parsed.sub || 'web3auth',
             email: parsed.email || 'web3auth@bemconcreto.com',
@@ -62,19 +67,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     initAuth()
 
-    // Escuta eventos de login/logout do Supabase
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    // 🔹 Escuta mudanças de autenticação do Supabase (login/logout)
+    const listener = supabase?.auth?.onAuthStateChange?.((_event, session) => {
       setUser(session?.user ?? null)
     })
 
     return () => {
-      listener.subscription.unsubscribe()
+      listener?.data?.subscription?.unsubscribe?.()
     }
   }, [])
 
   const signOut = async () => {
     try {
-      await supabase.auth.signOut()
+      if (supabase && supabase.auth) {
+        await supabase.auth.signOut()
+      }
       localStorage.removeItem('web3auth_user')
       window.location.href = 'https://app-bct.vercel.app'
     } catch (err) {

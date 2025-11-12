@@ -1,43 +1,48 @@
-"use client";
+'use client'
 
-import { useState, useEffect } from "react";
-import { JsonRpcProvider, Contract } from "ethers";
+import { useState, useEffect } from 'react'
+import { ethers } from 'ethers'
 
-// ✅ Endereço do contrato do BCT (Polygon)
-const BCT_CONTRACT = "0xaf2bccf3fb32f0fdeda650f6feff4cb9f3fb8098";
+// ✅ Contrato do Bem Concreto Token (Polygon)
+const BCT_CONTRACT = "0xaf2bccf3fb32f0fdeda650f6feff4cb9f3fb8098"
 
-// ✅ ABI mínima apenas com a função que retorna preço (ajuste se necessário)
-const BCT_ABI = [
-  "function getLatestPrice() public view returns (uint256)"
-];
+// ✅ ABI mínima apenas com balance e decimals (você pode expandir depois)
+const ABI = [
+  "function decimals() view returns (uint8)",
+  "function symbol() view returns (string)",
+  "function totalSupply() view returns (uint256)",
+  "function balanceOf(address) view returns (uint256)"
+]
 
 export function useBCTPrice() {
-  const [price, setPrice] = useState<number | null>(null);
+  const [price, setPrice] = useState<number | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    async function fetchPrice() {
+    const fetchPrice = async () => {
       try {
-        // ✅ Conexão com a Polygon Mainnet
-        const provider = new JsonRpcProvider("https://polygon-rpc.com");
+        // ✅ Conexão segura com a RPC pública da Polygon
+        const provider = new ethers.JsonRpcProvider("https://polygon-rpc.com")
 
-        // ✅ Inicializa contrato
-        const contract = new Contract(BCT_CONTRACT, BCT_ABI, provider);
+        // ✅ Acessa o contrato do BCT
+        const contract = new ethers.Contract(BCT_CONTRACT, ABI, provider)
 
-        // ✅ Chama a função de preço
-        const rawPrice = await contract.getLatestPrice();
+        // ✅ Mock temporário para cálculo de preço em MATIC → USD
+        // (Aqui simulamos o valor até conectar a um oráculo real)
+        const maticToUSD = 0.75 // valor estimado do MATIC
+        const simulatedBCTPrice = 0.5 * maticToUSD // 0.5 MATIC por BCT, exemplo
 
-        // ✅ Converte pra número decimal
-        const formattedPrice = Number(rawPrice) / 1e8; // exemplo: 8 casas decimais
-
-        setPrice(formattedPrice);
-      } catch (err) {
-        console.error("Erro ao obter preço do BCT:", err);
-        setPrice(null);
+        setPrice(simulatedBCTPrice)
+      } catch (err: any) {
+        console.error("Erro ao buscar preço do BCT:", err)
+        setError("Falha ao obter preço do token")
       }
     }
 
-    fetchPrice();
-  }, []);
+    fetchPrice()
+    const interval = setInterval(fetchPrice, 60000) // atualiza a cada 1 min
+    return () => clearInterval(interval)
+  }, [])
 
-  return price;
+  return price
 }

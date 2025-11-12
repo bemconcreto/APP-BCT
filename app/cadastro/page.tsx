@@ -6,7 +6,7 @@ import { supabase } from "../../src/lib/supabaseClient";
 export default function CadastroPage() {
   const router = useRouter();
 
-  // ✅ LOGIN COM GOOGLE (produção)
+  // ✅ LOGIN COM GOOGLE (mantém /dashboard em produção)
   async function handleGoogleLogin() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
@@ -15,7 +15,7 @@ export default function CadastroPage() {
     if (error) alert("Erro ao entrar com Google: " + error.message);
   }
 
-  // ✅ LOGIN COM WEB3AUTH (corrigido para mesmo fluxo do Google)
+  // ✅ LOGIN COM WEB3AUTH (agora com redirecionamento idêntico ao Google)
   async function handleWeb3AuthLogin() {
     try {
       if (typeof window === "undefined") {
@@ -23,6 +23,7 @@ export default function CadastroPage() {
         return;
       }
 
+      // Importações dinâmicas
       const { Web3Auth } = await import("@web3auth/modal");
       const { OpenloginAdapter } = await import("@web3auth/openlogin-adapter");
       const { CHAIN_NAMESPACES } = await import("@web3auth/base");
@@ -34,12 +35,12 @@ export default function CadastroPage() {
         return;
       }
 
-      // ✅ Configuração correta para Polygon Mainnet + Sapphire Mainnet
+      // 🔗 Conecta com a Polygon Mainnet via Sapphire
       const privateKeyProvider = new EthereumPrivateKeyProvider({
         config: {
           chainConfig: {
             chainNamespace: CHAIN_NAMESPACES.EIP155,
-            chainId: "0x89", // Polygon Mainnet
+            chainId: "0x89",
             rpcTarget: "https://polygon-rpc.com",
             displayName: "Polygon Mainnet",
             ticker: "MATIC",
@@ -57,16 +58,41 @@ export default function CadastroPage() {
       const openloginAdapter = new OpenloginAdapter({
         adapterSettings: {
           network: "sapphire_mainnet",
-          uxMode: "redirect", // ✅ FORÇA redirecionamento ao invés de modal
-          redirectUrl: "https://app-bct.vercel.app/dashboard", // ✅ redireciona direto pro dashboard
+          uxMode: "popup", // 👈 popup em vez de redirect
         },
       });
 
       web3auth.configureAdapter(openloginAdapter);
       await web3auth.initModal();
 
-      // 🔥 O usuário será redirecionado automaticamente, sem painel intermediário
-      await web3auth.connect();
+      // 🔥 Conecta o usuário via Web3Auth
+      const provider = await web3auth.connect();
+      if (!provider) {
+        alert("Não foi possível conectar ao Web3Auth.");
+        return;
+      }
+
+      // ✅ Pega as informações do usuário logado
+      const userInfo = await web3auth.getUserInfo();
+      const email = userInfo?.email ?? `user-${Date.now()}@web3auth.io`;
+      const password = crypto.randomUUID();
+
+      // 🔍 Garante sessão no Supabase (login ou criação)
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (signInError) {
+        const { error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+        });
+        if (signUpError) throw signUpError;
+      }
+
+      // ✅ Redireciona manualmente para o mesmo dashboard
+      router.push("/dashboard");
 
     } catch (err: any) {
       console.error("Erro no Web3Auth:", err);
@@ -74,7 +100,6 @@ export default function CadastroPage() {
     }
   }
 
-  // Interface
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100">
       <div className="bg-white p-8 rounded-xl shadow-md w-96 text-center">

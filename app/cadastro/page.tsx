@@ -53,18 +53,11 @@ export default function CadastroPage() {
 });
 
       const openloginAdapter = new OpenloginAdapter({
-        adapterSettings: {
-          network: "mainnet",
-          uxMode: "popup",
-          whiteLabel: {
-  appName: "Bem Concreto Token",
-  logoLight: "https://bemconcreto.com/favicon.ico",
-  logoDark: "https://bemconcreto.com/favicon.ico",
-  defaultLanguage: "pt",
-  mode: "dark",
-},
-        },
-      });
+  adapterSettings: {
+    network: "mainnet",
+    uxMode: "popup",
+  },
+});
 
       web3auth.configureAdapter(openloginAdapter);
       await web3auth.initModal();

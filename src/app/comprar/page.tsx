@@ -76,7 +76,7 @@ export default function ComprarPage() {
       <div className="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
         {/* Header */}
         <div className="flex items-center mb-8">
-          <Link href="/dashboard">
+          <Link href="/início">
             <Button variant="outline" size="sm" className="mr-4">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Voltar

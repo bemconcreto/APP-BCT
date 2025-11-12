@@ -92,7 +92,7 @@ export default function CadastroPage() {
       }
 
       // ✅ Redireciona manualmente para o mesmo dashboard
-      router.push("/dashboard");
+      window.location.href = "https://ccc0281c-novo-app-vert.lasy.pro/dashboard";
 
     } catch (err: any) {
       console.error("Erro no Web3Auth:", err);

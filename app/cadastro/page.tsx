@@ -6,16 +6,16 @@ import { supabase } from "../../src/lib/supabaseClient";
 export default function CadastroPage() {
   const router = useRouter();
 
-  // ✅ LOGIN COM GOOGLE → redireciona para /início (sem #)
+  // ✅ LOGIN COM GOOGLE → redireciona para /inicio (sem #)
   async function handleGoogleLogin() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: "https://app-bct.vercel.app/início" },
+      options: { redirectTo: "https://app-bct.vercel.app/inicio" },
     });
     if (error) alert("Erro ao entrar com Google: " + error.message);
   }
 
-  // ✅ LOGIN COM WEB3AUTH → redireciona para o mesmo /início
+  // ✅ LOGIN COM WEB3AUTH → redireciona para o mesmo /inicio
 async function handleWeb3AuthLogin() {
   try {
     if (typeof window === "undefined") {
@@ -96,9 +96,9 @@ async function handleWeb3AuthLogin() {
       if (signUpError) throw signUpError;
     }
 
-    // ✅ Login bem-sucedido → redireciona para /início
+    // ✅ Login bem-sucedido → redireciona para /inicio
     console.log("✅ Login Web3Auth realizado com sucesso!");
-    window.location.href = "https://app-bct.vercel.app/início";
+    window.location.href = "https://app-bct.vercel.app/inicio";
 
   } catch (err: any) {
     console.error("Erro no Web3Auth:", err);

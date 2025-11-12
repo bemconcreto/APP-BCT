@@ -31,7 +31,7 @@ export default function LoginPage() {
     if (error) {
       setError('Email ou senha incorretos')
     } else {
-      router.push('/início')
+      router.push('/inicio')
     }
     
     setLoading(false)

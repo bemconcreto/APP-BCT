@@ -12,7 +12,7 @@ export default function LoginPage() {
     e.preventDefault();
     if (email && senha) {
       // Simulação temporária de login
-      router.push("/início");
+      router.push("/inicio");
     } else {
       alert("Por favor, preencha todos os campos");
     }

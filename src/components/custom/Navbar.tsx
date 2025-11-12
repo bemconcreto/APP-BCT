@@ -22,7 +22,7 @@ export function Navbar() {
   const { user, signOut } = useAuthContext()
 
   const navigation = [
-    { name: 'Início', href: '/início', icon: Home },
+    { name: 'Inicio', href: '/inicio', icon: Home },
     { name: 'Imóveis', href: '/imoveis', icon: Building2 },
     { name: 'Comprar', href: '/comprar', icon: ShoppingCart },
     { name: 'Vender', href: '/vender', icon: TrendingUp },
@@ -35,7 +35,7 @@ export function Navbar() {
         <div className="flex justify-between h-16">
           {/* Logo */}
           <div className="flex items-center">
-            <Link href="/início" className="flex items-center space-x-2">
+            <Link href="/inicio" className="flex items-center space-x-2">
   <div className="w-8 h-8 bg-[#12B76A] rounded-full flex items-center justify-center cursor-pointer hover:opacity-90 transition-opacity">
     <span className="text-white font-bold text-sm">BCT</span>
   </div>

@@ -35,14 +35,14 @@ export function Navbar() {
         <div className="flex justify-between h-16">
           {/* Logo */}
           <div className="flex items-center">
-            <Link href="/" className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-[#12B76A] rounded-full flex items-center justify-center">
-                <span className="text-white font-bold text-sm">BCT</span>
-              </div>
-              <span className="text-white font-bold text-xl font-inter">
-                Bem Concreto Token
-              </span>
-            </Link>
+            <Link href="/inicio" className="flex items-center space-x-2">
+  <div className="w-8 h-8 bg-[#12B76A] rounded-full flex items-center justify-center cursor-pointer hover:opacity-90 transition-opacity">
+    <span className="text-white font-bold text-sm">BCT</span>
+  </div>
+  <span className="text-white font-bold text-xl font-inter cursor-pointer hover:text-[#12B76A] transition-colors">
+    Bem Concreto Token
+  </span>
+</Link>
           </div>
 
           {/* Desktop Navigation */}

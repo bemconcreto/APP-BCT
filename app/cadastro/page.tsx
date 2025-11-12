@@ -57,12 +57,12 @@ export default function CadastroPage() {
           network: "mainnet",
           uxMode: "popup",
           whiteLabel: {
-            name: "Bem Concreto Token",
-            logoLight: "https://bemconcreto.com/favicon.ico",
-            logoDark: "https://bemconcreto.com/favicon.ico",
-            defaultLanguage: "pt",
-            mode: "dark",
-          },
+  appName: "Bem Concreto Token",
+  logoLight: "https://bemconcreto.com/favicon.ico",
+  logoDark: "https://bemconcreto.com/favicon.ico",
+  defaultLanguage: "pt",
+  mode: "dark",
+},
         },
       });
 

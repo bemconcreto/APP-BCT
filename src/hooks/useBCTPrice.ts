@@ -1,39 +1,42 @@
-import { useEffect, useState } from "react";
-import { ethers } from "ethers";
+"use client";
 
-// Hook React para buscar o preço do Bem Concreto Token (BCT)
+import { useState, useEffect } from "react";
+import { JsonRpcProvider, Contract } from "ethers";
+
+// ✅ Endereço do contrato do BCT (Polygon)
+const BCT_CONTRACT = "0xaf2bccf3fb32f0fdeda650f6feff4cb9f3fb8098";
+
+// ✅ ABI mínima apenas com a função que retorna preço (ajuste se necessário)
+const BCT_ABI = [
+  "function getLatestPrice() public view returns (uint256)"
+];
+
 export function useBCTPrice() {
   const [price, setPrice] = useState<number | null>(null);
 
   useEffect(() => {
     async function fetchPrice() {
       try {
-        // Conecta à blockchain Polygon
-        const provider = new ethers.providers.JsonRpcProvider("https://polygon-rpc.com");
+        // ✅ Conexão com a Polygon Mainnet
+        const provider = new JsonRpcProvider("https://polygon-rpc.com");
 
-        // Contrato do BCT (Polygon)
-        const contract = new ethers.Contract(
-          "0xaf2bccf3fb32f0fdeda650f6feff4cb9f3fb8098",
-          [
-            // Substitui essa função pela que realmente existe no teu contrato (exemplo genérico)
-            "function getLatestPrice() public view returns (int)"
-          ],
-          provider
-        );
+        // ✅ Inicializa contrato
+        const contract = new Contract(BCT_CONTRACT, BCT_ABI, provider);
 
-        // Tenta buscar o preço
-        const result = await contract.getLatestPrice();
-        setPrice(Number(result) / 1e8);
-      } catch (error) {
-        console.error("Erro ao buscar preço BCT:", error);
+        // ✅ Chama a função de preço
+        const rawPrice = await contract.getLatestPrice();
+
+        // ✅ Converte pra número decimal
+        const formattedPrice = Number(rawPrice) / 1e8; // exemplo: 8 casas decimais
+
+        setPrice(formattedPrice);
+      } catch (err) {
+        console.error("Erro ao obter preço do BCT:", err);
+        setPrice(null);
       }
     }
 
     fetchPrice();
-
-    // Atualiza o preço a cada 15 segundos
-    const interval = setInterval(fetchPrice, 15000);
-    return () => clearInterval(interval);
   }, []);
 
   return price;

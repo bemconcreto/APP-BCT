@@ -22,11 +22,11 @@ export function Navbar() {
   const { user, signOut } = useAuthContext()
 
   const navigation = [
-    { name: 'Dashboard', href: '/dashboard', icon: Home },
+    { name: 'Início', href: '/início', icon: Home },
     { name: 'Imóveis', href: '/imoveis', icon: Building2 },
     { name: 'Comprar', href: '/comprar', icon: ShoppingCart },
     { name: 'Vender', href: '/vender', icon: TrendingUp },
-    { name: 'Histórico', href: '/transacoes', icon: History },
+    { name: 'Extrato', href: '/extrato', icon: History },
   ]
 
   return (

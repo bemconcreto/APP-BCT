@@ -68,14 +68,17 @@ export function Navbar() {
                   <span className="text-sm">{user.email}</span>
                 </div>
                 <Button
-                  onClick={signOut}
-                  variant="outline"
-                  size="sm"
-                  className="border-[#12B76A] text-[#12B76A] hover:bg-[#12B76A] hover:text-white"
-                >
-                  <LogOut className="w-4 h-4 mr-1" />
-                  Sair
-                </Button>
+  onClick={async () => {
+    await signOut();
+    window.location.href = "https://app-bct.vercel.app/";
+  }}
+  variant="outline"
+  size="sm"
+  className="border-[#12B76A] text-[#12B76A] hover:bg-[#12B76A] hover:text-white"
+>
+  <LogOut className="w-4 h-4 mr-1" />
+  Sair
+</Button>
               </div>
             ) : (
               <div className="flex items-center space-x-4">
@@ -137,15 +140,16 @@ export function Navbar() {
                   {user.email}
                 </div>
                 <button
-                  onClick={() => {
-                    signOut()
-                    setIsMenuOpen(false)
-                  }}
-                  className="text-[#F3F4F6] hover:text-[#12B76A] block px-3 py-2 rounded-md text-base font-medium flex items-center space-x-2 w-full text-left"
-                >
-                  <LogOut className="w-5 h-5" />
-                  <span>Sair</span>
-                </button>
+  onClick={async () => {
+    await signOut();
+    setIsMenuOpen(false);
+    window.location.href = "https://app-bct.vercel.app/";
+  }}
+  className="text-[#F3F4F6] hover:text-[#12B76A] block px-3 py-2 rounded-md text-base font-medium flex items-center space-x-2 w-full text-left"
+>
+  <LogOut className="w-5 h-5" />
+  <span>Sair</span>
+</button>
               </div>
             ) : (
               <div className="pt-4 border-t border-[#12B76A]/20 space-y-2">

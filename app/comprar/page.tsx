@@ -1,46 +1,50 @@
-"use client";
+import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
+import { ethers } from "ethers";
 
-import { useState, useEffect } from "react";
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE!
+);
 
-export default function ComprarPage() {
-  const [price, setPrice] = useState<number | null>(null);
-  const [usdBrl, setUsdBrl] = useState<number | null>(null);
-  const [amountBRL, setAmountBRL] = useState(50);
+const BCT_ADDRESS = "0xaf2bccf3fb32f0fdeda650f6feff4cb9f3fb8098";
 
-  useEffect(() => {
-    fetch("/api/price").then(r => r.json()).then(j => setPrice(j.priceUSD));
-    fetch("https://api.exchangerate.host/latest?base=USD&symbols=BRL")
-      .then(r => r.json())
-      .then(j => setUsdBrl(j.rates.BRL));
-  }, []);
+const ABI = [
+  "function mint(address to, uint256 amount) external",
+];
 
-  const valorBCT = ((amountBRL / (price || 0.5)) / (usdBrl || 5.3)).toFixed(2);
+export async function POST(req: Request) {
+  try {
+    const body = await req.json();
+    const { userWallet, amountTokens, paymentType } = body;
 
-  return (
-    <main className="p-6 bg-gray-50 min-h-screen">
-      <h1 className="text-2xl font-bold text-green-700 mb-4">Comprar BCT</h1>
-      <p className="text-gray-600 mb-6">
-        Cotação atual: <b>{price ? `$${price.toFixed(3)}` : "Carregando..."}</b> | USD/BRL:{" "}
-        <b>{usdBrl ? `R$${usdBrl.toFixed(2)}` : "Carregando..."}</b>
-      </p>
+    if (!userWallet || !amountTokens) {
+      return NextResponse.json({ error: "Dados incompletos" }, { status: 400 });
+    }
 
-      <div className="bg-white shadow rounded-lg p-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Valor em reais (R$)
-        </label>
-        <input
-          type="number"
-          value={amountBRL}
-          onChange={e => setAmountBRL(Number(e.target.value))}
-          className="border w-full rounded-md p-2 mb-4"
-        />
-        <p className="text-sm text-gray-600 mb-4">
-          Você receberá aproximadamente <b>{valorBCT}</b> BCT
-        </p>
-        <button className="bg-green-600 text-white px-4 py-2 rounded-md w-full font-semibold">
-          Comprar com Cartão 💳
-        </button>
-      </div>
-    </main>
-  );
+    // REGISTRA A COMPRA NO BANCO
+    const { data, error } = await supabase
+      .from("bct_compras")
+      .insert({
+        carteira_usuario: userWallet,
+        quantidade: amountTokens,
+        metodo: paymentType,
+        status: "pendente",
+      })
+      .select()
+      .single();
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      compraId: data.id,
+      message: "Compra registrada. Aguardando pagamento.",
+    });
+
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
 }

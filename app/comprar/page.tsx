@@ -5,15 +5,13 @@ import Link from "next/link";
 
 export default function ComprarPage() {
   const [amountBRL, setAmountBRL] = useState("");
-  const [tokenPriceUSD] = useState(0.4482); // preço fixo USD
-  const [usdToBrl] = useState(5.3); // câmbio fixo BRL
+  const [tokenPriceUSD] = useState(0.4482);
+  const [usdToBrl] = useState(5.3);
   const [loading, setLoading] = useState(false);
 
-  // BRL -> USD
+  // conversões
   const amountUSD = amountBRL ? Number(amountBRL) / usdToBrl : 0;
-  // Tokens = USD available / price (USD per token)
   const tokens = amountUSD ? amountUSD / tokenPriceUSD : 0;
-  // preço do token em BRL (apenas informativo)
   const priceBRL = tokenPriceUSD * usdToBrl;
 
   // -----------------------------
@@ -25,11 +23,21 @@ export default function ComprarPage() {
       return;
     }
 
+    const token = localStorage.getItem("sb-access-token");
+    if (!token) {
+      alert("Você precisa estar logado para comprar.");
+      return;
+    }
+
     setLoading(true);
 
     try {
       const res = await fetch("/api/pix/novo", {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
           amountBRL: Number(amountBRL),
           tokens,
@@ -42,9 +50,9 @@ export default function ComprarPage() {
         return;
       }
 
-      // redireciona para página do PIX
       window.location.href = `/comprar/pix?pedido=${data.id}`;
     } catch (e) {
+      console.error(e);
       alert("Erro inesperado");
     }
 
@@ -60,11 +68,21 @@ export default function ComprarPage() {
       return;
     }
 
+    const token = localStorage.getItem("sb-access-token");
+    if (!token) {
+      alert("Você precisa estar logado para comprar.");
+      return;
+    }
+
     setLoading(true);
 
     try {
       const res = await fetch("/api/transak/novo", {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
           amountBRL: Number(amountBRL),
           tokens,
@@ -78,7 +96,6 @@ export default function ComprarPage() {
         return;
       }
 
-      // abre link da transak
       window.location.href = data.url;
     } catch (e) {
       alert("Erro inesperado");
@@ -121,7 +138,10 @@ export default function ComprarPage() {
             Preço em BRL (por token): R$ {priceBRL.toFixed(4)}
           </p>
           <p className="text-gray-800 mt-1 text-lg font-semibold">
-            Você receberá: <span className="text-green-800">{tokens.toFixed(6)} BCT</span>
+            Você receberá:{" "}
+            <span className="text-green-800">
+              {tokens.toFixed(6)} BCT
+            </span>
           </p>
 
           <p className="text-sm text-gray-600 mt-2">

@@ -1,28 +1,38 @@
 import { NextResponse } from "next/server";
 
-// Preço base do BCT (você pode alterar)
-const BASE_PRICE_USD = 0.50;
+const BASE_PRICE_USD = 0.50; // valor base provisório
 
 export async function GET() {
   try {
-    // Gera variação leve automática: +3% / -3%
+    // Buscar dólar comercial
+    const fx = await fetch("https://economia.awesomeapi.com.br/json/last/USD-BRL", {
+      cache: "no-store",
+    });
+
+    const fxJson = await fx.json();
+
+    if (!fxJson?.USDBRL?.bid) {
+      throw new Error("Erro ao buscar USD-BRL");
+    }
+
+    const usdBRL = parseFloat(fxJson.USDBRL.bid);
+
+    // Simulação de variação (provisória)
     const variation = (Math.random() * 6 - 3) / 100;
     const priceUSD = BASE_PRICE_USD * (1 + variation);
-
-    // Buscar dólar comercial atualizado
-    const usdAPI = await fetch("https://economia.awesomeapi.com.br/json/last/USD-BRL");
-    const usdJson = await usdAPI.json();
-    const usdBRL = parseFloat(usdJson.USDBRL.bid);
-
     const priceBRL = priceUSD * usdBRL;
 
     return NextResponse.json({
-      usd: priceUSD,
-      brl: priceBRL,
-      variation24h: variation * 100,
+      usd: Number(priceUSD.toFixed(6)),
+      brl: Number(priceBRL.toFixed(6)),
+      variation24h: Number((variation * 100).toFixed(2)),
     });
-  } catch (e) {
-    console.error("Erro ao gerar preço mock:", e);
-    return NextResponse.json({ usd: null, brl: null, variation24h: 0 });
+
+  } catch (error) {
+    console.error("Erro na API:", error);
+    return NextResponse.json(
+      { usd: null, brl: null, variation24h: 0 },
+      { status: 500 }
+    );
   }
 }

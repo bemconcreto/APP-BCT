@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import useBCTPrice from "@/hooks/useBCTPrice";
+import { useBCTPrice } from "@/hooks/useBCTPrice"; // ✔️ CORRETO
 
 // Função para buscar o dólar comercial
 async function fetchUSD() {

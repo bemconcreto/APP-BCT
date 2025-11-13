@@ -4,15 +4,14 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
 
-    if (!body.valor || !body.uid) {
-      return NextResponse.json({ error: "Dados incompletos" }, { status: 400 });
+    if (!body.uid || !body.quantidade) {
+      return NextResponse.json({ error: "Dados insuficientes" }, { status: 400 });
     }
 
     return NextResponse.json({
-      message: "PIX criado com sucesso",
-      txid: "PIX-TXID-" + Date.now(),
-      valor: body.valor,
-      uid: body.uid
+      message: "Tokens aprovados e liberados",
+      uid: body.uid,
+      quantidade: body.quantidade
     });
 
   } catch (err: any) {

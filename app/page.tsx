@@ -21,7 +21,7 @@ export default function Home() {
 
   useEffect(() => {
     if (!loading && user) {
-      router.push('/início')
+      router.push('/inicio')
     }
   }, [user, loading, router])
 

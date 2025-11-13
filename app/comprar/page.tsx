@@ -9,8 +9,12 @@ export default function ComprarPage() {
   const [usdToBrl] = useState(5.3); // câmbio fixo BRL
   const [loading, setLoading] = useState(false);
 
+  // BRL -> USD
+  const amountUSD = amountBRL ? Number(amountBRL) / usdToBrl : 0;
+  // Tokens = USD available / price (USD per token)
+  const tokens = amountUSD ? amountUSD / tokenPriceUSD : 0;
+  // preço do token em BRL (apenas informativo)
   const priceBRL = tokenPriceUSD * usdToBrl;
-  const tokens = amountBRL ? Number(amountBRL) / priceBRL : 0;
 
   // -----------------------------
   //  PIX
@@ -114,10 +118,14 @@ export default function ComprarPage() {
             Dólar: <strong>R$ {usdToBrl.toFixed(2)}</strong>
           </p>
           <p className="text-gray-800 mt-2 text-lg font-semibold">
-            Preço em BRL: R$ {priceBRL.toFixed(4)}
+            Preço em BRL (por token): R$ {priceBRL.toFixed(4)}
           </p>
           <p className="text-gray-800 mt-1 text-lg font-semibold">
-            Você receberá: <span className="text-green-800">{tokens.toFixed(4)} BCT</span>
+            Você receberá: <span className="text-green-800">{tokens.toFixed(6)} BCT</span>
+          </p>
+
+          <p className="text-sm text-gray-600 mt-2">
+            (Conversão: R$ {amountBRL || "0"} → US$ {amountUSD.toFixed(6)})
           </p>
         </div>
 

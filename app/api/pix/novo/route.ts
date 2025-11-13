@@ -1,26 +1,13 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { cookies } from "next/headers";
 
-// ⚠ Supabase client para rotas server-side (com cookies)
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    {
-      global: {
-        headers: {
-          Authorization: `Bearer ${cookies().get("sb-access-token")?.value ?? ""}`,
-        },
-      },
-    }
-  );
-}
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 export async function POST(req: Request) {
   try {
-    const supabase = getSupabase();
-
     const body = await req.json();
     const { amountBRL, tokens } = body;
 
@@ -31,35 +18,46 @@ export async function POST(req: Request) {
       });
     }
 
-    // 🔍 Busca usuário logado
+    // 🔍 verifica usuário pelo token passado via header Authorization
+    const authHeader = req.headers.get("Authorization") ?? "";
+    const token = authHeader.replace("Bearer ", "").trim();
+
+    if (!token) {
+      return NextResponse.json({
+        success: false,
+        error: "Token não enviado",
+      });
+    }
+
     const {
       data: { user },
-    } = await supabase.auth.getUser();
+      error: userError
+    } = await supabase.auth.getUser(token);
 
-    if (!user) {
+    if (userError || !user) {
       return NextResponse.json({
         success: false,
         error: "Usuário não autenticado",
       });
     }
 
-    // carrega wallet do usuário
-    const userWallet = user?.user_metadata?.wallet ?? null;
+    // 🔗 pega wallet do usuário
+    const userWallet = user.user_metadata?.wallet ?? null;
 
     if (!userWallet) {
       return NextResponse.json({
         success: false,
-        error: "Wallet não encontrada no perfil do usuário",
+        error: "Wallet não encontrada",
       });
     }
 
-    // cria o pedido no Supabase
+    // 💾 cria o pedido
     const { data, error } = await supabase
       .from("payments")
       .insert({
         user_wallet: userWallet,
         amount_brl: amountBRL,
-        tokens: tokens,
+        tokens,
         payment_method: "pix",
         status: "pendente",
       })
@@ -67,7 +65,7 @@ export async function POST(req: Request) {
       .single();
 
     if (error) {
-      console.error("Erro no Supabase:", error);
+      console.error(error);
       return NextResponse.json({
         success: false,
         error: "Erro ao salvar no banco",
@@ -78,9 +76,8 @@ export async function POST(req: Request) {
       success: true,
       id: data.id,
     });
-
   } catch (e) {
-    console.error("Erro interno:", e);
+    console.error(e);
     return NextResponse.json({
       success: false,
       error: "Erro interno",

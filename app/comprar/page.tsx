@@ -1,5 +1,16 @@
 "use client";
 
+function getSupabaseToken() {
+  try {
+    const raw = localStorage.getItem("supabase.auth.token");
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return parsed.currentSession?.access_token || null;
+  } catch {
+    return null;
+  }
+}
+
 import { useState } from "react";
 import Link from "next/link";
 
@@ -23,7 +34,7 @@ export default function ComprarPage() {
       return;
     }
 
-    const token = localStorage.getItem("sb-access-token");
+    const token = getSupabaseToken();
     if (!token) {
       alert("Você precisa estar logado para comprar.");
       return;
@@ -68,7 +79,7 @@ export default function ComprarPage() {
       return;
     }
 
-    const token = localStorage.getItem("sb-access-token");
+    const token = getSupabaseToken();
     if (!token) {
       alert("Você precisa estar logado para comprar.");
       return;

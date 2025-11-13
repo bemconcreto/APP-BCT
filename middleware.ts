@@ -1,35 +1,29 @@
-// middleware.ts  (colocar na raiz do projeto)
+// middleware.ts
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+
+const PUBLIC_PREFIXES = [
+  "/",
+  "/login",
+  "/cadastro",
+  "/favicon",
+  "/_next",
+  "/api",
+  "/static",
+  "/assets",
+];
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // caminhos públicos — ajuste se precisar adicionar/remover rotas públicas
-  const PUBLIC_PATHS = [
-    "/",
-    "/login",
-    "/cadastro",
-    "/favicon.ico",
-  ];
-
-  // permitir tudo do _next, assets e api sem checar auth
-  if (
-    pathname.startsWith("/_next") ||
-    pathname.startsWith("/api") ||
-    pathname.startsWith("/public") ||
-    pathname.startsWith("/static") ||
-    pathname.startsWith("/favicon.ico")
-  ) {
-    return NextResponse.next();
+  // --- PERMITIR CAMINHOS PÚBLICOS E PREFIXOS ---------
+  for (const pub of PUBLIC_PREFIXES) {
+    if (pathname === pub || pathname.startsWith(pub + "/")) {
+      return NextResponse.next();
+    }
   }
 
-  // permitir caminhos explicitamente públicos
-  if (PUBLIC_PATHS.includes(pathname)) {
-    return NextResponse.next();
-  }
-
-  // Nomes de cookie comuns do Supabase / helpers — ajuste se você usa outros
+  // --- CHECAR COOKIES DE SESSÃO SUPABASE ------------
   const cookieNamesToCheck = [
     "sb-access-token",
     "sb-refresh-token",
@@ -37,42 +31,30 @@ export function middleware(req: NextRequest) {
     "supabase-auth-token",
   ];
 
-  let hasSession = false;
-  for (const name of cookieNamesToCheck) {
+  const hasSession = cookieNamesToCheck.some((name) => {
     const c = req.cookies.get(name);
-    if (c && c.value && c.value.length > 0) {
-      hasSession = true;
-      break;
-    }
-  }
+    return c && c.value && c.value.length > 0;
+  });
 
   if (!hasSession) {
-    // não autenticado -> redireciona para / (página pública)
+    // não autenticado → manda para /
     const url = req.nextUrl.clone();
     url.pathname = "/";
-    // opcional: informa de onde veio para o login redirecionar de volta
-    url.search = `redirectedFrom=${encodeURIComponent(req.nextUrl.pathname)}`;
+    url.search = `redirectedFrom=${encodeURIComponent(pathname)}`;
     return NextResponse.redirect(url);
   }
 
   return NextResponse.next();
 }
 
-// Configura quais rotas o middleware aplica — protege as rotas da APP que você listou
+// --- ROTAS PROTEGIDAS ---------------------------------
 export const config = {
-  // protege as rotas do painel (ajuste se tiver mais caminhos a proteger)
   matcher: [
-    "/inicio",
     "/inicio/:path*",
-    "/comprar",
     "/comprar/:path*",
-    "/vender",
     "/vender/:path*",
-    "/imoveis",
     "/imoveis/:path*",
-    "/extrato",
     "/extrato/:path*",
-    "/perfil",
     "/perfil/:path*",
   ],
 };

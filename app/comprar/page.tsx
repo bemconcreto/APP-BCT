@@ -1,50 +1,37 @@
-import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-import { ethers } from "ethers";
+"use client";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE!
-);
+import Link from "next/link";
 
-const BCT_ADDRESS = "0xaf2bccf3fb32f0fdeda650f6feff4cb9f3fb8098";
+export default function ComprarPage() {
+  return (
+    <div className="min-h-screen bg-gray-100 p-8">
+      <div className="max-w-3xl mx-auto bg-white rounded-xl shadow-md p-8">
+        <h1 className="text-3xl font-bold text-center mb-6 text-gray-800">
+          Comprar BCT
+        </h1>
 
-const ABI = [
-  "function mint(address to, uint256 amount) external",
-];
+        <p className="text-gray-600 text-center mb-8">
+          Escolha a forma de pagamento para adquirir seus tokens.
+        </p>
 
-export async function POST(req: Request) {
-  try {
-    const body = await req.json();
-    const { userWallet, amountTokens, paymentType } = body;
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
 
-    if (!userWallet || !amountTokens) {
-      return NextResponse.json({ error: "Dados incompletos" }, { status: 400 });
-    }
+          <Link href="/comprar/transak">
+            <div className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg p-6 cursor-pointer text-center">
+              <h2 className="text-xl font-semibold">Cartão (Transak)</h2>
+              <p className="mt-2 text-sm text-blue-100">Compra instantânea</p>
+            </div>
+          </Link>
 
-    // REGISTRA A COMPRA NO BANCO
-    const { data, error } = await supabase
-      .from("bct_compras")
-      .insert({
-        carteira_usuario: userWallet,
-        quantidade: amountTokens,
-        metodo: paymentType,
-        status: "pendente",
-      })
-      .select()
-      .single();
+          <Link href="/comprar/pix">
+            <div className="bg-green-600 hover:bg-green-700 text-white rounded-lg p-6 cursor-pointer text-center">
+              <h2 className="text-xl font-semibold">PIX</h2>
+              <p className="mt-2 text-sm text-green-100">Pagamento por Pix</p>
+            </div>
+          </Link>
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    return NextResponse.json({
-      success: true,
-      compraId: data.id,
-      message: "Compra registrada. Aguardando pagamento.",
-    });
-
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
-  }
+        </div>
+      </div>
+    </div>
+  );
 }

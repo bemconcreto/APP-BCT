@@ -1,22 +1,17 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
-    "./src/**/*.{js,ts,jsx,tsx}",
     "./app/**/*.{js,ts,jsx,tsx}",
     "./components/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
     extend: {
       colors: {
-        primary: '#6B4A3E',
-        secondary: '#BFA89C',
-        dark: '#0D0F11',
-        light: '#F2F2F2',
-        accent: '#12B76A',
-        muted: '#A0A0A0',
-      },
-      fontFamily: {
-        sans: ['Inter', 'sans-serif'],
+        bc_dark: "#101820",      // fundo premium
+        bc_brown: "#56423b",     // marrom principal
+        bc_brown2: "#4c3b34",    // marrom secundário
+        bc_beige: "#e8e3dd",     // fundo claro elegante
+        bc_white: "#ffffff",
       },
     },
   },

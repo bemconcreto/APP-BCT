@@ -2,52 +2,51 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@supabase/supabase-js";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+// IMPORTA O WEB3AUTH (MESMO DO CADASTRO)
+import { web3auth } from "@/lib/web3authClient"; // <- mesmo arquivo usado no cadastro
 
 export default function LoginPage() {
   const router = useRouter();
+
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // ------------------------------------
-  // LOGIN COM EMAIL + SENHA
-  // ------------------------------------
-  async function handleLogin(e: React.FormEvent) {
+  // --- LOGIN SIMPLES COM EMAIL/SENHA (TEMPORÁRIO)
+  const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password: senha,
-    });
-
-    if (error) {
-      alert("Erro ao entrar: " + error.message);
-      setLoading(false);
-      return;
+    if (email && senha) {
+      router.push("/inicio");
+    } else {
+      alert("Por favor, preencha todos os campos");
     }
+  };
 
-    router.push("/inicio");
+  // --- LOGIN COM GOOGLE
+  async function loginGoogle() {
+    try {
+      setLoading(true);
+      await web3auth.connectTo("google"); // mesmo do cadastro
+      router.push("/inicio");
+    } catch (e) {
+      alert("Erro ao entrar com Google");
+      console.error(e);
+    }
+    setLoading(false);
   }
 
-  // ------------------------------------
-  // LOGIN COM GOOGLE
-  // ------------------------------------
-  async function loginGoogle() {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: `${window.location.origin}/inicio`
-      }
-    });
-
-    if (error) alert("Erro ao entrar com Google: " + error.message);
+  // --- LOGIN COM WEB3AUTH (WALLET)
+  async function loginWeb3Auth() {
+    try {
+      setLoading(true);
+      await web3auth.connect(); // abre modal wallet/metamask/etc
+      router.push("/inicio");
+    } catch (e) {
+      alert("Erro ao conectar carteira");
+      console.error(e);
+    }
+    setLoading(false);
   }
 
   return (
@@ -57,7 +56,7 @@ export default function LoginPage() {
         className="bg-white p-8 rounded-lg shadow-md w-full max-w-sm"
       >
         <h1 className="text-2xl font-semibold mb-6 text-center text-gray-800">
-          Entrar na sua conta
+          Entrar
         </h1>
 
         {/* EMAIL */}
@@ -88,22 +87,44 @@ export default function LoginPage() {
         </button>
 
         {/* DIVISOR */}
-        <div className="my-6 text-center text-gray-500 text-sm">ou</div>
+        <div className="my-6 text-center text-gray-500 text-sm">
+          ou
+        </div>
 
-        {/* LOGIN GOOGLE */}
+        {/* BOTÃO GOOGLE */}
         <button
           type="button"
           onClick={loginGoogle}
+          disabled={loading}
           className="w-full flex items-center justify-center gap-3 border p-3 rounded-lg hover:bg-gray-100 transition"
         >
           <img
-            src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg"
-            className="w-5 h-5"
+            src="https://www.svgrepo.com/show/475656/google-color.svg"
+            className="w-6 h-6"
+            alt="Google"
           />
           Entrar com Google
         </button>
 
-        <p className="mt-4 text-center text-sm text-gray-600">
+        {/* ESPAÇO */}
+        <div className="h-3" />
+
+        {/* BOTÃO WEB3AUTH */}
+        <button
+          type="button"
+          onClick={loginWeb3Auth}
+          disabled={loading}
+          className="w-full flex items-center justify-center gap-3 border p-3 rounded-lg hover:bg-gray-100 transition"
+        >
+          <img
+            src="https://www.svgrepo.com/show/508686/wallet.svg"
+            className="w-6 h-6"
+            alt="Wallet"
+          />
+          Entrar com Web3Auth
+        </button>
+
+        <p className="mt-6 text-center text-sm text-gray-600">
           Ainda não tem conta?{" "}
           <a href="/cadastro" className="text-blue-600 font-medium hover:underline">
             Cadastre-se

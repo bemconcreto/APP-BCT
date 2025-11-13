@@ -1,1 +1,0 @@
-# Pasta principal do App

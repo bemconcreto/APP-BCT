@@ -1,53 +1,27 @@
 import { NextResponse } from "next/server";
 
-const BASE_PRICE_USD = 0.50;
-
 export async function GET() {
   try {
-    // Buscar cotação USD/BRL
-    const fx = await fetch("https://economia.awesomeapi.com.br/json/last/USD-BRL", {
-      cache: "no-store"
-    });
+    // Preço fixo definido por você
+    const priceUSD = 0.4482;
 
-    if (!fx.ok) {
-      console.warn("Erro ao buscar dólar, usando fallback");
-      return NextResponse.json({
-        usd: BASE_PRICE_USD,
-        brl: BASE_PRICE_USD * 5, // fallback
-        variation24h: 0
-      });
-    }
+    // Conversão fixa com USD = R$5.30
+    const usdToBrl = 5.30;
 
-    const json = await fx.json();
+    const priceBRL = priceUSD * usdToBrl;
 
-    if (!json?.USDBRL?.bid) {
-      console.warn("Resposta inválida da API, usando fallback");
-      return NextResponse.json({
-        usd: BASE_PRICE_USD,
-        brl: BASE_PRICE_USD * 5,
-        variation24h: 0
-      });
-    }
-
-    const usd = BASE_PRICE_USD;
-    const brl = BASE_PRICE_USD * parseFloat(json.USDBRL.bid);
-
-    // Simular variação (opcional)
-    const variation = (Math.random() * 4 - 2).toFixed(2); // -2% a +2%
+    // Variação pode ser fixa ou simulada — deixei fixa em +0.00%
+    const variation24h = 0;
 
     return NextResponse.json({
-      usd,
-      brl,
-      variation24h: variation
+      usd: priceUSD,
+      brl: priceBRL,
+      variation24h,
     });
-
   } catch (error) {
-    console.error("Erro crítico na API:", error);
-
-    return NextResponse.json({
-      usd: BASE_PRICE_USD,
-      brl: BASE_PRICE_USD * 5,
-      variation24h: 0
-    });
+    return NextResponse.json(
+      { error: "Erro ao calcular preço" },
+      { status: 500 }
+    );
   }
 }

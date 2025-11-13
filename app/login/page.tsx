@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 // IMPORTA O WEB3AUTH (MESMO DO CADASTRO)
-import { web3auth } from "@/lib/web3authClient"; // <- mesmo arquivo usado no cadastro
+import { supabase } from "../../src/lib/supabaseClient"; // <- mesmo arquivo usado no cadastro
 
 export default function LoginPage() {
   const router = useRouter();

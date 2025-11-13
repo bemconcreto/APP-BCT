@@ -16,12 +16,12 @@ export default function InicioPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const response = await fetch("/api/preco-bct");
+      const response = await fetch("/api/preco-bct", { cache: "no-store" });
       const data = await response.json();
 
       setPriceUSD(data.usd);
       setPriceBRL(data.brl);
-      setVariation(data.variation24h);
+      setVariation(Number(data.variation24h));
     } catch (e) {
       console.error("Erro ao carregar preço:", e);
     } finally {
@@ -31,32 +31,34 @@ export default function InicioPage() {
 
   return (
     <div className="min-h-screen bg-gray-100 p-8">
-
       <div className="max-w-5xl mx-auto bg-white rounded-xl shadow-md p-8">
-
         <h1 className="text-3xl font-bold text-center mb-6 text-gray-800">
           Painel Bem Concreto Token
         </h1>
 
-        {/* BLOCO DO PREÇO DO BCT */}
+        {/* BLOCO DO PREÇO */}
         <div className="bg-white shadow-md p-6 rounded-xl text-center border mb-10">
           <h2 className="text-xl font-bold text-[#0C3D2E]">Preço do BCT</h2>
 
           <p className="text-gray-700 text-lg mt-3">
-            USD: {priceUSD ? `$${priceUSD.toFixed(4)}` : "Carregando..."}
+            USD:{" "}
+            {priceUSD !== null ? `$${priceUSD.toFixed(4)}` : "Carregando..."}
           </p>
 
           <p className="text-gray-700 text-lg">
-            BRL: {priceBRL ? `R$ ${priceBRL.toFixed(4)}` : "Carregando..."}
+            BRL:{" "}
+            {priceBRL !== null ? `R$ ${priceBRL.toFixed(4)}` : "Carregando..."}
           </p>
 
-          <p
-            className={`mt-2 text-sm font-semibold ${
-              variation >= 0 ? "text-green-600" : "text-red-600"
-            }`}
-          >
-            {variation >= 0 ? "▲" : "▼"} {variation.toFixed(2)}%
-          </p>
+          {variation !== null && (
+            <p
+              className={`mt-2 text-sm font-semibold ${
+                variation >= 0 ? "text-green-600" : "text-red-600"
+              }`}
+            >
+              {variation >= 0 ? "▲" : "▼"} {variation.toFixed(2)}%
+            </p>
+          )}
 
           <button
             onClick={loadData}
@@ -66,7 +68,7 @@ export default function InicioPage() {
           </button>
         </div>
 
-        {/* BOTÕES DO PAINEL */}
+        {/* MENU */}
         <p className="text-center text-gray-600 mb-8">
           Selecione uma das opções abaixo para gerenciar seus investimentos.
         </p>

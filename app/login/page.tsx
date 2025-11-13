@@ -2,52 +2,126 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-
-// IMPORTA O WEB3AUTH (MESMO DO CADASTRO)
-import { supabase } from "../../src/lib/supabaseClient"; // <- mesmo arquivo usado no cadastro
+import { supabase } from "../../src/lib/supabaseClient";
 
 export default function LoginPage() {
   const router = useRouter();
-
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
-  const [loading, setLoading] = useState(false);
 
-  // --- LOGIN SIMPLES COM EMAIL/SENHA (TEMPORÁRIO)
-  const handleLogin = (e: React.FormEvent) => {
+  // -------------------------------------------------------
+  // LOGIN TRADICIONAL
+  // -------------------------------------------------------
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email && senha) {
-      router.push("/inicio");
-    } else {
-      alert("Por favor, preencha todos os campos");
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password: senha,
+    });
+
+    if (error) {
+      alert("E-mail ou senha incorretos");
+      return;
     }
+
+    router.push("/inicio");
   };
 
-  // --- LOGIN COM GOOGLE
-  async function loginGoogle() {
-    try {
-      setLoading(true);
-      await web3auth.connectTo("google"); // mesmo do cadastro
-      router.push("/inicio");
-    } catch (e) {
-      alert("Erro ao entrar com Google");
-      console.error(e);
-    }
-    setLoading(false);
+  // -------------------------------------------------------
+  // LOGIN GOOGLE
+  // -------------------------------------------------------
+  async function handleGoogleLogin() {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: "https://app-bct.vercel.app/inicio" },
+    });
+    if (error) alert("Erro ao entrar com Google: " + error.message);
   }
 
-  // --- LOGIN COM WEB3AUTH (WALLET)
-  async function loginWeb3Auth() {
+  // -------------------------------------------------------
+  // LOGIN WEB3AUTH  (MESMO CÓDIGO DO CADASTRO)
+  // -------------------------------------------------------
+  async function handleWeb3AuthLogin() {
     try {
-      setLoading(true);
-      await web3auth.connect(); // abre modal wallet/metamask/etc
-      router.push("/inicio");
-    } catch (e) {
-      alert("Erro ao conectar carteira");
-      console.error(e);
+      if (typeof window === "undefined") {
+        alert("Web3Auth só funciona no navegador.");
+        return;
+      }
+
+      // imports dinâmicos (iguais ao cadastro)
+      const { Web3Auth } = await import("@web3auth/modal");
+      const { OpenloginAdapter } = await import("@web3auth/openlogin-adapter");
+      const { CHAIN_NAMESPACES } = await import("@web3auth/base");
+      const { EthereumPrivateKeyProvider } = await import("@web3auth/ethereum-provider");
+
+      const clientId = process.env.NEXT_PUBLIC_WEB3AUTH_CLIENT_ID;
+      if (!clientId) {
+        alert("Erro: Client ID do Web3Auth não encontrado.");
+        return;
+      }
+
+      const privateKeyProvider = new EthereumPrivateKeyProvider({
+        config: {
+          chainConfig: {
+            chainNamespace: CHAIN_NAMESPACES.EIP155,
+            chainId: "0x89",
+            rpcTarget: "https://polygon-rpc.com",
+            displayName: "Polygon Mainnet",
+            ticker: "MATIC",
+            tickerName: "Polygon",
+          },
+        },
+      });
+
+      const web3auth = new Web3Auth({
+        clientId,
+        web3AuthNetwork: "sapphire_mainnet",
+        privateKeyProvider,
+      });
+
+      const openloginAdapter = new OpenloginAdapter({
+        adapterSettings: {
+          network: "sapphire_mainnet",
+          uxMode: "popup",
+        },
+      });
+
+      web3auth.configureAdapter(openloginAdapter);
+      await web3auth.initModal();
+
+      const provider = await web3auth.connect();
+      if (!provider) {
+        alert("Não foi possível conectar ao Web3Auth.");
+        return;
+      }
+
+      const userInfo = await web3auth.getUserInfo();
+      localStorage.setItem("web3auth_user", JSON.stringify(userInfo));
+
+      const email = userInfo?.email ?? `user-${Date.now()}@web3auth.io`;
+      const password = crypto.randomUUID();
+
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (signInError) {
+        const { error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+        });
+        if (signUpError) throw signUpError;
+      }
+
+      window.location.href = "https://app-bct.vercel.app/inicio";
+    } catch (err: any) {
+      alert("Erro ao conectar com Web3Auth: " + (err?.message ?? String(err)));
     }
-    setLoading(false);
   }
+
+  // -------------------------------------------------------
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -59,72 +133,48 @@ export default function LoginPage() {
           Entrar
         </h1>
 
-        {/* EMAIL */}
+        {/* LOGIN TRADICIONAL */}
         <input
           type="email"
           placeholder="E-mail"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="w-full mb-4 p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full mb-4 p-3 border rounded-lg"
         />
-
-        {/* SENHA */}
         <input
           type="password"
           placeholder="Senha"
           value={senha}
           onChange={(e) => setSenha(e.target.value)}
-          className="w-full mb-6 p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full mb-6 p-3 border rounded-lg"
         />
 
-        {/* BOTÃO ENTRAR */}
         <button
           type="submit"
-          disabled={loading}
           className="w-full bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transition"
         >
           Entrar
         </button>
 
-        {/* DIVISOR */}
-        <div className="my-6 text-center text-gray-500 text-sm">
-          ou
-        </div>
-
-        {/* BOTÃO GOOGLE */}
+        {/* GOOGLE */}
         <button
           type="button"
-          onClick={loginGoogle}
-          disabled={loading}
-          className="w-full flex items-center justify-center gap-3 border p-3 rounded-lg hover:bg-gray-100 transition"
+          onClick={handleGoogleLogin}
+          className="w-full bg-green-600 hover:bg-green-700 text-white p-3 rounded-lg mt-4 transition"
         >
-          <img
-            src="https://www.svgrepo.com/show/475656/google-color.svg"
-            className="w-6 h-6"
-            alt="Google"
-          />
           Entrar com Google
         </button>
 
-        {/* ESPAÇO */}
-        <div className="h-3" />
-
-        {/* BOTÃO WEB3AUTH */}
+        {/* WEB3AUTH */}
         <button
           type="button"
-          onClick={loginWeb3Auth}
-          disabled={loading}
-          className="w-full flex items-center justify-center gap-3 border p-3 rounded-lg hover:bg-gray-100 transition"
+          onClick={handleWeb3AuthLogin}
+          className="w-full bg-indigo-600 hover:bg-indigo-700 text-white p-3 rounded-lg mt-3 transition"
         >
-          <img
-            src="https://www.svgrepo.com/show/508686/wallet.svg"
-            className="w-6 h-6"
-            alt="Wallet"
-          />
           Entrar com Web3Auth
         </button>
 
-        <p className="mt-6 text-center text-sm text-gray-600">
+        <p className="mt-4 text-center text-sm text-gray-600">
           Ainda não tem conta?{" "}
           <a href="/cadastro" className="text-blue-600 font-medium hover:underline">
             Cadastre-se

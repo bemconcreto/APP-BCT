@@ -6,14 +6,17 @@ export async function POST(req: Request) {
     const { amountBRL, tokens } = body;
 
     if (!amountBRL || !tokens) {
-      return NextResponse.json({ success: false, error: "Dados inválidos." });
+      return NextResponse.json({ success: false, error: "Dados inválidos" });
     }
 
+    // redireciona o usuário para a Transak
     return NextResponse.json({
       success: true,
       url: "https://global.transak.com",
     });
-  } catch (err) {
-    return NextResponse.json({ success: false, error: "Erro interno." });
+
+  } catch (e) {
+    console.error(e);
+    return NextResponse.json({ success: false, error: "Erro interno" });
   }
 }

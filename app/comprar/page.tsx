@@ -1,24 +1,30 @@
 "use client";
 
-function getSupabaseToken() {
-  try {
-    const raw = localStorage.getItem("supabase.auth.token");
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    return parsed.currentSession?.access_token || null;
-  } catch {
-    return null;
-  }
-}
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { supabase } from "../../src/lib/supabaseClient";
+
+// Função correta para pegar a sessão atual
+async function getUserSession() {
+  const { data } = await supabase.auth.getSession();
+  return data.session;
+}
 
 export default function ComprarPage() {
   const [amountBRL, setAmountBRL] = useState("");
   const [tokenPriceUSD] = useState(0.4482);
   const [usdToBrl] = useState(5.3);
   const [loading, setLoading] = useState(false);
+  const [session, setSession] = useState<any>(null);
+
+  // Carregar sessão ao abrir a página
+  useEffect(() => {
+    async function loadSession() {
+      const s = await getUserSession();
+      setSession(s);
+    }
+    loadSession();
+  }, []);
 
   // conversões
   const amountUSD = amountBRL ? Number(amountBRL) / usdToBrl : 0;
@@ -34,11 +40,12 @@ export default function ComprarPage() {
       return;
     }
 
-    const token = getSupabaseToken();
-    if (!token) {
+    if (!session) {
       alert("Você precisa estar logado para comprar.");
       return;
     }
+
+    const accessToken = session.access_token;
 
     setLoading(true);
 
@@ -47,7 +54,7 @@ export default function ComprarPage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
           amountBRL: Number(amountBRL),
@@ -56,6 +63,7 @@ export default function ComprarPage() {
       });
 
       const data = await res.json();
+
       if (!data.success) {
         alert("Erro ao gerar PIX");
         return;
@@ -79,11 +87,12 @@ export default function ComprarPage() {
       return;
     }
 
-    const token = getSupabaseToken();
-    if (!token) {
+    if (!session) {
       alert("Você precisa estar logado para comprar.");
       return;
     }
+
+    const accessToken = session.access_token;
 
     setLoading(true);
 
@@ -92,7 +101,7 @@ export default function ComprarPage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
           amountBRL: Number(amountBRL),
@@ -109,6 +118,7 @@ export default function ComprarPage() {
 
       window.location.href = data.url;
     } catch (e) {
+      console.error(e);
       alert("Erro inesperado");
     }
 

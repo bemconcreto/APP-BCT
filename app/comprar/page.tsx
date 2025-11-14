@@ -34,49 +34,49 @@ export default function ComprarPage() {
   // -----------------------------
   //  PIX
   // -----------------------------
-  async function pagarPix() {
-    if (!amountBRL || Number(amountBRL) <= 0) {
-      alert("Digite um valor válido.");
-      return;
-    }
-
-    if (!session) {
-      alert("Você precisa estar logado para comprar.");
-      return;
-    }
-
-    const accessToken = session.access_token;
-
-    setLoading(true);
-
-    try {
-      const res = await fetch("/api/pix/novo", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({
-          amountBRL: Number(amountBRL),
-          tokens,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!data.success) {
-        alert("Erro ao gerar PIX");
-        return;
-      }
-
-      window.location.href = `/comprar/pix?pedido=${data.id}`;
-    } catch (e) {
-      console.error(e);
-      alert("Erro inesperado");
-    }
-
-    setLoading(false);
+async function pagarPix() {
+  if (!amountBRL || Number(amountBRL) <= 0) {
+    alert("Digite um valor válido.");
+    return;
   }
+
+  const token = getSupabaseToken();
+  if (!token) {
+    alert("Você precisa estar logado para comprar.");
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    const res = await fetch("/api/pix/novo", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        amountBRL: Number(amountBRL),
+        tokens: Number(tokens.toFixed(6)),
+      }),
+    });
+
+    const data = await res.json();
+    console.log("RESPOSTA DA API PIX:", data);
+
+    if (data.success !== true) {
+      alert("Erro ao gerar PIX: " + (data.error || "Erro desconhecido"));
+      return;
+    }
+
+    window.location.href = `/comprar/pix?pedido=${data.id}`;
+  } catch (e) {
+    console.error("ERRO PIX:", e);
+    alert("Erro inesperado");
+  }
+
+  setLoading(false);
+}
 
   // -----------------------------
   //  CARTÃO / TRANSAK

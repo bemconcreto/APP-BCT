@@ -4,7 +4,23 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { supabase } from "../../src/lib/supabaseClient";
 
-// Função correta para pegar a sessão atual
+// ------------------------------
+// Função correta: pegar token salvo pelo Supabase
+// ------------------------------
+function getSupabaseToken() {
+  try {
+    const raw = localStorage.getItem("supabase.auth.token");
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return parsed.currentSession?.access_token ?? null;
+  } catch {
+    return null;
+  }
+}
+
+// ------------------------------
+// Buscar sessão atual direto do Supabase
+// ------------------------------
 async function getUserSession() {
   const { data } = await supabase.auth.getSession();
   return data.session;
@@ -17,7 +33,6 @@ export default function ComprarPage() {
   const [loading, setLoading] = useState(false);
   const [session, setSession] = useState<any>(null);
 
-  // Carregar sessão ao abrir a página
   useEffect(() => {
     async function loadSession() {
       const s = await getUserSession();
@@ -26,60 +41,59 @@ export default function ComprarPage() {
     loadSession();
   }, []);
 
-  // conversões
   const amountUSD = amountBRL ? Number(amountBRL) / usdToBrl : 0;
   const tokens = amountUSD ? amountUSD / tokenPriceUSD : 0;
   const priceBRL = tokenPriceUSD * usdToBrl;
 
   // -----------------------------
-  //  PIX
+  //            PIX
   // -----------------------------
-async function pagarPix() {
-  if (!amountBRL || Number(amountBRL) <= 0) {
-    alert("Digite um valor válido.");
-    return;
-  }
-
-  const token = getSupabaseToken();
-  if (!token) {
-    alert("Você precisa estar logado para comprar.");
-    return;
-  }
-
-  setLoading(true);
-
-  try {
-    const res = await fetch("/api/pix/novo", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        amountBRL: Number(amountBRL),
-        tokens: Number(tokens.toFixed(6)),
-      }),
-    });
-
-    const data = await res.json();
-    console.log("RESPOSTA DA API PIX:", data);
-
-    if (data.success !== true) {
-      alert("Erro ao gerar PIX: " + (data.error || "Erro desconhecido"));
+  async function pagarPix() {
+    if (!amountBRL || Number(amountBRL) <= 0) {
+      alert("Digite um valor válido.");
       return;
     }
 
-    window.location.href = `/comprar/pix?pedido=${data.id}`;
-  } catch (e) {
-    console.error("ERRO PIX:", e);
-    alert("Erro inesperado");
+    const token = getSupabaseToken();
+    if (!token) {
+      alert("Você precisa estar logado para comprar.");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const res = await fetch("/api/pix/novo", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          amountBRL: Number(amountBRL),
+          tokens: Number(tokens.toFixed(6)),
+        }),
+      });
+
+      const data = await res.json();
+      console.log("RESPOSTA DA API PIX:", data);
+
+      if (data.success !== true) {
+        alert("Erro ao gerar PIX: " + (data.error || "Erro desconhecido"));
+        return;
+      }
+
+      window.location.href = `/comprar/pix?pedido=${data.id}`;
+    } catch (e) {
+      console.error("ERRO PIX:", e);
+      alert("Erro inesperado");
+    }
+
+    setLoading(false);
   }
 
-  setLoading(false);
-}
-
   // -----------------------------
-  //  CARTÃO / TRANSAK
+  //      CARTÃO / TRANSAK
   // -----------------------------
   async function pagarTransak() {
     if (!amountBRL || Number(amountBRL) <= 0) {
@@ -133,7 +147,6 @@ async function pagarPix() {
           Comprar BCT
         </h1>
 
-        {/* VALOR EM REAIS */}
         <div className="mb-8">
           <label className="block text-gray-700 font-semibold mb-2">
             Valor (em Reais)
@@ -147,7 +160,6 @@ async function pagarPix() {
           />
         </div>
 
-        {/* INFORMAÇÃO DO TOKEN */}
         <div className="bg-gray-50 border rounded-lg p-4 mb-8">
           <p className="text-gray-700">
             Preço do BCT: <strong>US$ {tokenPriceUSD.toFixed(4)}</strong>
@@ -159,10 +171,7 @@ async function pagarPix() {
             Preço em BRL (por token): R$ {priceBRL.toFixed(4)}
           </p>
           <p className="text-gray-800 mt-1 text-lg font-semibold">
-            Você receberá:{" "}
-            <span className="text-green-800">
-              {tokens.toFixed(6)} BCT
-            </span>
+            Você receberá: <span className="text-green-800">{tokens.toFixed(6)} BCT</span>
           </p>
 
           <p className="text-sm text-gray-600 mt-2">
@@ -174,9 +183,7 @@ async function pagarPix() {
           Escolha a forma de pagamento
         </p>
 
-        {/* BOTÕES */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-
           <button
             onClick={pagarTransak}
             disabled={loading}
@@ -194,7 +201,6 @@ async function pagarPix() {
             <h2 className="text-xl font-semibold">PIX</h2>
             <p className="mt-2 text-sm text-green-100">Pagamento manual</p>
           </button>
-
         </div>
 
         <div className="text-center mt-8">

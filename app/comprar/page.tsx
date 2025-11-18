@@ -29,7 +29,7 @@ export default function ComprarPage() {
   const [tokenPriceUSD] = useState(0.4482);
   const [usdToBrl] = useState(5.3);
   const [loading, setLoading] = useState(false);
-  const [session, setSession] = useState(null);
+  const [session, setSession] = useState<any>(null);
 
   useEffect(() => {
     async function load() {

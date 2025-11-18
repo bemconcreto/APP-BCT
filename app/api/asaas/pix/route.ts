@@ -1,62 +1,55 @@
 import { NextResponse } from "next/server";
+import { criarPagamentoAsaas } from "../funcoes/criarPagamento";
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const { amountBRL } = body;
+    const { amountBRL, tokens } = await req.json();
 
-    if (!amountBRL || Number(amountBRL) <= 0) {
-      return NextResponse.json({
-        success: false,
-        error: "Valor inválido",
-      });
+    if (!amountBRL || amountBRL <= 0) {
+      return NextResponse.json(
+        { success: false, error: "Valor inválido." },
+        { status: 400 }
+      );
     }
 
-    const apiKey = process.env.ASAAS_API_KEY!;
-    const customerId = process.env.ASAAS_CUSTOMER_ID!;
-
-    if (!apiKey || !customerId) {
-      return NextResponse.json({
-        success: false,
-        error: "Variáveis ASAAS_API_KEY ou ASAAS_CUSTOMER_ID faltando",
-      });
+    // ID DO CLIENTE ASAAS (definido no painel)
+    const customerId = process.env.ASAAS_CUSTOMER_ID;
+    if (!customerId) {
+      return NextResponse.json(
+        { success: false, error: "AS AAS CUSTOMER ID não configurado." },
+        { status: 500 }
+      );
     }
 
-    const response = await fetch("https://api.asaas.com/v3/payments", {
-      method: "POST",
-      headers: {
-        accept: "application/json",
-        "content-type": "application/json",
-        access_token: apiKey,
-      },
-      body: JSON.stringify({
-        customer: customerId,
-        billingType: "PIX",
-        value: Number(amountBRL),
-        description: "Compra de BCT via PIX",
-      }),
+    // DESCRIÇÃO PADRÃO DO PAGAMENTO
+    const description = `Compra de ${tokens} BCT pelo app`;
+
+    // 🔥 CRIA O PAGAMENTO PIX
+    const resultado = await criarPagamentoAsaas({
+      customerId,
+      value: amountBRL,
+      billingType: "PIX",
+      description,
     });
 
-    const result = await response.json();
-
-    if (result.errors) {
-      return NextResponse.json({
-        success: false,
-        error: result.errors[0]?.description || "Erro no Asaas",
-      });
+    if (!resultado.success) {
+      return NextResponse.json(
+        { success: false, error: resultado.error },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({
       success: true,
-      paymentId: result.id,
-      pixCopyPaste: result.pixCopyPasteKey,
-      qrCodeImage: result.pixQrCodeImageUrl,
+      id: resultado.data.id,
+      pix: resultado.data.pixQrCode,
+      copiaCola: resultado.data.pixCopiaECola,
     });
   } catch (e) {
-    console.error("Erro PIX:", e);
-    return NextResponse.json({
-      success: false,
-      error: "Erro interno no servidor",
-    });
+    console.error("Erro rota PIX:", e);
+    return NextResponse.json(
+      { success: false, error: "Erro interno." },
+      { status: 500 }
+    );
   }
 }

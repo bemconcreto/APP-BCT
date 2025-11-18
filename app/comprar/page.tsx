@@ -43,6 +43,15 @@ export default function ComprarPage() {
   const [loading, setLoading] = useState(false);
   const [session, setSession] = useState<any>(null);
 
+  // ----------- STATES DO CARTÃO -------------
+  const [showCardModal, setShowCardModal] = useState(false);
+  const [cardNumber, setCardNumber] = useState("");
+  const [cardHolder, setCardHolder] = useState("");
+  const [expiryMonth, setExpiryMonth] = useState("");
+  const [expiryYear, setExpiryYear] = useState("");
+  const [ccv, setCcv] = useState("");
+  const [cpfCnpj, setCpfCnpj] = useState("");
+
   useEffect(() => {
     async function loadSession() {
       if (typeof window !== "undefined") {
@@ -57,6 +66,7 @@ export default function ComprarPage() {
   const tokens = amountUSD ? amountUSD / tokenPriceUSD : 0;
   const priceBRL = tokenPriceUSD * usdToBrl;
 
+  // ---------- PIX ----------
   async function pagarPix() {
     if (!amountBRL || Number(amountBRL) <= 0) {
       alert("Digite um valor válido.");
@@ -100,45 +110,58 @@ export default function ComprarPage() {
     setLoading(false);
   }
 
-  async function pagarTransak() {
+  // ---------- CARTÃO (ASAAS) ----------
+  async function pagarCartao() {
     if (!amountBRL || Number(amountBRL) <= 0) {
-      alert("Digite um valor válido.");
+      alert("Digite o valor da compra.");
       return;
     }
 
-    if (!session) {
+    if (!cardNumber || !cardHolder || !expiryMonth || !expiryYear || !ccv || !cpfCnpj) {
+      alert("Preencha todos os dados do cartão.");
+      return;
+    }
+
+    const token = getSupabaseToken();
+    if (!token) {
       alert("Você precisa estar logado para comprar.");
       return;
     }
 
-    const accessToken = session.access_token;
-
     setLoading(true);
 
     try {
-      const res = await fetch("/api/transak/novo", {
+      const res = await fetch("/api/asaas/cartao", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           amountBRL: Number(amountBRL),
-          tokens,
+          cardNumber,
+          cardHolder,
+          expiryMonth,
+          expiryYear,
+          ccv,
+          cpfCnpj,
+          tokens: Number(tokens.toFixed(6)),
         }),
       });
 
       const data = await res.json();
 
       if (!data.success) {
-        alert("Erro ao iniciar compra com cartão.");
+        alert("Pagamento recusado: " + (data.error ?? "Erro desconhecido"));
         return;
       }
 
-      window.location.href = data.url;
+      alert("Pagamento aprovado!");
+      window.location.href = `/comprar/sucesso?pedido=${data.paymentId}`;
+
     } catch (e) {
       console.error(e);
-      alert("Erro inesperado");
+      alert("Erro inesperado ao processar pagamento.");
     }
 
     setLoading(false);
@@ -185,14 +208,17 @@ export default function ComprarPage() {
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+
+          {/* CARTÃO */}
           <button
-            onClick={pagarTransak}
+            onClick={() => setShowCardModal(true)}
             disabled={loading}
             className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg p-6 cursor-pointer text-center"
           >
-            <h2 className="text-xl font-semibold">Cartão</h2>
+            <h2 className="text-xl font-semibold">Cartão (Asaas)</h2>
           </button>
 
+          {/* PIX */}
           <button
             onClick={pagarPix}
             disabled={loading}
@@ -200,6 +226,7 @@ export default function ComprarPage() {
           >
             <h2 className="text-xl font-semibold">PIX</h2>
           </button>
+
         </div>
 
         <div className="text-center mt-8">
@@ -211,6 +238,82 @@ export default function ComprarPage() {
         </div>
 
       </div>
+
+      {/* ----------- MODAL DO CARTÃO ----------- */}
+      {showCardModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-lg">
+
+            <h2 className="text-xl font-bold mb-4">Pagamento com Cartão</h2>
+
+            <input
+              type="text"
+              placeholder="Nome impresso no cartão"
+              className="w-full mb-3 p-3 border rounded"
+              value={cardHolder}
+              onChange={(e) => setCardHolder(e.target.value)}
+            />
+
+            <input
+              type="text"
+              placeholder="Número do cartão"
+              className="w-full mb-3 p-3 border rounded"
+              value={cardNumber}
+              onChange={(e) => setCardNumber(e.target.value)}
+            />
+
+            <div className="grid grid-cols-2 gap-4 mb-3">
+              <input
+                type="text"
+                placeholder="Mês (MM)"
+                className="p-3 border rounded"
+                value={expiryMonth}
+                onChange={(e) => setExpiryMonth(e.target.value)}
+              />
+
+              <input
+                type="text"
+                placeholder="Ano (AA)"
+                className="p-3 border rounded"
+                value={expiryYear}
+                onChange={(e) => setExpiryYear(e.target.value)}
+              />
+            </div>
+
+            <input
+              type="text"
+              placeholder="CCV"
+              className="w-full mb-3 p-3 border rounded"
+              value={ccv}
+              onChange={(e) => setCcv(e.target.value)}
+            />
+
+            <input
+              type="text"
+              placeholder="CPF ou CNPJ do titular"
+              className="w-full mb-4 p-3 border rounded"
+              value={cpfCnpj}
+              onChange={(e) => setCpfCnpj(e.target.value)}
+            />
+
+            <button
+              onClick={pagarCartao}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white p-3 rounded mb-3"
+            >
+              Pagar Agora
+            </button>
+
+            <button
+              onClick={() => setShowCardModal(false)}
+              className="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 p-3 rounded"
+            >
+              Cancelar
+            </button>
+
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

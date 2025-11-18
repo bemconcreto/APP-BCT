@@ -1,5 +1,9 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+export const ssr = false;
+export const csr = true;
+
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { supabase } from "../../src/lib/supabaseClient";
@@ -39,7 +43,7 @@ export default function ComprarPage() {
   const tokenPriceUSD = 0.4482;
   const usdToBrl = 5.3;
   const [loading, setLoading] = useState(false);
-  const [session, setSession] = useState<any>(null); // FIX
+  const [session, setSession] = useState<any>(null);
 
   useEffect(() => {
     async function loadSession() {
@@ -55,16 +59,11 @@ export default function ComprarPage() {
   const tokens = amountUSD ? amountUSD / tokenPriceUSD : 0;
   const priceBRL = tokenPriceUSD * usdToBrl;
 
-  // -----------------------------
-  //              PIX
-  // -----------------------------
   async function pagarPix() {
     if (!amountBRL || Number(amountBRL) <= 0) {
       alert("Digite um valor válido.");
       return;
     }
-
-    if (typeof window === "undefined") return;
 
     const token = getSupabaseToken();
     if (!token) {
@@ -88,7 +87,6 @@ export default function ComprarPage() {
       });
 
       const data = await res.json();
-      console.log("RESPOSTA DA API PIX:", data);
 
       if (!data.success) {
         alert("Erro ao gerar PIX: " + data.error);
@@ -104,9 +102,6 @@ export default function ComprarPage() {
     setLoading(false);
   }
 
-  // -----------------------------
-  //       TRANSAK / CARTÃO
-  // -----------------------------
   async function pagarTransak() {
     if (!amountBRL || Number(amountBRL) <= 0) {
       alert("Digite um valor válido.");
@@ -192,7 +187,6 @@ export default function ComprarPage() {
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          {/* CARTÃO */}
           <button
             onClick={pagarTransak}
             disabled={loading}
@@ -201,7 +195,6 @@ export default function ComprarPage() {
             <h2 className="text-xl font-semibold">Cartão</h2>
           </button>
 
-          {/* PIX */}
           <button
             onClick={pagarPix}
             disabled={loading}

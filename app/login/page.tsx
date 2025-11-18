@@ -1,20 +1,11 @@
 "use client";
-
 export const dynamic = "force-dynamic";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
 import { supabase } from "../../src/lib/supabaseClient";
 
 export default function LoginPage() {
   const router = useRouter();
-
-  // Garante que localStorage só será usado no navegador
-  const [isClient, setIsClient] = useState(false);
-
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
 
   // ----------- LOGIN GOOGLE --------------
   async function handleGoogleLogin() {
@@ -29,7 +20,7 @@ export default function LoginPage() {
   // ----------- LOGIN WEB3AUTH --------------
   async function handleWeb3AuthLogin() {
     try {
-      if (!isClient) return; // impede execução no servidor
+      if (typeof window === "undefined") return;
 
       const { Web3Auth } = await import("@web3auth/modal");
       const { OpenloginAdapter } = await import("@web3auth/openlogin-adapter");
@@ -81,13 +72,16 @@ export default function LoginPage() {
 
       const userInfo = await web3auth.getUserInfo();
 
-      // Agora localStorage é seguro porque só roda no navegador
-      if (isClient) {
+      if (typeof window !== "undefined") {
         localStorage.setItem("web3auth_user", JSON.stringify(userInfo));
       }
 
       const email = userInfo?.email ?? `user-${Date.now()}@web3auth.io`;
-      const password = crypto.randomUUID();
+
+      const password =
+        typeof crypto !== "undefined"
+          ? crypto.randomUUID()
+          : Math.random().toString(36).slice(2);
 
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email,
@@ -104,7 +98,7 @@ export default function LoginPage() {
       }
 
       window.location.href = "https://app-bct.vercel.app/inicio";
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
       alert("Erro ao conectar Web3Auth.");
     }

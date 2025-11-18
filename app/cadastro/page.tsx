@@ -7,18 +7,23 @@ import { supabase } from "../../src/lib/supabaseClient";
 export default function CadastroPage() {
   const router = useRouter();
 
+  // ---------------- LOGIN GOOGLE ----------------
   async function handleGoogleLogin() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: "https://app-bct.vercel.app/inicio" },
     });
+
     if (error) alert("Erro ao entrar com Google: " + error.message);
   }
 
+  // ---------------- LOGIN WEB3AUTH ----------------
   async function handleWeb3AuthLogin() {
     try {
+      // 🛑 Impede execução no servidor
       if (typeof window === "undefined") return;
 
+      // Importações 100% client-side
       const { Web3Auth } = await import("@web3auth/modal");
       const { OpenloginAdapter } = await import("@web3auth/openlogin-adapter");
       const { CHAIN_NAMESPACES } = await import("@web3auth/base");
@@ -68,10 +73,19 @@ export default function CadastroPage() {
       }
 
       const userInfo = await web3auth.getUserInfo();
-      localStorage.setItem("web3auth_user", JSON.stringify(userInfo));
+
+      // 🛑 Proteção para localStorage
+      if (typeof window !== "undefined") {
+        localStorage.setItem("web3auth_user", JSON.stringify(userInfo));
+      }
 
       const email = userInfo?.email ?? `user-${Date.now()}@web3auth.io`;
-      const password = crypto.randomUUID();
+
+      // 🛑 crypto.randomUUID também só existe no client
+      const password =
+        typeof crypto !== "undefined"
+          ? crypto.randomUUID()
+          : Math.random().toString(36).slice(2);
 
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email,

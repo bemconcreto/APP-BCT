@@ -1,9 +1,5 @@
 import { NextResponse } from "next/server";
 
-// ====================================================================
-//  PIX via ASAAS - Criação de Cobrança PIX
-// ====================================================================
-
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -16,27 +12,22 @@ export async function POST(req: Request) {
       });
     }
 
-    // 🔐 Pega variáveis de ambiente
     const apiKey = process.env.ASAAS_API_KEY!;
     const customerId = process.env.ASAAS_CUSTOMER_ID!;
 
     if (!apiKey || !customerId) {
       return NextResponse.json({
         success: false,
-        error: "Configuração da API incorreta (API KEY ou Customer ID não encontrados)",
+        error: "Variáveis ASAAS_API_KEY ou ASAAS_CUSTOMER_ID faltando",
       });
     }
-
-    // ====================================================================
-    //  Cria cobrança PIX no ASAAS
-    // ====================================================================
 
     const response = await fetch("https://api.asaas.com/v3/payments", {
       method: "POST",
       headers: {
         accept: "application/json",
         "content-type": "application/json",
-        access_token: apiKey, // 🔥 sem $ — API KEY pura
+        access_token: apiKey,
       },
       body: JSON.stringify({
         customer: customerId,
@@ -47,9 +38,7 @@ export async function POST(req: Request) {
     });
 
     const result = await response.json();
-    console.log("ASAAS PIX RESULT:", result);
 
-    // Erro vindo do Asaas
     if (result.errors) {
       return NextResponse.json({
         success: false,
@@ -57,12 +46,11 @@ export async function POST(req: Request) {
       });
     }
 
-    // Resposta correta
     return NextResponse.json({
       success: true,
+      paymentId: result.id,
       pixCopyPaste: result.pixCopyPasteKey,
       qrCodeImage: result.pixQrCodeImageUrl,
-      paymentId: result.id,
     });
   } catch (e) {
     console.error("Erro PIX:", e);

@@ -1,11 +1,10 @@
-"use client";
-
 import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-// CLIENTE CORRETO PARA O BROWSER — SALVA A SESSÃO
+// NÃO COLOQUE "use client" AQUI
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,

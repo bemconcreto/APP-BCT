@@ -4,23 +4,30 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { supabase } from "../../src/lib/supabaseClient";
 
-// ------------------------------
-// Função correta: pegar token salvo pelo Supabase
-// ------------------------------
+/* -------------------------------------------------------
+   TOKEN CORRETO DO SUPABASE (APENAS UMA FUNÇÃO!)
+------------------------------------------------------- */
 function getSupabaseToken() {
   try {
     const raw = localStorage.getItem("supabase.auth.token");
     if (!raw) return null;
+
     const parsed = JSON.parse(raw);
-    return parsed.currentSession?.access_token ?? null;
+
+    return (
+      parsed.currentSession?.access_token ||
+      parsed.session?.access_token ||
+      parsed.access_token ||
+      null
+    );
   } catch {
     return null;
   }
 }
 
-// ------------------------------
-// Buscar sessão atual direto do Supabase
-// ------------------------------
+/* -------------------------------------------------------
+   PEGAR SESSÃO ATUAL
+------------------------------------------------------- */
 async function getUserSession() {
   const { data } = await supabase.auth.getSession();
   return data.session;
@@ -33,21 +40,26 @@ export default function ComprarPage() {
   const [loading, setLoading] = useState(false);
   const [session, setSession] = useState<any>(null);
 
+  /* ---------------------------------------------
+     Carregar sessão quando abrir a página
+  --------------------------------------------- */
   useEffect(() => {
     async function loadSession() {
       const s = await getUserSession();
       setSession(s);
+      console.log("SESSION:", s);
     }
     loadSession();
   }, []);
 
+  /* Conversões */
   const amountUSD = amountBRL ? Number(amountBRL) / usdToBrl : 0;
   const tokens = amountUSD ? amountUSD / tokenPriceUSD : 0;
   const priceBRL = tokenPriceUSD * usdToBrl;
 
-  // -----------------------------
-  //            PIX
-  // -----------------------------
+  /* ---------------------------------------------
+     PIX
+  --------------------------------------------- */
   async function pagarPix() {
     if (!amountBRL || Number(amountBRL) <= 0) {
       alert("Digite um valor válido.");
@@ -55,6 +67,8 @@ export default function ComprarPage() {
     }
 
     const token = getSupabaseToken();
+    console.log("TOKEN CAPTURADO:", token);
+
     if (!token) {
       alert("Você precisa estar logado para comprar.");
       return;
@@ -76,10 +90,11 @@ export default function ComprarPage() {
       });
 
       const data = await res.json();
-      console.log("RESPOSTA DA API PIX:", data);
+      console.log("API PIX:", data);
 
       if (data.success !== true) {
         alert("Erro ao gerar PIX: " + (data.error || "Erro desconhecido"));
+        setLoading(false);
         return;
       }
 
@@ -92,21 +107,20 @@ export default function ComprarPage() {
     setLoading(false);
   }
 
-  // -----------------------------
-  //      CARTÃO / TRANSAK
-  // -----------------------------
+  /* ---------------------------------------------
+     CARTÃO / TRANSAK
+  --------------------------------------------- */
   async function pagarTransak() {
     if (!amountBRL || Number(amountBRL) <= 0) {
       alert("Digite um valor válido.");
       return;
     }
 
-    if (!session) {
+    const token = getSupabaseToken();
+    if (!token) {
       alert("Você precisa estar logado para comprar.");
       return;
     }
-
-    const accessToken = session.access_token;
 
     setLoading(true);
 
@@ -115,7 +129,7 @@ export default function ComprarPage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           amountBRL: Number(amountBRL),
@@ -127,6 +141,7 @@ export default function ComprarPage() {
 
       if (!data.success) {
         alert("Erro ao iniciar compra com cartão.");
+        setLoading(false);
         return;
       }
 
@@ -138,6 +153,8 @@ export default function ComprarPage() {
 
     setLoading(false);
   }
+
+  /* --------------------------------------------- */
 
   return (
     <div className="min-h-screen bg-gray-100 p-8">
@@ -171,7 +188,8 @@ export default function ComprarPage() {
             Preço em BRL (por token): R$ {priceBRL.toFixed(4)}
           </p>
           <p className="text-gray-800 mt-1 text-lg font-semibold">
-            Você receberá: <span className="text-green-800">{tokens.toFixed(6)} BCT</span>
+            Você receberá:{" "}
+            <span className="text-green-800">{tokens.toFixed(6)} BCT</span>
           </p>
 
           <p className="text-sm text-gray-600 mt-2">
@@ -187,7 +205,7 @@ export default function ComprarPage() {
           <button
             onClick={pagarTransak}
             disabled={loading}
-            className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg p-6 cursor-pointer text-center"
+            className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg p-6"
           >
             <h2 className="text-xl font-semibold">Cartão</h2>
             <p className="mt-2 text-sm text-blue-100">Compra instantânea</p>
@@ -196,7 +214,7 @@ export default function ComprarPage() {
           <button
             onClick={pagarPix}
             disabled={loading}
-            className="bg-green-600 hover:bg-green-700 text-white rounded-lg p-6 cursor-pointer text-center"
+            className="bg-green-600 hover:bg-green-700 text-white rounded-lg p-6"
           >
             <h2 className="text-xl font-semibold">PIX</h2>
             <p className="mt-2 text-sm text-green-100">Pagamento manual</p>

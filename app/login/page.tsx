@@ -3,10 +3,18 @@
 export const dynamic = "force-dynamic";
 
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { supabase } from "../../src/lib/supabaseClient";
 
 export default function LoginPage() {
   const router = useRouter();
+
+  // Garante que localStorage só será usado no navegador
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   // ----------- LOGIN GOOGLE --------------
   async function handleGoogleLogin() {
@@ -21,7 +29,7 @@ export default function LoginPage() {
   // ----------- LOGIN WEB3AUTH --------------
   async function handleWeb3AuthLogin() {
     try {
-      if (typeof window === "undefined") return;
+      if (!isClient) return; // impede execução no servidor
 
       const { Web3Auth } = await import("@web3auth/modal");
       const { OpenloginAdapter } = await import("@web3auth/openlogin-adapter");
@@ -72,7 +80,11 @@ export default function LoginPage() {
       }
 
       const userInfo = await web3auth.getUserInfo();
-      localStorage.setItem("web3auth_user", JSON.stringify(userInfo));
+
+      // Agora localStorage é seguro porque só roda no navegador
+      if (isClient) {
+        localStorage.setItem("web3auth_user", JSON.stringify(userInfo));
+      }
 
       const email = userInfo?.email ?? `user-${Date.now()}@web3auth.io`;
       const password = crypto.randomUUID();

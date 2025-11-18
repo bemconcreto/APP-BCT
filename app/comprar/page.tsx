@@ -1,53 +1,70 @@
 "use client";
 
-// 🚫 Impede o Next.js de tentar fazer prerender desta página
-export const dynamic = "force-dynamic";
-
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { supabase } from "../../src/lib/supabaseClient";
 
+// ----------- SAFE LOCALSTORAGE -------------
 function getSupabaseToken() {
-  if (typeof window === "undefined") return null; // 👈 ESSENCIAL
+  if (typeof window === "undefined") return null;
 
   try {
     const raw = localStorage.getItem("supabase.auth.token");
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    return parsed.currentSession?.access_token ?? null;
+
+    return (
+      parsed.currentSession?.access_token ||
+      parsed.access_token ||
+      parsed.session?.access_token ||
+      null
+    );
   } catch {
     return null;
   }
 }
 
-async function getUserSession() {
-  return supabase.auth.getSession().then((res) => res.data.session);
+// ----------- SAFE SESSION FETCH -------------
+async function getUserSessionSafe() {
+  try {
+    const { data } = await supabase.auth.getSession();
+    return data.session ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export default function ComprarPage() {
   const [amountBRL, setAmountBRL] = useState("");
-  const [tokenPriceUSD] = useState(0.4482);
-  const [usdToBrl] = useState(5.3);
+  const tokenPriceUSD = 0.4482;
+  const usdToBrl = 5.3;
   const [loading, setLoading] = useState(false);
-  const [session, setSession] = useState<any>(null);
+  const [session, setSession] = useState<any>(null); // FIX
 
   useEffect(() => {
-    async function load() {
-      const s = await getUserSession();
-      setSession(s);
+    async function loadSession() {
+      if (typeof window !== "undefined") {
+        const s = await getUserSessionSafe();
+        setSession(s);
+      }
     }
-    load();
+    loadSession();
   }, []);
 
   const amountUSD = amountBRL ? Number(amountBRL) / usdToBrl : 0;
   const tokens = amountUSD ? amountUSD / tokenPriceUSD : 0;
   const priceBRL = tokenPriceUSD * usdToBrl;
 
+  // -----------------------------
+  //              PIX
+  // -----------------------------
   async function pagarPix() {
     if (!amountBRL || Number(amountBRL) <= 0) {
       alert("Digite um valor válido.");
       return;
     }
+
+    if (typeof window === "undefined") return;
 
     const token = getSupabaseToken();
     if (!token) {
@@ -71,28 +88,73 @@ export default function ComprarPage() {
       });
 
       const data = await res.json();
+      console.log("RESPOSTA DA API PIX:", data);
 
       if (!data.success) {
         alert("Erro ao gerar PIX: " + data.error);
         return;
       }
 
-      window.location.href = data.pixUrl;
-    } catch (err) {
-      console.error(err);
-      alert("Erro inesperado.");
+      window.location.href = `/comprar/pix?pedido=${data.id}`;
+    } catch (e) {
+      console.error("ERRO PIX:", e);
+      alert("Erro inesperado");
     }
 
     setLoading(false);
   }
 
+  // -----------------------------
+  //       TRANSAK / CARTÃO
+  // -----------------------------
   async function pagarTransak() {
-    alert("Pagamento via cartão Asaas ainda não configurado.");
+    if (!amountBRL || Number(amountBRL) <= 0) {
+      alert("Digite um valor válido.");
+      return;
+    }
+
+    if (!session) {
+      alert("Você precisa estar logado para comprar.");
+      return;
+    }
+
+    const accessToken = session.access_token;
+
+    setLoading(true);
+
+    try {
+      const res = await fetch("/api/transak/novo", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          amountBRL: Number(amountBRL),
+          tokens,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!data.success) {
+        alert("Erro ao iniciar compra com cartão.");
+        return;
+      }
+
+      window.location.href = data.url;
+    } catch (e) {
+      console.error(e);
+      alert("Erro inesperado");
+    }
+
+    setLoading(false);
   }
 
   return (
     <div className="min-h-screen bg-gray-100 p-8">
       <div className="max-w-3xl mx-auto bg-white rounded-xl shadow-md p-8">
+
         <h1 className="text-3xl font-bold text-center mb-6 text-gray-800">
           Comprar BCT
         </h1>
@@ -121,8 +183,7 @@ export default function ComprarPage() {
             Preço em BRL (por token): R$ {priceBRL.toFixed(4)}
           </p>
           <p className="text-gray-800 mt-1 text-lg font-semibold">
-            Você receberá:{" "}
-            <span className="text-green-800">{tokens.toFixed(6)} BCT</span>
+            Você receberá: <span className="text-green-800">{tokens.toFixed(6)} BCT</span>
           </p>
         </div>
 
@@ -131,20 +192,22 @@ export default function ComprarPage() {
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          {/* CARTÃO */}
           <button
             onClick={pagarTransak}
             disabled={loading}
-            className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg p-6"
+            className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg p-6 cursor-pointer text-center"
           >
-            Cartão
+            <h2 className="text-xl font-semibold">Cartão</h2>
           </button>
 
+          {/* PIX */}
           <button
             onClick={pagarPix}
             disabled={loading}
-            className="bg-green-600 hover:bg-green-700 text-white rounded-lg p-6"
+            className="bg-green-600 hover:bg-green-700 text-white rounded-lg p-6 cursor-pointer text-center"
           >
-            PIX
+            <h2 className="text-xl font-semibold">PIX</h2>
           </button>
         </div>
 
@@ -155,6 +218,7 @@ export default function ComprarPage() {
             </span>
           </Link>
         </div>
+
       </div>
     </div>
   );

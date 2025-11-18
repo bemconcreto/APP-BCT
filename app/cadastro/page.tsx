@@ -1,5 +1,8 @@
 "use client";
 
+// 🚫 Impede o Next.js de tentar pré-renderizar esta página
+export const dynamic = "force-dynamic";
+
 import { useRouter } from "next/navigation";
 import { supabase } from "../../src/lib/supabaseClient";
 
@@ -14,13 +17,17 @@ export default function CadastroPage() {
     if (error) alert("Erro ao entrar com Google: " + error.message);
   }
 
+  // ==========================
+  // WEB3AUTH (SEGURO)
+  // ==========================
   async function handleWeb3AuthLogin() {
     try {
-      if (typeof window === "undefined") {
-        alert("Web3Auth só funciona no navegador.");
-        return;
-      }
+      if (typeof window === "undefined") return;
 
+      // ⛔ NÃO importe Web3Auth no topo
+      // ⛔ NÃO chame nada antes de garantir que estamos no navegador
+
+      // ▶️ IMPORTAÇÃO DINÂMICA (só no navegador)
       const { Web3Auth } = await import("@web3auth/modal");
       const { OpenloginAdapter } = await import("@web3auth/openlogin-adapter");
       const { CHAIN_NAMESPACES } = await import("@web3auth/base");
@@ -28,7 +35,7 @@ export default function CadastroPage() {
 
       const clientId = process.env.NEXT_PUBLIC_WEB3AUTH_CLIENT_ID;
       if (!clientId) {
-        alert("Erro: Client ID do Web3Auth não encontrado.");
+        alert("Client ID ausente.");
         return;
       }
 
@@ -38,7 +45,7 @@ export default function CadastroPage() {
             chainNamespace: CHAIN_NAMESPACES.EIP155,
             chainId: "0x89",
             rpcTarget: "https://polygon-rpc.com",
-            displayName: "Polygon Mainnet",
+            displayName: "Polygon",
             ticker: "MATIC",
             tickerName: "Polygon",
           },
@@ -59,11 +66,13 @@ export default function CadastroPage() {
       });
 
       web3auth.configureAdapter(openloginAdapter);
+
+      // 🔥 AGORA SIM, inicializa
       await web3auth.initModal();
 
       const provider = await web3auth.connect();
       if (!provider) {
-        alert("Não foi possível conectar ao Web3Auth.");
+        alert("Falha ao conectar Web3Auth");
         return;
       }
 
@@ -71,8 +80,7 @@ export default function CadastroPage() {
       localStorage.setItem("web3auth_user", JSON.stringify(userInfo));
 
       const email = userInfo?.email ?? `user-${Date.now()}@web3auth.io`;
-      
-      // 🔥 NOVO GERADOR DE SENHA COMPATÍVEL COM O BUILD
+
       const password = Math.random().toString(36).slice(-10);
 
       const { error: signInError } = await supabase.auth.signInWithPassword({
@@ -85,14 +93,14 @@ export default function CadastroPage() {
           email,
           password,
         });
+
         if (signUpError) throw signUpError;
       }
 
-      window.location.href = "https://app-bct.vercel.app/inicio";
-
+      window.location.href = "/inicio";
     } catch (err: any) {
-      console.error("Erro no Web3Auth:", err);
-      alert("Erro ao conectar com Web3Auth: " + (err?.message ?? String(err)));
+      console.error(err);
+      alert("Erro ao conectar ao Web3Auth.");
     }
   }
 

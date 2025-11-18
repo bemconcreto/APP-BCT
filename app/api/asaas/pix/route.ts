@@ -1,61 +1,71 @@
 import { NextResponse } from "next/server";
 
+// ====================================================================
+//  PIX via ASAAS - Criação de Cobrança PIX
+// ====================================================================
+
 export async function POST(req: Request) {
   try {
-    const { amountBRL } = await req.json();
+    const body = await req.json();
+    const { amountBRL } = body;
 
-    if (!amountBRL || amountBRL <= 0) {
+    if (!amountBRL || Number(amountBRL) <= 0) {
       return NextResponse.json({
         success: false,
         error: "Valor inválido",
       });
     }
 
-    const customerId = process.env.148940098!;
+    // 🔐 Pega variáveis de ambiente
     const apiKey = process.env.ASAAS_API_KEY!;
+    const customerId = process.env.ASAAS_CUSTOMER_ID!;
 
-    if (!customerId || !apiKey) {
+    if (!apiKey || !customerId) {
       return NextResponse.json({
         success: false,
-        error: "Configuração ASAAS faltando",
+        error: "Configuração da API incorreta (API KEY ou Customer ID não encontrados)",
       });
     }
 
-    // Cria pagamento PIX
-    const res = await fetch("https://www.asaas.com/api/v3/payments", {
+    // ====================================================================
+    //  Cria cobrança PIX no ASAAS
+    // ====================================================================
+
+    const response = await fetch("https://api.asaas.com/v3/payments", {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
-        access_token: apiKey,
+        accept: "application/json",
+        "content-type": "application/json",
+        access_token: apiKey, // 🔥 sem $ — API KEY pura
       },
       body: JSON.stringify({
         customer: customerId,
         billingType: "PIX",
-        value: amountBRL,
-        description: "Compra de BCT",
+        value: Number(amountBRL),
+        description: "Compra de BCT via PIX",
       }),
     });
 
-    const data = await res.json();
-    console.log("ASAAS RES:", data);
+    const result = await response.json();
+    console.log("ASAAS PIX RESULT:", result);
 
-    if (data.errors) {
+    // Erro vindo do Asaas
+    if (result.errors) {
       return NextResponse.json({
         success: false,
-        error: data.errors[0]?.description || "Erro ao criar pagamento",
+        error: result.errors[0]?.description || "Erro no Asaas",
       });
     }
 
+    // Resposta correta
     return NextResponse.json({
       success: true,
-      paymentId: data.id,
-      qrCode: data.pixQrCode,
-      qrCodeImage: data.pixQrCodeImage,
-      expiration: data.dueDate,
+      pixCopyPaste: result.pixCopyPasteKey,
+      qrCodeImage: result.pixQrCodeImageUrl,
+      paymentId: result.id,
     });
-
-  } catch (err: any) {
-    console.error(err);
+  } catch (e) {
+    console.error("Erro PIX:", e);
     return NextResponse.json({
       success: false,
       error: "Erro interno no servidor",

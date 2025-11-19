@@ -39,7 +39,10 @@ async function getUserSessionSafe() {
 
 export default function ComprarPage() {
   const [amountBRL, setAmountBRL] = useState("");
-  const [session, setSession] = useState(null);
+  
+  // ✅ CORREÇÃO IMPORTANTE
+  const [session, setSession] = useState<any>(null);
+
   const [loading, setLoading] = useState(false);
 
   const tokenPriceUSD = 0.4482;
@@ -48,7 +51,7 @@ export default function ComprarPage() {
   useEffect(() => {
     async function loadSession() {
       const s = await getUserSessionSafe();
-      setSession(s);
+      setSession(s); // <-- AGORA ACEITO
     }
     loadSession();
   }, []);
@@ -141,7 +144,6 @@ export default function ComprarPage() {
         return;
       }
 
-      // redireciona para página de sucesso/cartão
       window.location.href = `/comprar/cartao?pedido=${data.id}`;
     } catch (err) {
       console.error(err);

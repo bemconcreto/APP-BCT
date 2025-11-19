@@ -130,45 +130,50 @@ export default function ComprarPage() {
   //                         PAGAR CARTÃO
   // =============================================================
   async function pagarCartao() {
-    if (!amountBRL || Number(amountBRL) <= 0) {
-      alert("Digite um valor válido.");
+  const token = getSupabaseToken();
+
+  if (!token) {
+    alert("Você precisa estar logado.");
+    return;
+  }
+
+  if (!amountBRL || Number(amountBRL) <= 0) {
+    alert("Digite um valor válido.");
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    const res = await fetch("/api/asaas/cartao", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        amount: Number(amountBRL),
+        tokens: Number(tokens.toFixed(4)),
+      }),
+    });
+
+    const data = await res.json();
+
+    if (!data.success) {
+      alert("Erro ao gerar pagamento com cartão.");
+      console.log("DETALHE:", data);
       return;
     }
 
-    const token = await getAuthTokenOrRedirect();
-    if (!token) return;
-
-    setLoading(true);
-
-    try {
-      const res = await fetch("/api/asaas/cartao", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          amountBRL: Number(amountBRL),
-          tokens: Number(tokens.toFixed(6)),
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!data.success) {
-        alert("Erro ao gerar pagamento com cartão.");
-        setLoading(false);
-        return;
-      }
-
-      window.location.href = `/comprar/cartao?pedido=${data.id}`;
-    } catch (err) {
-      console.error("Cartão erro:", err);
-      alert("Erro inesperado ao gerar pagamento com cartão.");
-    }
-
-    setLoading(false);
+    // 👉 Redireciona para o checkout do Asaas
+    window.location.href = data.url;
+  } catch (err) {
+    console.error(err);
+    alert("Erro inesperado no pagamento com cartão.");
   }
+
+  setLoading(false);
+}
 
   // =============================================================
   //                         TELA

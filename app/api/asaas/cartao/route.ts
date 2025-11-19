@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 export async function POST(req: Request) {
   try {
     const ASAAS_API_KEY = process.env.ASAAS_API_KEY;
+    const ASAAS_CUSTOMER_ID = process.env.ASAAS_CUSTOMER_ID;
 
     if (!ASAAS_API_KEY) {
       return NextResponse.json(
@@ -11,99 +12,23 @@ export async function POST(req: Request) {
       );
     }
 
-    const body = await req.json();
-
-    const {
-      amountBRL,
-      holderName,
-      cpfCnpj,
-      email,
-      cardNumber,
-      expiryMonth,
-      expiryYear,
-      cvv,
-    } = body;
-
-    // -------------------------
-    // 1. Validar campos
-    // -------------------------
-    if (
-      !amountBRL ||
-      !holderName ||
-      !cpfCnpj ||
-      !email ||
-      !cardNumber ||
-      !expiryMonth ||
-      !expiryYear ||
-      !cvv
-    ) {
+    if (!ASAAS_CUSTOMER_ID) {
       return NextResponse.json(
-        { success: false, error: "Dados incompletos." },
+        { success: false, error: "AS AAS CUSTOMER ID não configurado." },
+        { status: 500 }
+      );
+    }
+
+    const { amount, tokens } = await req.json();
+
+    if (!amount || amount <= 0) {
+      return NextResponse.json(
+        { success: false, error: "Valor inválido." },
         { status: 400 }
       );
     }
 
-    // -------------------------
-    // 2. Criar CLIENTE Asaas
-    // -------------------------
-    const criarCliente = await fetch("https://api.asaas.com/v3/customers", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        access_token: ASAAS_API_KEY,
-      },
-      body: JSON.stringify({
-        name: holderName,
-        cpfCnpj: cpfCnpj,
-        email: email,
-      }),
-    });
-
-    const cliente = await criarCliente.json();
-
-    if (!cliente?.id) {
-      return NextResponse.json(
-        { success: false, error: "Erro ao criar cliente", detalhe: cliente },
-        { status: 400 }
-      );
-    }
-
-    // -------------------------
-    // 3. Tokenizar cartão
-    // -------------------------
-    const tokenizar = await fetch("https://api.asaas.com/v3/creditCard/tokenize", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        access_token: ASAAS_API_KEY,
-      },
-      body: JSON.stringify({
-        creditCard: {
-          holderName,
-          number: cardNumber,
-          expiryMonth,
-          expiryYear,
-          ccv: cvv,
-        },
-      }),
-    });
-
-    const tokenizado = await tokenizar.json();
-
-    if (!tokenizado?.creditCardToken) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Erro ao tokenizar cartão.",
-          detalhe: tokenizado,
-        },
-        { status: 400 }
-      );
-    }
-
-    // -------------------------
-    // 4. Criar pagamento
-    // -------------------------
+    // Criar pagamento via CHECKOUT ASAAS
     const pagamento = await fetch("https://api.asaas.com/v3/payments", {
       method: "POST",
       headers: {
@@ -111,36 +36,34 @@ export async function POST(req: Request) {
         access_token: ASAAS_API_KEY,
       },
       body: JSON.stringify({
-        customer: cliente.id,
+        customer: ASAAS_CUSTOMER_ID,
         billingType: "CREDIT_CARD",
-        value: Number(amountBRL),
-        creditCardToken: tokenizado.creditCardToken,
+        value: Number(amount),
+        dueDate: new Date().toISOString().split("T")[0],
+        description: `Compra de ${tokens} BCT pelo app`,
       }),
     });
 
     const resultado = await pagamento.json();
 
-    if (!resultado?.id) {
+    if (!resultado?.invoiceUrl) {
       return NextResponse.json(
         {
           success: false,
-          error: "Erro ao criar pagamento.",
+          error: "Erro ao gerar checkout do cartão.",
           detalhe: resultado,
         },
         { status: 400 }
       );
     }
 
-    // -------------------------
-    // 5. Sucesso total
-    // -------------------------
     return NextResponse.json({
       success: true,
       id: resultado.id,
-      status: resultado.status,
+      url: resultado.invoiceUrl,
     });
   } catch (err) {
-    console.error("ERRO BACKEND CARTAO:", err);
+    console.error("ERRO CHECKOUT CARTAO:", err);
     return NextResponse.json(
       { success: false, error: "Erro interno no servidor." },
       { status: 500 }

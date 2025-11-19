@@ -3,7 +3,10 @@ import { criarPagamentoAsaas } from "../funcoes/criarPagamento";
 
 export async function POST(req: Request) {
   try {
-    const { amountBRL, tokens } = await req.json();
+    const { amount, tokens } = await req.json();
+
+    // amountBRL → amount
+    const amountBRL = Number(amount);
 
     if (!amountBRL || amountBRL <= 0) {
       return NextResponse.json(
@@ -12,7 +15,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // ID DO CLIENTE ASAAS (definido no painel)
+    // ID do cliente (fixo por enquanto)
     const customerId = process.env.ASAAS_CUSTOMER_ID;
     if (!customerId) {
       return NextResponse.json(
@@ -21,10 +24,9 @@ export async function POST(req: Request) {
       );
     }
 
-    // DESCRIÇÃO PADRÃO DO PAGAMENTO
     const description = `Compra de ${tokens} BCT pelo app`;
 
-    // 🔥 CRIA O PAGAMENTO PIX
+    // Criar pagamento PIX
     const resultado = await criarPagamentoAsaas({
       customerId,
       value: amountBRL,
@@ -34,7 +36,7 @@ export async function POST(req: Request) {
 
     if (!resultado.success) {
       return NextResponse.json(
-        { success: false, error: resultado.error },
+        { success: false, error: resultado.error, detalhe: resultado.data },
         { status: 500 }
       );
     }
@@ -45,10 +47,11 @@ export async function POST(req: Request) {
       pix: resultado.data.pixQrCode,
       copiaCola: resultado.data.pixCopiaECola,
     });
-  } catch (e) {
+
+  } catch (e: any) {
     console.error("Erro rota PIX:", e);
     return NextResponse.json(
-      { success: false, error: "Erro interno." },
+      { success: false, error: e.message || "Erro interno." },
       { status: 500 }
     );
   }

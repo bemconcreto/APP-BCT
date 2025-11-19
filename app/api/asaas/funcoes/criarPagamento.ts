@@ -40,7 +40,17 @@ export async function criarPagamentoAsaas({
       return { success: false, error: data.errors };
     }
 
-    return { success: true, data };
+    // 💡 Padroniza o retorno para PIX ou cartão
+    return {
+      success: true,
+      data: {
+        id: data.id,
+        status: data.status,
+        invoiceUrl: data.invoiceUrl, // checkout do cartão/PIX
+        pix: data.pixTransaction?.qrCode ?? null,
+        copiaCola: data.pixTransaction?.payload ?? null,
+      },
+    };
   } catch (error) {
     console.error("Erro criarPagamentoAsaas:", error);
     return { success: false, error };

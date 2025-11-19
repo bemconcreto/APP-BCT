@@ -45,7 +45,7 @@ async function getUserSessionSafe() {
 // =============================
 export default function ComprarPage() {
   const [amountBRL, setAmountBRL] = useState("");
-  const [session, setSession] = useState(null);
+  const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
   const usd = 5.3;

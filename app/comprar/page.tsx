@@ -6,19 +6,20 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { supabase } from "../../src/lib/supabaseClient";
 
-// ----------- SAFE LOCALSTORAGE -------------
+// 🔒 Pega token do Supabase com segurança
 function getSupabaseToken() {
   if (typeof window === "undefined") return null;
 
   try {
     const raw = localStorage.getItem("supabase.auth.token");
     if (!raw) return null;
+
     const parsed = JSON.parse(raw);
 
     return (
       parsed.currentSession?.access_token ||
-      parsed.access_token ||
       parsed.session?.access_token ||
+      parsed.access_token ||
       null
     );
   } catch {
@@ -26,7 +27,7 @@ function getSupabaseToken() {
   }
 }
 
-// ----------- SAFE SESSION FETCH -------------
+// 🔒 Pega sessão
 async function getUserSessionSafe() {
   try {
     const { data } = await supabase.auth.getSession();
@@ -38,44 +39,36 @@ async function getUserSessionSafe() {
 
 export default function ComprarPage() {
   const [amountBRL, setAmountBRL] = useState("");
+  const [session, setSession] = useState(null);
+  const [loading, setLoading] = useState(false);
+
   const tokenPriceUSD = 0.4482;
   const usdToBrl = 5.3;
-  const [loading, setLoading] = useState(false);
-  const [session, setSession] = useState<any>(null);
-
-  // ----------- STATES DO CARTÃO -------------
-  const [showCardModal, setShowCardModal] = useState(false);
-  const [cardNumber, setCardNumber] = useState("");
-  const [cardHolder, setCardHolder] = useState("");
-  const [expiryMonth, setExpiryMonth] = useState("");
-  const [expiryYear, setExpiryYear] = useState("");
-  const [ccv, setCcv] = useState("");
-  const [cpfCnpj, setCpfCnpj] = useState("");
 
   useEffect(() => {
     async function loadSession() {
-      if (typeof window !== "undefined") {
-        const s = await getUserSessionSafe();
-        setSession(s);
-      }
+      const s = await getUserSessionSafe();
+      setSession(s);
     }
     loadSession();
   }, []);
 
   const amountUSD = amountBRL ? Number(amountBRL) / usdToBrl : 0;
   const tokens = amountUSD ? amountUSD / tokenPriceUSD : 0;
-  const priceBRL = tokenPriceUSD * usdToBrl;
 
-  // ---------- PIX ----------
+  // ==========================
+  //        PAGAMENTO PIX
+  // ==========================
   async function pagarPix() {
-    if (!amountBRL || Number(amountBRL) <= 0) {
-      alert("Digite um valor válido.");
+    const token = getSupabaseToken();
+
+    if (!token) {
+      alert("Você precisa estar logado para comprar!");
       return;
     }
 
-    const token = getSupabaseToken();
-    if (!token) {
-      alert("Você precisa estar logado para comprar.");
+    if (!amountBRL || Number(amountBRL) <= 0) {
+      alert("Digite um valor válido.");
       return;
     }
 
@@ -89,8 +82,8 @@ export default function ComprarPage() {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          amountBRL: Number(amountBRL),
-          tokens: Number(tokens.toFixed(6)),
+          amount: Number(amountBRL),
+          tokens: Number(tokens.toFixed(4)),
         }),
       });
 
@@ -102,29 +95,27 @@ export default function ComprarPage() {
       }
 
       window.location.href = `/comprar/pix?pedido=${data.id}`;
-    } catch (e) {
-      console.error("ERRO PIX:", e);
-      alert("Erro inesperado");
+    } catch (err) {
+      console.error(err);
+      alert("Erro inesperado no PIX");
     }
 
     setLoading(false);
   }
 
-  // ---------- CARTÃO (ASAAS) ----------
+  // ==========================
+  //   PAGAMENTO CARTÃO ASAAS
+  // ==========================
   async function pagarCartao() {
-    if (!amountBRL || Number(amountBRL) <= 0) {
-      alert("Digite o valor da compra.");
-      return;
-    }
-
-    if (!cardNumber || !cardHolder || !expiryMonth || !expiryYear || !ccv || !cpfCnpj) {
-      alert("Preencha todos os dados do cartão.");
-      return;
-    }
-
     const token = getSupabaseToken();
+
     if (!token) {
-      alert("Você precisa estar logado para comprar.");
+      alert("Você precisa estar logado.");
+      return;
+    }
+
+    if (!amountBRL || Number(amountBRL) <= 0) {
+      alert("Digite um valor válido.");
       return;
     }
 
@@ -138,34 +129,29 @@ export default function ComprarPage() {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          amountBRL: Number(amountBRL),
-          cardNumber,
-          cardHolder,
-          expiryMonth,
-          expiryYear,
-          ccv,
-          cpfCnpj,
-          tokens: Number(tokens.toFixed(6)),
+          amount: Number(amountBRL),
+          tokens: Number(tokens.toFixed(4)),
         }),
       });
 
       const data = await res.json();
 
       if (!data.success) {
-        alert("Pagamento recusado: " + (data.error ?? "Erro desconhecido"));
+        alert("Erro ao gerar pagamento com cartão.");
         return;
       }
 
-      alert("Pagamento aprovado!");
-      window.location.href = `/comprar/sucesso?pedido=${data.paymentId}`;
-
-    } catch (e) {
-      console.error(e);
-      alert("Erro inesperado ao processar pagamento.");
+      // redireciona para página de sucesso/cartão
+      window.location.href = `/comprar/cartao?pedido=${data.id}`;
+    } catch (err) {
+      console.error(err);
+      alert("Erro inesperado no pagamento com cartão.");
     }
 
     setLoading(false);
   }
+
+  // ---------------------------------------------------
 
   return (
     <div className="min-h-screen bg-gray-100 p-8">
@@ -181,52 +167,33 @@ export default function ComprarPage() {
           </label>
           <input
             type="number"
-            placeholder="Ex: 100,00"
             value={amountBRL}
             onChange={(e) => setAmountBRL(e.target.value)}
-            className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600"
+            placeholder="Ex: 100,00"
+            className="w-full px-4 py-3 border rounded-lg"
           />
         </div>
 
-        <div className="bg-gray-50 border rounded-lg p-4 mb-8">
-          <p className="text-gray-700">
-            Preço do BCT: <strong>US$ {tokenPriceUSD.toFixed(4)}</strong>
-          </p>
-          <p className="text-gray-700">
-            Dólar: <strong>R$ {usdToBrl.toFixed(2)}</strong>
-          </p>
-          <p className="text-gray-800 mt-2 text-lg font-semibold">
-            Preço em BRL (por token): R$ {priceBRL.toFixed(4)}
-          </p>
-          <p className="text-gray-800 mt-1 text-lg font-semibold">
-            Você receberá: <span className="text-green-800">{tokens.toFixed(6)} BCT</span>
-          </p>
-        </div>
-
-        <p className="text-gray-600 text-center mb-8">
-          Escolha a forma de pagamento
+        <p className="text-gray-700 text-lg mb-6">
+          Você receberá: <strong>{tokens.toFixed(4)} BCT</strong>
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-
-          {/* CARTÃO */}
           <button
-            onClick={() => setShowCardModal(true)}
+            onClick={pagarCartao}
             disabled={loading}
-            className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg p-6 cursor-pointer text-center"
+            className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg p-6"
           >
             <h2 className="text-xl font-semibold">Cartão (Asaas)</h2>
           </button>
 
-          {/* PIX */}
           <button
             onClick={pagarPix}
             disabled={loading}
-            className="bg-green-600 hover:bg-green-700 text-white rounded-lg p-6 cursor-pointer text-center"
+            className="bg-green-600 hover:bg-green-700 text-white rounded-lg p-6"
           >
             <h2 className="text-xl font-semibold">PIX</h2>
           </button>
-
         </div>
 
         <div className="text-center mt-8">
@@ -236,84 +203,7 @@ export default function ComprarPage() {
             </span>
           </Link>
         </div>
-
       </div>
-
-      {/* ----------- MODAL DO CARTÃO ----------- */}
-      {showCardModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-lg">
-
-            <h2 className="text-xl font-bold mb-4">Pagamento com Cartão</h2>
-
-            <input
-              type="text"
-              placeholder="Nome impresso no cartão"
-              className="w-full mb-3 p-3 border rounded"
-              value={cardHolder}
-              onChange={(e) => setCardHolder(e.target.value)}
-            />
-
-            <input
-              type="text"
-              placeholder="Número do cartão"
-              className="w-full mb-3 p-3 border rounded"
-              value={cardNumber}
-              onChange={(e) => setCardNumber(e.target.value)}
-            />
-
-            <div className="grid grid-cols-2 gap-4 mb-3">
-              <input
-                type="text"
-                placeholder="Mês (MM)"
-                className="p-3 border rounded"
-                value={expiryMonth}
-                onChange={(e) => setExpiryMonth(e.target.value)}
-              />
-
-              <input
-                type="text"
-                placeholder="Ano (AA)"
-                className="p-3 border rounded"
-                value={expiryYear}
-                onChange={(e) => setExpiryYear(e.target.value)}
-              />
-            </div>
-
-            <input
-              type="text"
-              placeholder="CCV"
-              className="w-full mb-3 p-3 border rounded"
-              value={ccv}
-              onChange={(e) => setCcv(e.target.value)}
-            />
-
-            <input
-              type="text"
-              placeholder="CPF ou CNPJ do titular"
-              className="w-full mb-4 p-3 border rounded"
-              value={cpfCnpj}
-              onChange={(e) => setCpfCnpj(e.target.value)}
-            />
-
-            <button
-              onClick={pagarCartao}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white p-3 rounded mb-3"
-            >
-              Pagar Agora
-            </button>
-
-            <button
-              onClick={() => setShowCardModal(false)}
-              className="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 p-3 rounded"
-            >
-              Cancelar
-            </button>
-
-          </div>
-        </div>
-      )}
-
     </div>
   );
 }

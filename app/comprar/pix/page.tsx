@@ -1,61 +1,44 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 
-export default function PagamentoPixPage() {
+function PixPageContent() {
   const params = useSearchParams();
-  const paymentId = params.get("pedido"); // vem da URL ?pedido=xxxx
-
-  const [status, setStatus] = useState("PENDING");
-
-  useEffect(() => {
-    if (!paymentId) return;
-
-    const interval = setInterval(async () => {
-      try {
-        const res = await fetch(`/api/asaas/status/${paymentId}`);
-        const data = await res.json();
-
-        if (data.status) {
-          setStatus(data.status);
-
-          if (data.status === "RECEIVED" || data.status === "CONFIRMED") {
-            // Redireciona para tela de PIX confirmado
-            window.location.href = "/comprar/pix-confirmado";
-          }
-        }
-      } catch (err) {
-        console.error("Erro checando status:", err);
-      }
-    }, 3000);
-
-    return () => clearInterval(interval);
-  }, [paymentId]);
+  const pedido = params.get("pedido");
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-6">
-      <div className="bg-white shadow-xl rounded-xl p-8 max-w-lg text-center">
-
-        <h1 className="text-3xl font-bold mb-4 text-blue-600">
-          Aguardando pagamento PIX...
+    <div className="min-h-screen bg-gray-100 p-8">
+      <div className="max-w-xl mx-auto bg-white rounded-xl shadow-md p-8 text-center">
+        
+        <h1 className="text-3xl font-bold mb-4 text-green-700">
+          PIX Confirmado! ✅
         </h1>
 
-        <p className="text-gray-700 mb-6">
-          Assim que o seu PIX for confirmado pela Asaas, seu saldo será atualizado automaticamente.
+        <p className="text-xl text-gray-800 mb-6">
+          Seu pagamento foi recebido com sucesso.
         </p>
 
-        <div className="p-4 bg-gray-50 rounded-lg border mb-6">
-          <p className="font-medium">
-            Status atual:{" "}
-            <span className="text-blue-700 font-bold">{status}</span>
-          </p>
-        </div>
-
-        <p className="text-gray-500 text-sm">
-          Esta página atualiza automaticamente a cada 3 segundos.
+        <p className="text-gray-600 mb-8">
+          ID do pedido: <strong>{pedido}</strong>
         </p>
+
+        <a
+          href="/inicio"
+          className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg text-lg"
+        >
+          Voltar ao painel
+        </a>
+
       </div>
     </div>
+  );
+}
+
+export default function PixPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center">Carregando...</div>}>
+      <PixPageContent />
+    </Suspense>
   );
 }

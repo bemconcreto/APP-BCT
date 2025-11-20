@@ -1,19 +1,16 @@
 import { NextResponse } from "next/server";
+import { criarPagamentoAsaas } from "../../asaas/funcoes/criarPagamento";
+import { createClient } from "@supabase/supabase-js";
 
 export async function POST(req: Request) {
   try {
-    const ASAAS_API_KEY = process.env.ASAAS_API_KEY;
-    const customerId = process.env.ASAAS_CUSTOMER_ID;
-
-    if (!ASAAS_API_KEY || !customerId) {
-      return NextResponse.json(
-        { success: false, error: "Credenciais ASAAS ausentes." },
-        { status: 500 }
-      );
-    }
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
 
     const body = await req.json();
-    const { amountBRL, tokens, cpfCnpj } = body;
+    const { amountBRL, cpfCnpj, user_id, wallet } = body;
 
     if (!amountBRL || amountBRL <= 0) {
       return NextResponse.json(
@@ -22,51 +19,70 @@ export async function POST(req: Request) {
       );
     }
 
-    if (!cpfCnpj) {
+    // Preço fixo local (estava funcionando antes)
+    const precoUSD = 0.4482;
+    const dolar = 5.30;
+    const precoBRL = precoUSD * dolar;
+
+    const tokens = Number((amountBRL / precoBRL).toFixed(6));
+
+    // Criar compra pendente
+    const { data: compra, error: compraErr } = await supabase
+      .from("compras_bct")
+      .insert({
+        user_id,
+        wallet,
+        tokens,
+        valor_pago: amountBRL,
+        status: "pending",
+      })
+      .select()
+      .single();
+
+    if (compraErr || !compra) {
       return NextResponse.json(
-        { success: false, error: "CPF/CNPJ é obrigatório." },
-        { status: 400 }
+        { success: false, error: "Erro ao registrar compra." },
+        { status: 500 }
       );
     }
 
-    // 📌 Asaas exige dueDate SEMPRE
+    const customerId = process.env.ASAAS_CUSTOMER_ID!;
+    const descricao = `Compra de ${tokens} BCT`;
+
     const dueDate = new Date();
     dueDate.setDate(dueDate.getDate() + 1);
 
-    const pagamento = await fetch("https://api.asaas.com/v3/payments", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        access_token: ASAAS_API_KEY,
-      },
-      body: JSON.stringify({
-        customer: customerId,
-        billingType: "PIX",
-        value: amountBRL,
-        description: `Compra de ${tokens} BCT via PIX`,
-        dueDate: dueDate.toISOString().split("T")[0], // formato YYYY-MM-DD
-        cpfCnpj: cpfCnpj // obrigatório!
-      }),
+    const pagamento = await criarPagamentoAsaas({
+      customerId,
+      value: amountBRL,
+      billingType: "PIX",
+      description: descricao,
+      dueDate: dueDate.toISOString().split("T")[0],
+      cpfCnpj,
     });
 
-    const resultado = await pagamento.json();
-
-    if (!resultado.id) {
+    if (!pagamento.success || !pagamento.data?.id) {
       return NextResponse.json(
-        { success: false, error: resultado.errors ?? resultado },
-        { status: 400 }
+        { success: false, error: "Erro ao gerar PIX." },
+        { status: 500 }
       );
     }
 
+    // Atualiza id do pagamento
+    await supabase
+      .from("compras_bct")
+      .update({ payment_id: pagamento.data.id })
+      .eq("id", compra.id);
+
     return NextResponse.json({
       success: true,
-      id: resultado.id,
-      pixQrCode: resultado.pixQrCode,
-      pixCopiaECola: resultado.pixCopiaECola,
-      status: resultado.status,
+      id: pagamento.data.id,
+      qrCode: pagamento.data.pixQrCode,
+      copiaCola: pagamento.data.pixCopiaECola,
     });
+
   } catch (err) {
-    console.error("ERRO PIX Backend:", err);
+    console.error("ERRO PIX:", err);
     return NextResponse.json(
       { success: false, error: "Erro interno." },
       { status: 500 }

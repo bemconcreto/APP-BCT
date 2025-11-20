@@ -4,74 +4,74 @@ import { useState } from "react";
 import { supabase } from "../../../src/lib/supabaseClient";
 
 export default function PixPage() {
-  const [loading, setLoading] = useState(false);
+  const [amount, setAmount] = useState("");
   const [erro, setErro] = useState("");
+  const [qrCode, setQrCode] = useState("");
+  const [copia, setCopia] = useState("");
 
-  async function gerarPix(event: any) {
-    event.preventDefault();
+  async function gerarPix() {
     setErro("");
-    setLoading(true);
 
-    const { amountBRL } = Object.fromEntries(new FormData(event.target));
+    const { data: session } = await supabase.auth.getSession();
+    const user = session?.session?.user;
 
-    try {
-      const { data: session } = await supabase.auth.getSession();
-      const token = session?.session?.access_token;
-      if (!token) {
-        setErro("Faça login novamente.");
-        setLoading(false);
-        return;
-      }
-
-      const res = await fetch("/api/asaas/pix", {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ amountBRL }),
-      });
-
-      const data = await res.json();
-
-      if (!data.success) {
-        setErro("Erro ao gerar PIX.");
-        setLoading(false);
-        return;
-      }
-
-      // IR PARA A TELA DE SUCESSO QUE JÁ EXISTIA
-      window.location.href = `/comprar/sucesso?id=${data.id}`;
-
-    } catch (error) {
-      console.error(error);
-      setErro("Erro inesperado.");
+    if (!user) {
+      setErro("Faça login novamente.");
+      return;
     }
 
-    setLoading(false);
+    const res = await fetch("/api/asaas/pix", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        amountBRL: Number(amount),
+        cpfCnpj: session.session.user.user_metadata.cpf,
+        user_id: user.id,
+        wallet: user.id,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (!data.success) {
+      setErro("Erro ao gerar PIX.");
+      return;
+    }
+
+    setQrCode(data.qrCode);
+    setCopia(data.copiaCola);
   }
 
   return (
-    <div className="p-8 max-w-xl mx-auto">
+    <div className="p-6">
       <h1 className="text-2xl font-bold mb-4">Pagamento via PIX</h1>
 
-      {erro && <p className="bg-red-200 p-3 mb-4">{erro}</p>}
+      {erro && <p className="bg-red-200 p-2">{erro}</p>}
 
-      <form onSubmit={gerarPix} className="space-y-4">
-        <input
-          type="number"
-          name="amountBRL"
-          placeholder="Valor em Reais"
-          className="border w-full p-3 rounded"
-        />
+      {!qrCode && (
+        <>
+          <input
+            type="number"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            className="border p-2 w-full mb-4"
+            placeholder="Valor"
+          />
+          <button
+            onClick={gerarPix}
+            className="bg-green-600 p-3 rounded text-white w-full"
+          >
+            Gerar PIX
+          </button>
+        </>
+      )}
 
-        <button
-          className="bg-green-600 text-white p-4 rounded w-full"
-          disabled={loading}
-        >
-          {loading ? "Gerando PIX..." : "Gerar PIX"}
-        </button>
-      </form>
+      {qrCode && (
+        <div className="text-center mt-6">
+          <img src={qrCode} className="mx-auto w-64" />
+          <p className="mt-4 break-all">{copia}</p>
+        </div>
+      )}
     </div>
   );
 }

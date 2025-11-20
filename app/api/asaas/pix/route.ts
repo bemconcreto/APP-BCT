@@ -1,14 +1,8 @@
 import { NextResponse } from "next/server";
-import { criarPagamentoAsaas } from "../../asaas/funcoes/criarPagamento";
 import { createClient } from "@supabase/supabase-js";
 
 export async function POST(req: Request) {
   try {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
-
     const body = await req.json();
     const { amountBRL, cpfCnpj, user_id, wallet } = body;
 
@@ -19,14 +13,19 @@ export async function POST(req: Request) {
       );
     }
 
-    // Preço fixo local (estava funcionando antes)
+    // === CÁLCULO ORIGINAL ===
     const precoUSD = 0.4482;
     const dolar = 5.30;
     const precoBRL = precoUSD * dolar;
-
     const tokens = Number((amountBRL / precoBRL).toFixed(6));
 
-    // Criar compra pendente
+    // Supabase client
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    // Registrar compra pendente
     const { data: compra, error: compraErr } = await supabase
       .from("compras_bct")
       .insert({
@@ -46,43 +45,50 @@ export async function POST(req: Request) {
       );
     }
 
-    const customerId = process.env.ASAAS_CUSTOMER_ID!;
-    const descricao = `Compra de ${tokens} BCT`;
+    // === CRIAR COBRANÇA PIX DIRETO NO ASAAS ===
+    const response = await fetch(
+      "https://www.asaas.com/api/v3/payments",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          access_token: process.env.ASAAS_TOKEN!,
+        },
+        body: JSON.stringify({
+          customer: process.env.ASAAS_CUSTOMER_ID!,
+          billingType: "PIX",
+          value: amountBRL,
+          description: `Compra de ${tokens} BCT`,
+          dueDate: new Date().toISOString().split("T")[0],
+          cpfCnpj,
+        }),
+      }
+    );
 
-    const dueDate = new Date();
-    dueDate.setDate(dueDate.getDate() + 1);
+    const pagamento = await response.json();
 
-    const pagamento = await criarPagamentoAsaas({
-      customerId,
-      value: amountBRL,
-      billingType: "PIX",
-      description: descricao,
-      dueDate: dueDate.toISOString().split("T")[0],
-      cpfCnpj,
-    });
-
-    if (!pagamento.success || !pagamento.data?.id) {
+    if (!response.ok || !pagamento?.id) {
       return NextResponse.json(
         { success: false, error: "Erro ao gerar PIX." },
         { status: 500 }
       );
     }
 
-    // Atualiza id do pagamento
+    // Atualizar compra com o payment_id
     await supabase
       .from("compras_bct")
-      .update({ payment_id: pagamento.data.id })
+      .update({ payment_id: pagamento.id })
       .eq("id", compra.id);
 
     return NextResponse.json({
       success: true,
-      id: pagamento.data.id,
-      qrCode: pagamento.data.pixQrCode,
-      copiaCola: pagamento.data.pixCopiaECola,
+      id: pagamento.id,
+      qrCode: pagamento.pixQrCode,
+      copiaCola: pagamento.pixCopiaECola,
     });
 
-  } catch (err) {
-    console.error("ERRO PIX:", err);
+  } catch (error) {
+    console.error("ERRO PIX:", error);
     return NextResponse.json(
       { success: false, error: "Erro interno." },
       { status: 500 }

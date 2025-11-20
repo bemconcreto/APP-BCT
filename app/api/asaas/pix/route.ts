@@ -1,19 +1,19 @@
 import { NextResponse } from "next/server";
-import { criarPagamentoAsaas } from "../funcoes/criarPagamento";
 
 export async function POST(req: Request) {
   try {
-    const ASAAS_CUSTOMER_ID = process.env.ASAAS_CUSTOMER_ID;
+    const ASAAS_API_KEY = process.env.ASAAS_API_KEY;
+    const customerId = process.env.ASAAS_CUSTOMER_ID;
 
-    if (!ASAAS_CUSTOMER_ID) {
+    if (!ASAAS_API_KEY || !customerId) {
       return NextResponse.json(
-        { success: false, error: "AS AAS CUSTOMER ID não configurado." },
+        { success: false, error: "Credenciais ASAAS ausentes." },
         { status: 500 }
       );
     }
 
     const body = await req.json();
-    const { amountBRL, tokens } = body;
+    const { amountBRL, tokens, cpfCnpj } = body;
 
     if (!amountBRL || amountBRL <= 0) {
       return NextResponse.json(
@@ -22,41 +22,51 @@ export async function POST(req: Request) {
       );
     }
 
-    const description = `Compra de ${tokens} BCT via PIX`;
-
-    // CRIA PAGAMENTO NO ASAAS
-    const resultado = await criarPagamentoAsaas({
-      customerId: ASAAS_CUSTOMER_ID,
-      value: amountBRL,
-      billingType: "PIX",
-      description,
-    });
-
-    if (!resultado.success || !resultado.data) {
+    if (!cpfCnpj) {
       return NextResponse.json(
-        {
-          success: false,
-          error: resultado.error ?? "Erro desconhecido ao criar PIX",
-        },
-        { status: 500 }
+        { success: false, error: "CPF/CNPJ é obrigatório." },
+        { status: 400 }
       );
     }
 
-    const payment = resultado.data;
+    // 📌 Asaas exige dueDate SEMPRE
+    const dueDate = new Date();
+    dueDate.setDate(dueDate.getDate() + 1);
 
-    // 🔥 Ajuste correto do retorno PIX (formato oficial ASAAS)
-    const pixQrCode = payment.pix?.qrCode ?? null;
-    const pixCopiaECola = payment.pix?.payload ?? null;
+    const pagamento = await fetch("https://api.asaas.com/v3/payments", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        access_token: ASAAS_API_KEY,
+      },
+      body: JSON.stringify({
+        customer: customerId,
+        billingType: "PIX",
+        value: amountBRL,
+        description: `Compra de ${tokens} BCT via PIX`,
+        dueDate: dueDate.toISOString().split("T")[0], // formato YYYY-MM-DD
+        cpfCnpj: cpfCnpj // obrigatório!
+      }),
+    });
+
+    const resultado = await pagamento.json();
+
+    if (!resultado.id) {
+      return NextResponse.json(
+        { success: false, error: resultado.errors ?? resultado },
+        { status: 400 }
+      );
+    }
 
     return NextResponse.json({
       success: true,
-      id: payment.id ?? null,
-      status: payment.status ?? "PENDING",
-      pixQrCode,
-      pixCopiaECola,
+      id: resultado.id,
+      pixQrCode: resultado.pixQrCode,
+      pixCopiaECola: resultado.pixCopiaECola,
+      status: resultado.status,
     });
-  } catch (e) {
-    console.error("Erro rota PIX:", e);
+  } catch (err) {
+    console.error("ERRO PIX Backend:", err);
     return NextResponse.json(
       { success: false, error: "Erro interno." },
       { status: 500 }

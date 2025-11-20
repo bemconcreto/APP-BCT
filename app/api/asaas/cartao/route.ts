@@ -4,16 +4,17 @@ import { criarPagamentoAsaas } from "../funcoes/criarPagamento";
 export async function POST(req: Request) {
   try {
     const ASAAS_API_KEY = process.env.ASAAS_API_KEY;
+    const customerId = process.env.ASAAS_CUSTOMER_ID;
 
-    if (!ASAAS_API_KEY) {
+    if (!ASAAS_API_KEY || !customerId) {
       return NextResponse.json(
-        { success: false, error: "API KEY da Asaas não encontrada." },
+        { success: false, error: "Credenciais ASAAS ausentes." },
         { status: 500 }
       );
     }
 
     const body = await req.json();
-    const { amountBRL, tokens, cpfCnpj, email, nome } = body;
+    const { amountBRL, tokens, cpfCnpj } = body;
 
     if (!amountBRL || amountBRL <= 0) {
       return NextResponse.json(
@@ -29,14 +30,9 @@ export async function POST(req: Request) {
       );
     }
 
-    const customerId = process.env.ASAAS_CUSTOMER_ID;
-
-    if (!customerId) {
-      return NextResponse.json(
-        { success: false, error: "AS AAS CUSTOMER ID não configurado." },
-        { status: 500 }
-      );
-    }
+    // 📌 dueDate obrigatório
+    const dueDate = new Date();
+    dueDate.setDate(dueDate.getDate() + 1);
 
     const description = `Compra de ${tokens} BCT (cartão)`;
 
@@ -45,20 +41,21 @@ export async function POST(req: Request) {
       value: amountBRL,
       billingType: "CREDIT_CARD",
       description,
+      dueDate: dueDate.toISOString().split("T")[0],
+      cpfCnpj
     });
 
-    // PROTEÇÃO CONTRA UNDEFINED
     if (!resultado.success || !resultado.data) {
       return NextResponse.json(
-        { success: false, error: resultado.error ?? "Erro desconhecido" },
+        { success: false, error: resultado.error ?? "Erro ao criar pagamento." },
         { status: 500 }
       );
     }
 
     return NextResponse.json({
       success: true,
-      id: resultado.data.id ?? null,
-      status: resultado.data.status ?? "PENDING",
+      id: resultado.data.id,
+      status: resultado.data.status,
     });
   } catch (err) {
     console.error("ERRO BACKEND CARTAO:", err);

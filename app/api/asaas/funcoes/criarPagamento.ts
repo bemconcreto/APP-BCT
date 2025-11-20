@@ -3,24 +3,33 @@ export async function criarPagamentoAsaas({
   value,
   billingType,
   description,
+  dueDate,
+  cpfCnpj,
 }: {
   customerId: string;
   value: number;
   billingType: "PIX" | "CREDIT_CARD";
   description: string;
+  dueDate: string; // YYYY-MM-DD
+  cpfCnpj: string;
 }) {
   try {
+
     const apiKey = process.env.ASAAS_API_KEY;
+
     if (!apiKey) {
       console.error("API KEY do Asaas não encontrada!");
       return { success: false, error: "API key missing" };
     }
 
+    // 🔥 Corpo completo exigido pelo Asaas
     const body = {
       customer: customerId,
       billingType,
       value,
       description,
+      dueDate,
+      cpfCnpj, // agora sempre enviado
     };
 
     const res = await fetch("https://api.asaas.com/v3/payments", {
@@ -35,20 +44,23 @@ export async function criarPagamentoAsaas({
 
     const data = await res.json();
 
+    // Caso o Asaas retorne erro
     if (data.errors) {
       console.error("Erro ASAAS:", data.errors);
       return { success: false, error: data.errors };
     }
 
-    // 💡 Padroniza o retorno para PIX ou cartão
+    // 🔥 Padronização universal p/ PIX e cartão
     return {
       success: true,
       data: {
-        id: data.id,
-        status: data.status,
-        invoiceUrl: data.invoiceUrl, // checkout do cartão/PIX
-        pix: data.pixTransaction?.qrCode ?? null,
-        copiaCola: data.pixTransaction?.payload ?? null,
+        id: data.id ?? null,
+        status: data.status ?? null,
+        invoiceUrl: data.invoiceUrl ?? null,
+
+        // PIX (algumas respostas variam em sandbox/produção)
+        pixQrCode: data.pixQrCode ?? data.pix?.qrCode ?? null,
+        pixCopiaECola: data.pixCopiaECola ?? data.pix?.payload ?? null,
       },
     };
   } catch (error) {

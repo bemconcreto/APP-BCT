@@ -65,6 +65,11 @@ export default function ImoveisPage() {
                   <span className="text-[#12B76A]">Valor de mercado:</span>{" "}
                   {item.mercado}
                 </p>
+                </p>
+                <span className="text-[#BFA89C]">Valorizacao:</span> {item.pago}
+                </p>
+                <p>
+                </p>
               </div>
               <Link
                 href={item.documentos}

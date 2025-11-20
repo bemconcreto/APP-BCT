@@ -8,6 +8,16 @@ export default function PixPage() {
   const [copiaECola, setCopiaECola] = useState("");
   const [valor, setValor] = useState(0);
 
+  // 👉 Estado para mostrar "copiado!"
+  const [copiado, setCopiado] = useState(false);
+
+  function copiarCodigo() {
+    navigator.clipboard.writeText(copiaECola);
+    setCopiado(true);
+
+    setTimeout(() => setCopiado(false), 2000);
+  }
+
   useEffect(() => {
     async function load() {
       const urlParams = new URLSearchParams(window.location.search);
@@ -78,10 +88,10 @@ export default function PixPage() {
           />
 
           <button
-            onClick={() => navigator.clipboard.writeText(copiaECola)}
-            className="w-full bg-green-600 text-white py-3 mt-3 rounded-lg hover:bg-green-700"
+            onClick={copiarCodigo}
+            className="w-full bg-green-600 text-white py-3 mt-3 rounded-lg hover:bg-green-700 transition"
           >
-            Copiar código PIX
+            {copiado ? "Copiado! ✔" : "Copiar código PIX"}
           </button>
         </div>
 

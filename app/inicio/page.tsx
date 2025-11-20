@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { supabase } from "../../src/lib/supabaseClient";
 
 export default function InicioPage() {
   const [priceUSD, setPriceUSD] = useState<number | null>(null);
@@ -9,9 +10,34 @@ export default function InicioPage() {
   const [variation, setVariation] = useState<number>(0);
   const [loading, setLoading] = useState(true);
 
+  const [saldoBCT, setSaldoBCT] = useState<number | null>(null);
+
   useEffect(() => {
     loadData();
+    loadSaldo();
   }, []);
+
+  // 🔹 BUSCA O SALDO DO USUÁRIO
+  const loadSaldo = async () => {
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      const user = session.session?.user;
+
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from("carteiras_bct")
+        .select("saldo")
+        .eq("wallet", user.id)
+        .single();
+
+      if (!error && data) {
+        setSaldoBCT(data.saldo);
+      }
+    } catch (err) {
+      console.error("Erro ao carregar saldo:", err);
+    }
+  };
 
   const loadData = async () => {
     setLoading(true);
@@ -32,9 +58,19 @@ export default function InicioPage() {
   return (
     <div className="min-h-screen bg-gray-100 p-8">
       <div className="max-w-5xl mx-auto bg-white rounded-xl shadow-md p-8">
+
         <h1 className="text-3xl font-bold text-center mb-6 text-gray-800">
           Painel Bem Concreto Token
         </h1>
+
+        {/* 🔥 SALDO DO USUÁRIO */}
+        <div className="bg-[#0C3D2E] text-white p-6 rounded-xl text-center shadow-md mb-8">
+          <h2 className="text-xl font-semibold">Seu saldo de BCT</h2>
+
+          <p className="text-3xl font-bold mt-3">
+            {saldoBCT !== null ? saldoBCT.toFixed(6) : "Carregando..."} BCT
+          </p>
+        </div>
 
         {/* BLOCO DO PREÇO */}
         <div className="bg-white shadow-md p-6 rounded-xl text-center border mb-10">
@@ -61,10 +97,13 @@ export default function InicioPage() {
           )}
 
           <button
-            onClick={loadData}
+            onClick={() => {
+              loadData();
+              loadSaldo();
+            }}
             className="mt-4 bg-[#0C3D2E] text-white px-4 py-2 rounded-lg hover:bg-[#125c45]"
           >
-            Atualizar Preço
+            Atualizar Dados
           </button>
         </div>
 

@@ -12,7 +12,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // PEGANDO BODY
     const body = await req.json();
     const { amountBRL, tokens } = body;
 
@@ -25,7 +24,7 @@ export async function POST(req: Request) {
 
     const description = `Compra de ${tokens} BCT via PIX`;
 
-    // 🔥 CHAMADA PARA CRIAR O PAGAMENTO PIX
+    // CRIA PAGAMENTO NO ASAAS
     const resultado = await criarPagamentoAsaas({
       customerId: ASAAS_CUSTOMER_ID,
       value: amountBRL,
@@ -33,7 +32,6 @@ export async function POST(req: Request) {
       description,
     });
 
-    // Proteção contra undefined
     if (!resultado.success || !resultado.data) {
       return NextResponse.json(
         {
@@ -46,12 +44,16 @@ export async function POST(req: Request) {
 
     const payment = resultado.data;
 
+    // 🔥 Ajuste correto do retorno PIX (formato oficial ASAAS)
+    const pixQrCode = payment.pix?.qrCode ?? null;
+    const pixCopiaECola = payment.pix?.payload ?? null;
+
     return NextResponse.json({
       success: true,
       id: payment.id ?? null,
-      pixQrCode: payment.pixQrCode ?? null,
-      pixCopiaECola: payment.pixCopiaECola ?? null,
       status: payment.status ?? "PENDING",
+      pixQrCode,
+      pixCopiaECola,
     });
   } catch (e) {
     console.error("Erro rota PIX:", e);

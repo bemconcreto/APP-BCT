@@ -2,19 +2,30 @@ import { NextResponse } from "next/server";
 
 export async function GET(
   req: Request,
-  { params }: { params: { paymentId: string } }
+  context: { params: { paymentId: string } }
 ) {
-  const paymentId = params.paymentId;
+  try {
+    const { paymentId } = context.params;
 
-  const res = await fetch(`https://api.asaas.com/v3/payments/${paymentId}`, {
-    method: "GET",
-    headers: {
-      accept: "application/json",
-      access_token: process.env.ASAAS_API_KEY!,
-    },
-  });
+    const response = await fetch(
+      `https://api.asaas.com/v3/payments/${paymentId}`,
+      {
+        method: "GET",
+        headers: {
+          accept: "application/json",
+          access_token: process.env.ASAAS_API_KEY!,
+        },
+      }
+    );
 
-  const data = await res.json();
+    const data = await response.json();
 
-  return NextResponse.json({ status: data.status });
+    return NextResponse.json({ success: true, data });
+  } catch (error) {
+    console.error("Erro ao consultar status ASAAS:", error);
+    return NextResponse.json(
+      { success: false, error: "Erro ao consultar status." },
+      { status: 500 }
+    );
+  }
 }

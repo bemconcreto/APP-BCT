@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { supabase } from "../../../src/lib/supabaseClient";
 
 export default function CartaoPage() {
   const [loading, setLoading] = useState(false);
@@ -26,10 +27,28 @@ export default function CartaoPage() {
     setLoading(true);
 
     try {
+      // 🔥 Buscar usuário logado
+      const { data: session } = await supabase.auth.getSession();
+      const user = session?.session?.user;
+
+      if (!user) {
+        setErro("Faça login novamente.");
+        setLoading(false);
+        return;
+      }
+
+      const user_id = user.id;
+      const wallet = user.id; // carteira = id do usuário
+
+      // 🔥 Enviar tudo ao backend
       const res = await fetch("/api/asaas/cartao", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          user_id,
+          wallet,
+        }),
       });
 
       const data = await res.json();
@@ -41,7 +60,9 @@ export default function CartaoPage() {
         return;
       }
 
+      // Se deu certo → vai para tela de sucesso
       window.location.href = `/comprar/sucesso?id=${data.id}`;
+
     } catch (e) {
       console.error(e);
       setErro("Erro inesperado ao processar pagamento.");

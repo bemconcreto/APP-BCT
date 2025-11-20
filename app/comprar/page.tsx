@@ -221,12 +221,12 @@ export default function ComprarPage() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           <button
-            onClick={pagarCartao}
-            disabled={loading}
-            className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg p-6"
-          >
-            <h2 className="text-xl font-semibold">Cartão (Asaas)</h2>
-          </button>
+  onClick={pagarCartao}
+  disabled={loading}
+  className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg p-6"
+>
+  <h2 className="text-xl font-semibold">Cartão (Débito ou Crédito)</h2>
+</button>
 
           <button
             onClick={pagarPix}

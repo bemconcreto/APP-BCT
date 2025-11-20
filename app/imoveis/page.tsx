@@ -68,7 +68,6 @@ export default function ImoveisPage() {
                 </p>
                 <span className="text-[#BFA89C]">Valorizacao:</span> {item.pago}
                 </p>
-                <p>
                 </p>
               </div>
               <Link

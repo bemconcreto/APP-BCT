@@ -92,17 +92,17 @@ export async function POST(req: Request) {
       .single();
 
     if (compraErr || !compra) {
-  console.error("❌ ERRO Supabase ao inserir compra:", compraErr);
+      console.error("❌ ERRO Supabase ao inserir compra:", compraErr);
 
-  return NextResponse.json(
-    {
-      success: false,
-      error: "Erro ao registrar compra.",
-      detalhe: compraErr, // <-- AGORA O CELULAR VAI MOSTRAR O MOTIVO REAL
-    },
-    { status: 500 }
-  );
-}
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Erro ao registrar compra.",
+          detalhe: compraErr, // AGORA aparece no celular!
+        },
+        { status: 500 }
+      );
+    }
 
     // =====================================================
     //        🔥 Criar pagamento ASAAS

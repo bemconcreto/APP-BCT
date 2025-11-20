@@ -10,7 +10,7 @@ const imoveis = [
     descricao: "Residência moderna e sustentável, localizada em condomínio de alto padrão com segurança 24h.",
     pago: "R$ 1.100.000,00",
     mercado: "R$ 1.600.000,00",
-    valorizacao "45%",
+    valorizacao: "45%",
     documentos: "/docs/casa-condominio.pdf"
   },
   {
@@ -19,7 +19,7 @@ const imoveis = [
     descricao: "Empreendimento de studios localizado na zona sul de São Paulo, com alta valorização e demanda de locação.",
     pago: "R$ 1.606.800,00",
     mercado: "R$ 2.678.000,00",
-    valorizacao "67%",
+    valorizacao: "67%",
     documentos: "/docs/studios-sp.pdf"
   },
   {
@@ -28,7 +28,7 @@ const imoveis = [
     descricao: "Terrenos prontos para construir, com infraestrutura completa e grande potencial de valorização.",
     pago: "R$ 4.400.000,00",
     mercado: "R$ 12.000.000,00",
-    valorizacao "172%",
+    valorizacao: "172%",
     documentos: "/docs/lotes-condominio.pdf"
   }
 ];

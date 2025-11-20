@@ -1,104 +1,53 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
 import { Suspense } from "react";
+
+// Isso impede o Next de tentar pré-renderizar a página
+// evitando o bug de abrir a tela sem ter gerado o PIX
+export const dynamic = "force-dynamic";
 
 function PixPageContent() {
   const params = useSearchParams();
-  const paymentId = params.get("pedido");
+  const pedido = params.get("pedido");
+  const qr = params.get("qr");
 
-  const [status, setStatus] = useState<"loading" | "pending" | "confirmed" | "error">("loading");
-
-  useEffect(() => {
-    if (!paymentId) {
-      setStatus("error");
-      return;
-    }
-
-    async function verificarStatus() {
-      try {
-        const res = await fetch(`/api/asaas/status/${paymentId}`);
-
-        const data = await res.json();
-
-        if (!data.success) {
-          setStatus("pending");
-          return;
-        }
-
-        if (data.status === "RECEIVED" || data.status === "CONFIRMED") {
-          setStatus("confirmed");
-          return;
-        }
-
-        // Ainda aguardando pagamento
-        setStatus("pending");
-
-      } catch (err) {
-        console.error(err);
-        setStatus("error");
-      }
-    }
-
-    verificarStatus();
-  }, [paymentId]);
-
-  // ===============================
-  // TELAS
-  // ===============================
-
-  if (status === "loading") {
-    return <div className="p-8 text-center">Carregando status do pagamento...</div>;
-  }
-
-  if (status === "error") {
+  if (!pedido || !qr) {
     return (
-      <div className="min-h-screen bg-gray-100 p-8 text-center">
-        <div className="max-w-xl mx-auto bg-white rounded-xl shadow-md p-8">
-          <h1 className="text-3xl font-bold mb-4 text-red-600">Erro</h1>
-          <p className="text-gray-700">Não foi possível verificar o pagamento.</p>
-          <p className="mt-4 text-gray-500">ID: {paymentId}</p>
-          <a href="/inicio" className="mt-6 inline-block bg-gray-600 text-white px-6 py-3 rounded-lg">
-            Voltar ao painel
-          </a>
-        </div>
+      <div className="min-h-screen p-8 text-center">
+        <h1 className="text-2xl font-bold">Erro ao gerar PIX</h1>
+        <p>Volte e tente novamente.</p>
       </div>
     );
   }
 
-  if (status === "pending") {
-    return (
-      <div className="min-h-screen bg-gray-100 p-8 text-center">
-        <div className="max-w-xl mx-auto bg-white rounded-xl shadow-md p-8">
-          <h1 className="text-3xl font-bold mb-4 text-yellow-600">Aguardando PIX ⏳</h1>
-          <p className="text-gray-700">Estamos aguardando a confirmação do pagamento.</p>
-          <p className="mt-4">ID do pedido: <strong>{paymentId}</strong></p>
-          <p className="mt-2 text-sm text-gray-500">Isso pode levar alguns segundos...</p>
-        </div>
-      </div>
-    );
-  }
+  return (
+    <div className="min-h-screen bg-gray-100 p-8">
+      <div className="max-w-xl mx-auto bg-white rounded-xl shadow-md p-8 text-center">
 
-  if (status === "confirmed") {
-    return (
-      <div className="min-h-screen bg-gray-100 p-8 text-center">
-        <div className="max-w-xl mx-auto bg-white rounded-xl shadow-md p-8">
-          <h1 className="text-3xl font-bold mb-4 text-green-700">PIX Confirmado! ✅</h1>
-          <p className="text-gray-800 mb-6">Seu pagamento foi recebido com sucesso.</p>
-          <p className="text-gray-600 mb-8">
-            ID do pedido: <strong>{paymentId}</strong>
-          </p>
-          <a
-            href="/inicio"
-            className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg text-lg"
-          >
-            Voltar ao painel
-          </a>
-        </div>
+        <h1 className="text-3xl font-bold mb-4 text-yellow-600">
+          Aguardando PIX ⏳
+        </h1>
+
+        <p className="text-gray-700 mb-4">
+          Escaneie o QR Code abaixo para pagar:
+        </p>
+
+        <img
+          src={qr}
+          alt="QR Code PIX"
+          className="w-full max-w-xs mx-auto mb-6 border rounded-lg shadow"
+        />
+
+        <p className="text-gray-700 mb-2">
+          ID do pedido: <strong>{pedido}</strong>
+        </p>
+
+        <p className="text-gray-500">A confirmação ocorre automaticamente.</p>
+
       </div>
-    );
-  }
+    </div>
+  );
 }
 
 export default function PixPage() {

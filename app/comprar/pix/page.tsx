@@ -1,104 +1,60 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
-export default function PixPage() {
-  const [loading, setLoading] = useState(true);
-  const [qrCode, setQrCode] = useState("");
-  const [copiaECola, setCopiaECola] = useState("");
-  const [valor, setValor] = useState(0);
+export default function PagamentoPixPage() {
+  const params = useSearchParams();
+  const paymentId = params.get("pedido"); // vem da URL ?pedido=xxxx
 
-  // 👉 Estado para mostrar "copiado!"
-  const [copiado, setCopiado] = useState(false);
-
-  function copiarCodigo() {
-    navigator.clipboard.writeText(copiaECola);
-    setCopiado(true);
-
-    setTimeout(() => setCopiado(false), 2000);
-  }
+  const [status, setStatus] = useState("PENDING");
 
   useEffect(() => {
-    async function load() {
-      const urlParams = new URLSearchParams(window.location.search);
-      const id = urlParams.get("pedido");
+    if (!paymentId) return;
 
-      if (!id) {
-        alert("ID do pedido não encontrado.");
-        return;
-      }
-
+    const interval = setInterval(async () => {
       try {
-        const res = await fetch(`/api/pix/status?id=${id}`);
+        const res = await fetch(`/api/asaas/status/${paymentId}`);
         const data = await res.json();
 
-        if (!data.success) {
-          alert("Erro ao carregar PIX");
-          return;
+        if (data.status) {
+          setStatus(data.status);
+
+          if (data.status === "RECEIVED" || data.status === "CONFIRMED") {
+            // Redireciona para tela de PIX confirmado
+            window.location.href = "/comprar/pix-confirmado";
+          }
         }
-
-        setQrCode(data.qrCodeBase64);
-        setCopiaECola(data.copiaECola);
-        setValor(data.value);
-      } catch (e) {
-        alert("Erro inesperado");
+      } catch (err) {
+        console.error("Erro checando status:", err);
       }
+    }, 3000);
 
-      setLoading(false);
-    }
-
-    load();
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex justify-center items-center text-lg">
-        Carregando PIX...
-      </div>
-    );
-  }
+    return () => clearInterval(interval);
+  }, [paymentId]);
 
   return (
-    <div className="min-h-screen p-6 bg-gray-100 flex flex-col items-center">
-      <div className="bg-white p-6 rounded-xl shadow-lg w-full max-w-md text-center">
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-6">
+      <div className="bg-white shadow-xl rounded-xl p-8 max-w-lg text-center">
 
-        <h1 className="text-2xl font-bold mb-4">Pagamento via PIX</h1>
+        <h1 className="text-3xl font-bold mb-4 text-blue-600">
+          Aguardando pagamento PIX...
+        </h1>
 
-        <p className="text-gray-700 mb-2">
-          Valor: <strong>R$ {valor.toFixed(2)}</strong>
+        <p className="text-gray-700 mb-6">
+          Assim que o seu PIX for confirmado pela Asaas, seu saldo será atualizado automaticamente.
         </p>
 
-        {/* QR CODE */}
-        {qrCode && (
-          <img
-            src={`data:image/png;base64,${qrCode}`}
-            alt="QR Code Pix"
-            className="mx-auto w-64 h-64 mb-4 border rounded-lg"
-          />
-        )}
-
-        {/* COPIA E COLA */}
-        <div className="mt-4">
-          <label className="text-gray-600 text-sm">PIX Copia e Cola</label>
-          <textarea
-            className="w-full p-3 border rounded-lg text-sm mt-1"
-            rows={3}
-            readOnly
-            value={copiaECola}
-          />
-
-          <button
-            onClick={copiarCodigo}
-            className="w-full bg-green-600 text-white py-3 mt-3 rounded-lg hover:bg-green-700 transition"
-          >
-            {copiado ? "Copiado! ✔" : "Copiar código PIX"}
-          </button>
+        <div className="p-4 bg-gray-50 rounded-lg border mb-6">
+          <p className="font-medium">
+            Status atual:{" "}
+            <span className="text-blue-700 font-bold">{status}</span>
+          </p>
         </div>
 
-        <p className="text-sm text-gray-500 mt-4">
-          Aguarde, o pagamento normalmente compensa em alguns segundos.
+        <p className="text-gray-500 text-sm">
+          Esta página atualiza automaticamente a cada 3 segundos.
         </p>
-
       </div>
     </div>
   );

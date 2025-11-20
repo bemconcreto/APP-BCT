@@ -6,7 +6,7 @@ import Link from "next/link";
 const imoveis = [
   {
     titulo: "Casa em Condomínio Fechado",
-    imagem: "/imoveis/IMG_2406 2.HEIC",
+    imagem: "/imoveis/IMG_2406 2.jpg",
     descricao: "Residência moderna e sustentável, localizada em condomínio de alto padrão com segurança 24h.",
     pago: "R$ 1.100.000,00",
     mercado: "R$ 1.600.000,00",

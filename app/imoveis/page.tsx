@@ -6,15 +6,15 @@ import Link from "next/link";
 const imoveis = [
   {
     titulo: "Casa em Condomínio Fechado",
-    imagem: "/imoveis/casa-condominio.jpg",
+    imagem: "/imoveis/IMG_2406 2.HEIC",
     descricao: "Residência moderna e sustentável, localizada em condomínio de alto padrão com segurança 24h.",
-    pago: "R$ 480.000,00",
-    mercado: "R$ 720.000,00",
+    pago: "R$ 1.100.000,00",
+    mercado: "R$ 1.600.000,00",
     documentos: "/docs/casa-condominio.pdf"
   },
   {
     titulo: "Studios em São Paulo",
-    imagem: "/imoveis/studios-sp.jpg",
+    imagem: "/imoveis/IMG_2364.jpg",
     descricao: "Empreendimento de studios localizado na zona sul de São Paulo, com alta valorização e demanda de locação.",
     pago: "R$ 1.200.000,00",
     mercado: "R$ 1.850.000,00",
@@ -22,7 +22,7 @@ const imoveis = [
   },
   {
     titulo: "Lotes em Condomínio Fechado",
-    imagem: "/imoveis/lotes-condominio.jpg",
+    imagem: "/imoveis/IMG_1797.jpg",
     descricao: "Terrenos prontos para construir, com infraestrutura completa e grande potencial de valorização.",
     pago: "R$ 900.000,00",
     mercado: "R$ 1.400.000,00",

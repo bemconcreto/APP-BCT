@@ -1,17 +1,28 @@
 export async function criarPagamentoAsaas({
   customerId,
   value,
-  billingType,
   description,
   dueDate,
   cpfCnpj,
+  cardNumber,
+  holderName,
+  expiryMonth,
+  expiryYear,
+  cvv,
+  email,
 }: {
   customerId: string;
   value: number;
-  billingType: "PIX" | "CREDIT_CARD";
   description: string;
   dueDate: string; // YYYY-MM-DD
   cpfCnpj: string;
+
+  cardNumber: string;
+  holderName: string;
+  expiryMonth: string;
+  expiryYear: string;
+  cvv: string;
+  email: string;
 }) {
   try {
     const apiKey = process.env.ASAAS_API_KEY;
@@ -21,14 +32,30 @@ export async function criarPagamentoAsaas({
       return { success: false, error: "API key missing" };
     }
 
-    // 🔥 Agora enviamos TUDO que o Asaas pede
+    // 🔥 ENVIO COMPLETO DO CARTÃO AO ASAAS
     const body = {
       customer: customerId,
-      billingType,
+      billingType: "CREDIT_CARD",
       value,
       description,
       dueDate,
-      cpfCnpj,      // <-- ESTA LINHA É O QUE FALTAVA
+
+      creditCard: {
+        holderName,
+        number: cardNumber,
+        expiryMonth,
+        expiryYear,
+        ccv: cvv,
+      },
+
+      creditCardHolderInfo: {
+        name: holderName,
+        email,
+        cpfCnpj,
+        postalCode: "00000000",
+        addressNumber: "0",
+        phone: "11999999999",
+      },
     };
 
     const res = await fetch("https://api.asaas.com/v3/payments", {
@@ -54,9 +81,6 @@ export async function criarPagamentoAsaas({
         id: data.id ?? null,
         status: data.status ?? null,
         invoiceUrl: data.invoiceUrl ?? null,
-
-        pixQrCode: data.pixQrCode ?? data.pix?.qrCode ?? null,
-        pixCopiaECola: data.pixCopiaECola ?? data.pix?.payload ?? null,
       },
     };
   } catch (error) {

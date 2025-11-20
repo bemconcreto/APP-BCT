@@ -12,10 +12,8 @@ export async function POST(req: Request) {
       );
     }
 
-    // 🔥 AGORA SIM: PEGAMOS O BODY ANTES DE USAR!
     const body = await req.json();
-
-    const { amountBRL, tokens, cpfCnpj } = body;
+    const { amountBRL, tokens, cpfCnpj, email, nome } = body;
 
     if (!amountBRL || amountBRL <= 0) {
       return NextResponse.json(
@@ -31,7 +29,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // Usa um único cliente fixo no ASAAS
     const customerId = process.env.ASAAS_CUSTOMER_ID;
 
     if (!customerId) {
@@ -50,17 +47,18 @@ export async function POST(req: Request) {
       description,
     });
 
-    if (!resultado.success) {
+    // PROTEÇÃO CONTRA UNDEFINED
+    if (!resultado.success || !resultado.data) {
       return NextResponse.json(
-        { success: false, error: resultado.error },
+        { success: false, error: resultado.error ?? "Erro desconhecido" },
         { status: 500 }
       );
     }
 
     return NextResponse.json({
       success: true,
-      id: resultado.data.id,
-      status: resultado.data.status,
+      id: resultado.data.id ?? null,
+      status: resultado.data.status ?? "PENDING",
     });
   } catch (err) {
     console.error("ERRO BACKEND CARTAO:", err);

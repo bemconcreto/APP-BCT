@@ -19,7 +19,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const { amount, tokens } = await req.json();
+    const { amountBRL, tokens } = body;
 
     if (!amount || amount <= 0) {
       return NextResponse.json(

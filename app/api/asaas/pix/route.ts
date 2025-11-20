@@ -3,7 +3,7 @@ import { criarPagamentoAsaas } from "../funcoes/criarPagamento";
 
 export async function POST(req: Request) {
   try {
-    const { amountBRL, tokens } = await req.json();
+    const { amountBRL, tokens, cpfCnpj } = await req.json();
 
     if (!amountBRL || amountBRL <= 0) {
       return NextResponse.json(
@@ -12,8 +12,15 @@ export async function POST(req: Request) {
       );
     }
 
-    // ID DO CLIENTE FIXO DO ASAAS
+    if (!cpfCnpj) {
+      return NextResponse.json(
+        { success: false, error: "CPF/CNPJ não informado." },
+        { status: 400 }
+      );
+    }
+
     const customerId = process.env.ASAAS_CUSTOMER_ID;
+
     if (!customerId) {
       return NextResponse.json(
         { success: false, error: "AS AAS CUSTOMER ID não configurado." },
@@ -21,19 +28,23 @@ export async function POST(req: Request) {
       );
     }
 
-    const description = `Compra de ${tokens} BCT pelo app`;
+    const description = `Compra de ${tokens} BCT`;
 
-    // 🔥 CRIA O PAGAMENTO NO ASAAS
+    // 🔥 CRIA O PAGAMENTO PIX COM CAMPOS OBRIGATÓRIOS
     const resultado = await criarPagamentoAsaas({
       customerId,
       value: amountBRL,
       billingType: "PIX",
       description,
+      extra: {
+        cpfCnpj,
+        dueDate: new Date().toISOString().split("T")[0], // data de hoje
+      },
     });
 
-    if (!resultado.success || !resultado.data) {
+    if (!resultado.success) {
       return NextResponse.json(
-        { success: false, error: resultado.error ?? "Erro desconhecido" },
+        { success: false, error: resultado.error },
         { status: 500 }
       );
     }
@@ -41,9 +52,8 @@ export async function POST(req: Request) {
     return NextResponse.json({
       success: true,
       id: resultado.data.id,
-      pix: resultado.data.pix,
-      copiaCola: resultado.data.copiaCola,
-      invoiceUrl: resultado.data.invoiceUrl,
+      pix: resultado.data.pixQrCode,
+      copiaCola: resultado.data.pixCopiaECola,
     });
   } catch (e) {
     console.error("Erro rota PIX:", e);

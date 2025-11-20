@@ -7,7 +7,7 @@ import Link from "next/link";
 import { supabase } from "../../src/lib/supabaseClient";
 
 // =======================================
-//   SEMPRE PEGA O TOKEN DIRETO DO SUPABASE
+//   SUPABASE TOKEN DIRETO DA SESSÃO
 // =======================================
 async function getSupabaseToken() {
   try {
@@ -32,6 +32,7 @@ async function getUserSessionSafe() {
 
 export default function ComprarPage() {
   const [amountBRL, setAmountBRL] = useState("");
+  const [cpfCnpj, setCpfCnpj] = useState("");   // <--- NOVO!
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
@@ -55,7 +56,6 @@ export default function ComprarPage() {
   // =======================================
   //               PAGAR PIX
   // =======================================
-
   async function pagarPix() {
     const token = await getSupabaseToken();
 
@@ -69,6 +69,11 @@ export default function ComprarPage() {
       return;
     }
 
+    if (!cpfCnpj) {
+      alert("Digite seu CPF ou CNPJ.");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -79,8 +84,9 @@ export default function ComprarPage() {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          amountBRL: Number(amountBRL), // CORRIGIDO
+          amountBRL: Number(amountBRL),
           tokens: Number(tokens.toFixed(6)),
+          cpfCnpj: cpfCnpj,
         }),
       });
 
@@ -103,7 +109,6 @@ export default function ComprarPage() {
   // =======================================
   //        PAGAR CARTÃO (ASAAS)
   // =======================================
-
   async function pagarCartao() {
     const token = await getSupabaseToken();
 
@@ -117,6 +122,11 @@ export default function ComprarPage() {
       return;
     }
 
+    if (!cpfCnpj) {
+      alert("Digite seu CPF ou CNPJ.");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -127,8 +137,9 @@ export default function ComprarPage() {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          amountBRL: Number(amountBRL), // CORRIGIDO
-          tokens: Number(tokens.toFixed(6)),
+          amountBRL: Number(amountBRL),
+          tokens: Number(tokens.toFixed(4)),
+          cpfCnpj: cpfCnpj,
         }),
       });
 
@@ -151,7 +162,6 @@ export default function ComprarPage() {
   // =======================================
   //                 UI
   // =======================================
-
   return (
     <div className="min-h-screen bg-gray-100 p-8">
       <div className="max-w-3xl mx-auto bg-white rounded-xl shadow-md p-8">
@@ -171,6 +181,21 @@ export default function ComprarPage() {
             placeholder="Ex: 100,00"
             value={amountBRL}
             onChange={(e) => setAmountBRL(e.target.value)}
+            className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600"
+          />
+        </div>
+
+        {/* CPF/CNPJ */}
+        <div className="mb-8">
+          <label className="block text-gray-700 font-semibold mb-2">
+            CPF ou CNPJ
+          </label>
+
+          <input
+            type="text"
+            placeholder="Digite seu CPF ou CNPJ"
+            value={cpfCnpj}
+            onChange={(e) => setCpfCnpj(e.target.value)}
             className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600"
           />
         </div>
@@ -217,6 +242,7 @@ export default function ComprarPage() {
           >
             <h2 className="text-xl font-semibold">PIX</h2>
           </button>
+
         </div>
 
         <div className="text-center mt-8">

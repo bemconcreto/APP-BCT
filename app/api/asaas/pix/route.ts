@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server";
+import { criarPagamentoAsaas } from "../../funcoes/criarPagamento";
+import { createClient } from "@supabase/supabase-js";
 
 export async function POST(req: Request) {
   try {
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
     const ASAAS_API_KEY = process.env.ASAAS_API_KEY;
     const customerId = process.env.ASAAS_CUSTOMER_ID;
 
@@ -13,60 +20,75 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { amountBRL, tokens, cpfCnpj } = body;
+    const { amountBRL } = body;
 
-    if (!amountBRL || amountBRL <= 0) {
+    if (!amountBRL || Number(amountBRL) <= 0) {
       return NextResponse.json(
         { success: false, error: "Valor inválido." },
         { status: 400 }
       );
     }
 
-    if (!cpfCnpj) {
+    // USER LOGADO
+    const authHeader = req.headers.get("authorization");
+    const token = authHeader?.replace("Bearer ", "");
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser(token!);
+
+    if (!user) {
       return NextResponse.json(
-        { success: false, error: "CPF/CNPJ é obrigatório." },
-        { status: 400 }
+        { success: false, error: "Usuário não autenticado." },
+        { status: 401 }
       );
     }
 
-    // 📌 Asaas exige dueDate SEMPRE
+    // PREÇO LOCAL PARA CALCULAR TOKENS
+    const precoUSD = Number(process.env.FALLBACK_BCT_USD || 0.50);
+    const dolar = Number(process.env.FALLBACK_DOLAR || 5.30);
+    const precoBRL = precoUSD * dolar;
+
+    const tokens = Number((amountBRL / precoBRL).toFixed(6));
+
+    // REGISTRA COMPRA (pendente)
+    const { data: compra } = await supabase
+      .from("compras_bct")
+      .insert({
+        user_id: user.id,
+        wallet: user.id,
+        tokens,
+        valor_pago: amountBRL,
+        status: "pending",
+      })
+      .select()
+      .single();
+
     const dueDate = new Date();
     dueDate.setDate(dueDate.getDate() + 1);
 
-    const pagamento = await fetch("https://api.asaas.com/v3/payments", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        access_token: ASAAS_API_KEY,
-      },
-      body: JSON.stringify({
-        customer: customerId,
-        billingType: "PIX",
-        value: amountBRL,
-        description: `Compra de ${tokens} BCT via PIX`,
-        dueDate: dueDate.toISOString().split("T")[0], // formato YYYY-MM-DD
-        cpfCnpj: cpfCnpj // obrigatório!
-      }),
+    // CRIA PIX ASAAS
+    const resultado = await criarPagamentoAsaas({
+      customerId,
+      value: amountBRL,
+      billingType: "PIX",
+      description: `Compra de ${tokens} BCT (PIX)`,
+      dueDate: dueDate.toISOString().split("T")[0],
+      cpfCnpj: user.id,
     });
 
-    const resultado = await pagamento.json();
-
-    if (!resultado.id) {
-      return NextResponse.json(
-        { success: false, error: resultado.errors ?? resultado },
-        { status: 400 }
-      );
-    }
+    // Salva o payment_id
+    await supabase
+      .from("compras_bct")
+      .update({ payment_id: resultado.data!.id })
+      .eq("id", compra!.id);
 
     return NextResponse.json({
       success: true,
-      id: resultado.id,
-      pixQrCode: resultado.pixQrCode,
-      pixCopiaECola: resultado.pixCopiaECola,
-      status: resultado.status,
+      id: resultado.data!.id,
     });
   } catch (err) {
-    console.error("ERRO PIX Backend:", err);
+    console.error(err);
     return NextResponse.json(
       { success: false, error: "Erro interno." },
       { status: 500 }

@@ -3,7 +3,19 @@ import { criarPagamentoAsaas } from "../funcoes/criarPagamento";
 
 export async function POST(req: Request) {
   try {
-    const { amountBRL, tokens, cpfCnpj } = await req.json();
+    const ASAAS_API_KEY = process.env.ASAAS_API_KEY;
+
+    if (!ASAAS_API_KEY) {
+      return NextResponse.json(
+        { success: false, error: "API KEY da Asaas não encontrada." },
+        { status: 500 }
+      );
+    }
+
+    // 🔥 AGORA SIM: PEGAMOS O BODY ANTES DE USAR!
+    const body = await req.json();
+
+    const { amountBRL, tokens, cpfCnpj } = body;
 
     if (!amountBRL || amountBRL <= 0) {
       return NextResponse.json(
@@ -14,11 +26,12 @@ export async function POST(req: Request) {
 
     if (!cpfCnpj) {
       return NextResponse.json(
-        { success: false, error: "CPF/CNPJ não informado." },
+        { success: false, error: "CPF/CNPJ é obrigatório." },
         { status: 400 }
       );
     }
 
+    // Usa um único cliente fixo no ASAAS
     const customerId = process.env.ASAAS_CUSTOMER_ID;
 
     if (!customerId) {
@@ -28,18 +41,13 @@ export async function POST(req: Request) {
       );
     }
 
-    const description = `Compra de ${tokens} BCT`;
+    const description = `Compra de ${tokens} BCT (cartão)`;
 
-    // 🔥 CRIA O PAGAMENTO PIX COM CAMPOS OBRIGATÓRIOS
     const resultado = await criarPagamentoAsaas({
       customerId,
       value: amountBRL,
-      billingType: "PIX",
+      billingType: "CREDIT_CARD",
       description,
-      extra: {
-        cpfCnpj,
-        dueDate: new Date().toISOString().split("T")[0], // data de hoje
-      },
     });
 
     if (!resultado.success) {
@@ -52,13 +60,12 @@ export async function POST(req: Request) {
     return NextResponse.json({
       success: true,
       id: resultado.data.id,
-      pix: resultado.data.pixQrCode,
-      copiaCola: resultado.data.pixCopiaECola,
+      status: resultado.data.status,
     });
-  } catch (e) {
-    console.error("Erro rota PIX:", e);
+  } catch (err) {
+    console.error("ERRO BACKEND CARTAO:", err);
     return NextResponse.json(
-      { success: false, error: "Erro interno." },
+      { success: false, error: "Erro interno no servidor." },
       { status: 500 }
     );
   }

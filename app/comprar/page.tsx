@@ -7,7 +7,7 @@ import Link from "next/link";
 import { supabase } from "../../src/lib/supabaseClient";
 
 // =======================================
-//   SUPABASE TOKEN DIRETO DA SESSÃO
+//   TOKEN DIRETO DO SUPABASE
 // =======================================
 async function getSupabaseToken() {
   try {
@@ -21,10 +21,10 @@ async function getSupabaseToken() {
 // =======================================
 //       PEGA A SESSÃO DO USUÁRIO
 // =======================================
-async function getUserSessionSafe() {
+async function getUserSession() {
   try {
-    const { data } = await supabase.auth.getSession();
-    return data.session ?? null;
+    const { data } = await supabase.auth.getUser();
+    return data.user ?? null;
   } catch {
     return null;
   }
@@ -32,20 +32,20 @@ async function getUserSessionSafe() {
 
 export default function ComprarPage() {
   const [amountBRL, setAmountBRL] = useState("");
-  const [cpfCnpj, setCpfCnpj] = useState("");   // <--- NOVO!
-  const [session, setSession] = useState<any>(null);
+  const [user, setUser] = useState<any>(null);
+  const [cpfCnpj, setCpfCnpj] = useState("");
   const [loading, setLoading] = useState(false);
 
   const tokenPriceUSD = 0.4482;
   const usdToBrl = 5.3;
 
-  // CARREGA A SESSÃO AO ABRIR A PÁGINA
+  // CARREGA USUÁRIO AO ABRIR A PÁGINA
   useEffect(() => {
-    async function loadSession() {
-      const s = await getUserSessionSafe();
-      setSession(s);
+    async function loadUser() {
+      const u = await getUserSession();
+      setUser(u);
     }
-    loadSession();
+    loadUser();
   }, []);
 
   // SIMULADOR
@@ -60,17 +60,15 @@ export default function ComprarPage() {
     const token = await getSupabaseToken();
 
     if (!token) {
-      alert("Você precisa estar logado para comprar.");
+      alert("Você precisa estar logado.");
       return;
     }
-
+    if (!cpfCnpj) {
+      alert("Digite seu CPF/CNPJ.");
+      return;
+    }
     if (!amountBRL || Number(amountBRL) <= 0) {
       alert("Digite um valor válido.");
-      return;
-    }
-
-    if (!cpfCnpj) {
-      alert("Digite seu CPF ou CNPJ.");
       return;
     }
 
@@ -86,7 +84,9 @@ export default function ComprarPage() {
         body: JSON.stringify({
           amountBRL: Number(amountBRL),
           tokens: Number(tokens.toFixed(6)),
-          cpfCnpj: cpfCnpj,
+          cpfCnpj,
+          email: user?.email ?? "",
+          nome: user?.user_metadata?.full_name ?? "Usuário",
         }),
       });
 
@@ -113,17 +113,15 @@ export default function ComprarPage() {
     const token = await getSupabaseToken();
 
     if (!token) {
-      alert("Você precisa estar logado para comprar.");
+      alert("Você precisa estar logado.");
       return;
     }
-
+    if (!cpfCnpj) {
+      alert("Digite seu CPF/CNPJ.");
+      return;
+    }
     if (!amountBRL || Number(amountBRL) <= 0) {
       alert("Digite um valor válido.");
-      return;
-    }
-
-    if (!cpfCnpj) {
-      alert("Digite seu CPF ou CNPJ.");
       return;
     }
 
@@ -139,7 +137,9 @@ export default function ComprarPage() {
         body: JSON.stringify({
           amountBRL: Number(amountBRL),
           tokens: Number(tokens.toFixed(4)),
-          cpfCnpj: cpfCnpj,
+          cpfCnpj,
+          email: user?.email ?? "",
+          nome: user?.user_metadata?.full_name ?? "Usuário",
         }),
       });
 
@@ -165,68 +165,61 @@ export default function ComprarPage() {
   return (
     <div className="min-h-screen bg-gray-100 p-8">
       <div className="max-w-3xl mx-auto bg-white rounded-xl shadow-md p-8">
-
         <h1 className="text-3xl font-bold text-center mb-6 text-gray-800">
           Comprar BCT
         </h1>
 
-        {/* INPUT VALOR */}
-        <div className="mb-8">
-          <label className="block text-gray-700 font-semibold mb-2">
-            Valor (em Reais)
-          </label>
-
-          <input
-            type="number"
-            placeholder="Ex: 100,00"
-            value={amountBRL}
-            onChange={(e) => setAmountBRL(e.target.value)}
-            className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600"
-          />
-        </div>
-
         {/* CPF/CNPJ */}
-        <div className="mb-8">
+        <div className="mb-6">
           <label className="block text-gray-700 font-semibold mb-2">
             CPF ou CNPJ
           </label>
-
           <input
             type="text"
             placeholder="Digite seu CPF ou CNPJ"
             value={cpfCnpj}
             onChange={(e) => setCpfCnpj(e.target.value)}
-            className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600"
+            className="w-full px-4 py-3 border rounded-lg"
           />
         </div>
 
-        {/* SIMULADOR COMPLETO */}
+        {/* Valor */}
+        <div className="mb-8">
+          <label className="block text-gray-700 font-semibold mb-2">
+            Valor (em Reais)
+          </label>
+          <input
+            type="number"
+            placeholder="Ex: 100,00"
+            value={amountBRL}
+            onChange={(e) => setAmountBRL(e.target.value)}
+            className="w-full px-4 py-3 border rounded-lg"
+          />
+        </div>
+
+        {/* Simulador */}
         <div className="bg-gray-50 border rounded-lg p-4 mb-8">
           <p className="text-gray-700">
             Preço do BCT: <strong>US$ {tokenPriceUSD.toFixed(4)}</strong>
           </p>
-
           <p className="text-gray-700">
             Dólar: <strong>R$ {usdToBrl.toFixed(2)}</strong>
           </p>
-
           <p className="text-gray-800 mt-2 text-lg font-semibold">
             Preço em BRL (por token): R$ {priceBRL.toFixed(4)}
           </p>
-
           <p className="text-gray-800 mt-1 text-lg font-semibold">
             Você receberá:{" "}
             <span className="text-green-800">{tokens.toFixed(6)} BCT</span>
           </p>
         </div>
 
-        {/* BOTÕES */}
+        {/* Botões */}
         <p className="text-gray-600 text-center mb-8">
           Escolha a forma de pagamento
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-
           <button
             onClick={pagarCartao}
             disabled={loading}
@@ -242,7 +235,6 @@ export default function ComprarPage() {
           >
             <h2 className="text-xl font-semibold">PIX</h2>
           </button>
-
         </div>
 
         <div className="text-center mt-8">
@@ -252,7 +244,6 @@ export default function ComprarPage() {
             </span>
           </Link>
         </div>
-
       </div>
     </div>
   );

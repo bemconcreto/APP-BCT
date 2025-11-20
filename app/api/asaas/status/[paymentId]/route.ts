@@ -1,11 +1,18 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
-  req: Request,
+  req: NextRequest,
   context: { params: { paymentId: string } }
 ) {
   try {
-    const { paymentId } = context.params;
+    const paymentId = context.params.paymentId;
+
+    if (!paymentId) {
+      return NextResponse.json(
+        { success: false, error: "paymentId ausente." },
+        { status: 400 }
+      );
+    }
 
     const response = await fetch(
       `https://api.asaas.com/v3/payments/${paymentId}`,

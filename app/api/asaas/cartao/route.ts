@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { criarPagamentoAsaas } from "../funcoes/criarPagamento";
 import { createClient } from "@supabase/supabase-js";
 
+// =========================================================
+//   🔥 FUNÇÃO PRINCIPAL DO PAGAMENTO COM CARTÃO
+// =========================================================
 export async function POST(req: Request) {
   try {
     const ASAAS_API_KEY = process.env.ASAAS_API_KEY;
@@ -14,10 +17,16 @@ export async function POST(req: Request) {
       );
     }
 
-    const body = await req.json();
-    const { amountBRL, cpfCnpj, wallet, user_id } = body;
+    // 🔥 SUPABASE SERVICE ROLE
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
 
-    if (!amountBRL || amountBRL <= 0) {
+    const body = await req.json();
+    const { amountBRL, cpfCnpj, email, nome } = body;
+
+    if (!amountBRL || Number(amountBRL) <= 0) {
       return NextResponse.json(
         { success: false, error: "Valor inválido." },
         { status: 400 }
@@ -31,26 +40,45 @@ export async function POST(req: Request) {
       );
     }
 
-    if (!wallet || !user_id) {
+    // =====================================================
+    //  🔥 Pegando o usuário logado via JWT da requisição
+    // =====================================================
+    const authHeader = req.headers.get("authorization");
+    const token = authHeader?.replace("Bearer ", "");
+
+    if (!token) {
       return NextResponse.json(
-        { success: false, error: "Wallet e user_id são obrigatórios." },
-        { status: 400 }
+        { success: false, error: "Token não encontrado. Faça login novamente." },
+        { status: 401 }
       );
     }
 
-    // Conectar Supabase
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const {
+      data: { user },
+    } = await supabase.auth.getUser(token);
 
-    // 📌 Calcular tokens
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: "Usuário não autenticado." },
+        { status: 401 }
+      );
+    }
+
+    const user_id = user.id;
+    const wallet = user.id; // usamos o user.id como "wallet" fixa
+
+    // =====================================================
+    //        🔥 CALCULAR TOKENS UTILIZANDO PREÇO LOCAL
+    // =====================================================
     const precoUSD = Number(process.env.FALLBACK_BCT_USD || 0.50);
     const dolar = Number(process.env.FALLBACK_DOLAR || 5.30);
     const precoBRL = precoUSD * dolar;
+
     const tokens = Number((amountBRL / precoBRL).toFixed(6));
 
-    // 📌 Criar compra "pending"
+    // =====================================================
+    //   🔥 Registrar compra pendente no Supabase
+    // =====================================================
     const { data: compra, error: compraErr } = await supabase
       .from("compras_bct")
       .insert({
@@ -71,7 +99,9 @@ export async function POST(req: Request) {
       );
     }
 
-    // 📌 dueDate obrigatório
+    // =====================================================
+    //        🔥 Criar pagamento ASAAS
+    // =====================================================
     const dueDate = new Date();
     dueDate.setDate(dueDate.getDate() + 1);
 
@@ -93,7 +123,9 @@ export async function POST(req: Request) {
       );
     }
 
-    // 📌 Atualizar compra com payment_id
+    // =====================================================
+    //    🔥 Atualiza o registro da compra com payment_id
+    // =====================================================
     await supabase
       .from("compras_bct")
       .update({ payment_id: resultado.data.id })
@@ -105,7 +137,6 @@ export async function POST(req: Request) {
       status: resultado.data.status,
       invoiceUrl: resultado.data.invoiceUrl,
     });
-
   } catch (err) {
     console.error("ERRO BACKEND CARTAO:", err);
     return NextResponse.json(

@@ -18,27 +18,6 @@ export default function InicioPage() {
   }, []);
 
   // 🔹 BUSCA O SALDO DO USUÁRIO
-  const loadSaldo = async () => {
-    try {
-      const { data: session } = await supabase.auth.getSession();
-      const user = session.session?.user;
-
-      if (!user) return;
-
-      const { data, error } = await supabase
-        .from("carteiras_bct")
-        .select("saldo")
-        .eq("wallet", user.id)
-        .single();
-
-      if (!error && data) {
-        setSaldoBCT(data.saldo);
-      }
-    } catch (err) {
-      console.error("Erro ao carregar saldo:", err);
-    }
-  };
-
   const loadData = async () => {
     setLoading(true);
     try {

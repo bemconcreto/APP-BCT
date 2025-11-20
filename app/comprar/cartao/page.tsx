@@ -41,7 +41,12 @@ export default function CartaoPage() {
       const user_id = user.id;
       const wallet = user.id;
 
-      // 🔥 Enviar tudo ao backend COM AUTORIZAÇÃO
+      // 🔥 Asaas exige ANO COMPLETO
+      const ano = form.expiryYear.length === 2 
+        ? `20${form.expiryYear}` 
+        : form.expiryYear;
+
+      // 🔥 Enviar no FORMATO EXATO do backend
       const res = await fetch("/api/asaas/cartao", {
         method: "POST",
         headers: { 
@@ -49,9 +54,19 @@ export default function CartaoPage() {
           Authorization: `Bearer ${token}`
         },
         body: JSON.stringify({
-          ...form,
+          amountBRL: Number(form.amountBRL),
+          cpfCnpj: form.cpfCnpj,
+          email: form.email,
+          nome: form.holderName,
+
           user_id,
           wallet,
+
+          // 🔥 ENVIANDO DADOS DO CARTÃO
+          cardNumber: form.cardNumber,
+          expiryMonth: form.expiryMonth.padStart(2, "0"),
+          expiryYear: ano,
+          cvv: form.cvv,
         }),
       });
 
@@ -141,7 +156,7 @@ export default function CartaoPage() {
             />
             <input
               type="text"
-              placeholder="Ano (AA)"
+              placeholder="Ano (AA ou AAAA)"
               className="border p-3 rounded"
               value={form.expiryYear}
               onChange={(e) => updateField("expiryYear", e.target.value)}

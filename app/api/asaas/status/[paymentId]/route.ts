@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 
-export async function GET(
-  req: NextRequest,
-  context: { params: { paymentId: string } }
-) {
+export async function GET(req: NextRequest) {
   try {
-    const paymentId = context.params.paymentId;
+    // PEGAR paymentId direto da URL
+    const url = req.nextUrl;
+    const paymentId = url.pathname.split("/").pop(); // pega o último segmento da URL
 
     if (!paymentId) {
       return NextResponse.json(

@@ -1,92 +1,92 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-// Aceita body como texto e converte
-async function parseAsaasRequest(req: Request) {
-  const raw = await req.text();
-
+export async function POST(req: Request) {
   try {
-    return JSON.parse(raw);
-  } catch {
-    // Caso o ASAAS envie como x-www-form-urlencoded
-    const params = new URLSearchParams(raw);
-    const json = Object.fromEntries(params.entries());
+    const body = await req.json();
+    console.log("📥 Webhook recebido do ASAAS:", body);
 
-    if (json["payment"]) {
-      try {
-        json["payment"] = JSON.parse(json["payment"]);
-      } catch {}
+    // Proteção caso o ASAAS envie payload incompleto
+    if (!body?.event || !body?.payment?.id) {
+      console.log("❗ Webhook ignorado — dados incompletos");
+      return NextResponse.json({ ok: true }, { status: 200 });
     }
 
-    return json;
-  }
-}
+    const { event, payment } = body;
 
-export async function POST(req: Request) {
-  const body = await parseAsaasRequest(req);
+    // 🔥 Só processa pagamento confirmado
+    if (event !== "PAYMENT_CONFIRMED") {
+      console.log("📌 Evento ignorado:", event);
+      return NextResponse.json({ ok: true }, { status: 200 });
+    }
 
-  console.log("📩 Webhook Asaas recebido:", body);
+    const paymentId = payment.id;
+    const valorPago = Number(payment.value);
 
-  // Validação mínima
-  if (!body?.event || !body?.payment) {
-    console.log("❌ Payload sem event/pagamento");
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    // 1️⃣ Buscar compra no Supabase
+    const { data: compra, error: compraErr } = await supabase
+      .from("compras_bct")
+      .select("*")
+      .eq("payment_id", paymentId)
+      .single();
+
+    if (compraErr || !compra) {
+      console.log("❗ Compra não encontrada:", paymentId);
+      return NextResponse.json({ ok: true }, { status: 200 });
+    }
+
+    const user_id = compra.user_id;
+    const tokens = Number(compra.tokens);
+
+    // 2️⃣ Buscar saldo existente
+    const { data: wallet, error: walletErr } = await supabase
+      .from("wallet_saldos")
+      .select("*")
+      .eq("user_id", user_id)
+      .maybeSingle();
+
+    // Caso não exista — criar a carteira do usuário
+    if (!wallet) {
+      console.log("🟢 Criando novo saldo para usuário...");
+
+      await supabase.from("wallet_saldos").insert({
+        user_id,
+        saldo_bct: tokens,
+      });
+
+    } else {
+      // Caso exista — somar tokens
+      const novoSaldo = Number(wallet.saldo_bct) + tokens;
+
+      console.log("🟢 Atualizando saldo:", novoSaldo);
+
+      await supabase
+        .from("wallet_saldos")
+        .update({ saldo_bct: novoSaldo })
+        .eq("user_id", user_id);
+    }
+
+    // 3️⃣ Marcar compra como paga
+    await supabase
+      .from("compras_bct")
+      .update({ status: "paid" })
+      .eq("id", compra.id);
+
+    console.log("🎉 Tokens creditados com sucesso!");
+
+    return NextResponse.json({ ok: true }, { status: 200 });
+
+  } catch (error) {
+    console.error("❌ ERRO WEBHOOK:", error);
     return NextResponse.json({ ok: true }, { status: 200 });
   }
-
-  const { event, payment } = body;
-
-  // Ignorar eventos não confirmados
-  if (event !== "PAYMENT_CONFIRMED") {
-    console.log("🔎 Evento ignorado:", event);
-    return NextResponse.json({ ok: true }, { status: 200 });
-  }
-
-  // Somente confirmações
-  const paymentId = payment.id;
-  const valorPago = Number(payment.value);
-
-  if (!paymentId || !valorPago) {
-    console.log("❌ Pagamento inválido", payment);
-    return NextResponse.json({ ok: true }, { status: 200 });
-  }
-
-  console.log("💰 Pagamento confirmado:", paymentId);
-
-  // Conectar Supabase admin
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-
-  // Buscar compra
-  const { data: compra } = await supabase
-    .from("compras_bct")
-    .select("*")
-    .eq("payment_id", paymentId)
-    .single();
-
-  if (!compra) {
-    console.log("⚠️ Compra não encontrada:", paymentId);
-    return NextResponse.json({ ok: true }, { status: 200 });
-  }
-
-  // Creditar tokens
-  await supabase.rpc("creditar_bct", {
-    wallet: compra.wallet,
-    qtd_tokens: compra.tokens
-  });
-
-  // Atualizar status
-  await supabase
-    .from("compras_bct")
-    .update({ status: "paid" })
-    .eq("payment_id", paymentId);
-
-  console.log("✅ Tokens creditados com sucesso!");
-
-  return NextResponse.json({ ok: true }, { status: 200 });
 }
 
 export function GET() {
-  return NextResponse.json({ ok: true }, { status: 200 });
+  return NextResponse.json({ message: "Webhook ASAAS ativo" });
 }

@@ -12,12 +12,35 @@ export default function InicioPage() {
 
   const [saldoBCT, setSaldoBCT] = useState<number | null>(null);
 
+  // 🔹 BUSCA O SALDO DO USUÁRIO — AGORA ESTÁ ANTES DO useEffect
+  const loadSaldo = async () => {
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      const user = session.session?.user;
+
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from("saldos")
+        .select("saldo")
+        .eq("wallet", user.id)
+        .single();
+
+      if (!error && data) {
+        setSaldoBCT(data.saldo);
+      } else {
+        setSaldoBCT(0);
+      }
+    } catch (err) {
+      console.error("Erro ao carregar saldo:", err);
+    }
+  };
+
   useEffect(() => {
     loadData();
     loadSaldo();
   }, []);
 
-  // 🔹 BUSCA O SALDO DO USUÁRIO
   const loadData = async () => {
     setLoading(true);
     try {

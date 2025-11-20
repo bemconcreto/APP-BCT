@@ -79,7 +79,10 @@ export async function POST(req: Request) {
 
     console.log("🎉 Tokens creditados com sucesso!");
 
-    return NextResponse.json({ ok: true }, { status: 200 });
+    // 4️⃣ Redirecionar o usuário para PIX CONFIRMADO
+    return NextResponse.redirect(
+      `${process.env.NEXT_PUBLIC_SITE_URL}/pix-confirmado?pedido=${paymentId}`
+    );
 
   } catch (error) {
     console.error("❌ ERRO WEBHOOK:", error);

@@ -27,23 +27,27 @@ export default function CartaoPage() {
     setLoading(true);
 
     try {
-      // 🔥 Buscar usuário logado
+      // 🔥 Buscar usuário logado + token JWT
       const { data: session } = await supabase.auth.getSession();
       const user = session?.session?.user;
+      const token = session?.session?.access_token;
 
-      if (!user) {
-        setErro("Faça login novamente.");
+      if (!user || !token) {
+        setErro("Token não encontrado. Faça login novamente.");
         setLoading(false);
         return;
       }
 
       const user_id = user.id;
-      const wallet = user.id; // carteira = id do usuário
+      const wallet = user.id;
 
-      // 🔥 Enviar tudo ao backend
+      // 🔥 Enviar tudo ao backend COM AUTORIZAÇÃO
       const res = await fetch("/api/asaas/cartao", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
         body: JSON.stringify({
           ...form,
           user_id,
@@ -60,7 +64,7 @@ export default function CartaoPage() {
         return;
       }
 
-      // Se deu certo → vai para tela de sucesso
+      // Sucesso → vai para página de sucesso
       window.location.href = `/comprar/sucesso?id=${data.id}`;
 
     } catch (e) {

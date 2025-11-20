@@ -8,59 +8,33 @@ function PixPageContent() {
   const pedido = params.get("pedido");
   const qr = params.get("qr");
 
-  // Se não vier o pedido e o QR, mostra erro
   if (!pedido || !qr) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold">Erro ao gerar PIX</h1>
-          <p>Volte e tente novamente.</p>
-        </div>
+      <div className="min-h-screen p-8 text-center">
+        <h1 className="text-2xl font-bold">Erro ao gerar PIX</h1>
+        <p>Volte e tente novamente.</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 p-8 flex justify-center">
-      <div className="bg-white shadow-md rounded-xl p-8 text-center max-w-xl">
+    <div className="min-h-screen bg-gray-100 p-8">
+      <div className="max-w-xl mx-auto bg-white rounded-xl shadow-md p-8 text-center">
 
-        <h1 className="text-3xl font-bold mb-4 text-yellow-700">
-          Aguardando PIX ⏳
-        </h1>
+        <h1 className="text-3xl font-bold mb-4">Aguardando PIX ⏳</h1>
 
         <p className="text-gray-700 mb-4">
           Escaneie o QR Code abaixo para pagar:
         </p>
 
-        <img
-          src={qr}
-          alt="QR Code PIX"
-          className="w-full max-w-xs mx-auto mb-6 border rounded-xl shadow-sm"
-        />
+        <img src={qr} alt="QR Code" className="w-full max-w-xs mx-auto mb-6" />
 
         <p className="text-gray-700 mb-2">
           ID do pedido: <strong>{pedido}</strong>
         </p>
 
-        <p className="text-gray-500 text-sm">
-          Assim que o pagamento for confirmado, você será redirecionado automaticamente.
-        </p>
+        <p className="text-gray-500">A confirmação ocorre automaticamente.</p>
 
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              setInterval(() => {
-                fetch('/api/asaas/status/${pedido}')
-                  .then(r => r.json())
-                  .then(data => {
-                    if (data?.status === 'paid') {
-                      window.location.href = '/comprar/sucesso?id=${pedido}';
-                    }
-                  });
-              }, 3000);
-            `,
-          }}
-        />
       </div>
     </div>
   );
@@ -68,7 +42,7 @@ function PixPageContent() {
 
 export default function PixPage() {
   return (
-    <Suspense fallback={<p className="p-8 text-center">Carregando...</p>}>
+    <Suspense fallback={<div className="p-8 text-center">Carregando...</div>}>
       <PixPageContent />
     </Suspense>
   );

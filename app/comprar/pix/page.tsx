@@ -1,42 +1,37 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 
-export default function PixCheckoutPage() {
-  const [pedidoId, setPedidoId] = useState<string | null>(null);
-  const [valor, setValor] = useState<string | null>(null);
-  const [cpf, setCpf] = useState<string | null>(null);
-
-  const [qrCode, setQrCode] = useState("");
-  const [copiaCola, setCopiaCola] = useState("");
+export default function PixPage() {
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState("");
+  const [qrCode, setQrCode] = useState("");
+  const [copiaCola, setCopiaCola] = useState("");
   const [copiado, setCopiado] = useState(false);
 
-  // ==========================================
-  //   LER PARAMETROS DA URL (SEM SearchParams)
-  // ==========================================
   useEffect(() => {
-    const url = new URL(window.location.href);
-    setPedidoId(url.searchParams.get("pedido"));
-    setValor(url.searchParams.get("valor"));
-    setCpf(url.searchParams.get("cpf"));
-  }, []);
+    async function gerarPix() {
+      setLoading(true);
 
-  // ==========================================
-  //   CARREGAR STATUS DO PIX
-  // ==========================================
-  useEffect(() => {
-    if (!pedidoId) return;
-
-    async function loadPix() {
       try {
-        const res = await fetch(`/api/asaas/pix/status?id=${pedidoId}`);
+        const dados = JSON.parse(sessionStorage.getItem("BCT_PIX_DATA") || "{}");
+
+        if (!dados.amountBRL || !dados.cpfCnpj || !dados.tokens) {
+          setErro("Dados do PIX não encontrados.");
+          setLoading(false);
+          return;
+        }
+
+        const res = await fetch("/api/asaas/pix", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(dados),
+        });
 
         const data = await res.json();
 
         if (!data.success) {
-          setErro("Erro ao carregar PIX.");
+          setErro("Erro ao gerar PIX.");
           setLoading(false);
           return;
         }
@@ -50,21 +45,15 @@ export default function PixCheckoutPage() {
       setLoading(false);
     }
 
-    loadPix();
-  }, [pedidoId]);
+    gerarPix();
+  }, []);
 
-  // ==========================================
-  //   COPIAR CODIGO
-  // ==========================================
   function copiarCodigo() {
     navigator.clipboard.writeText(copiaCola);
     setCopiado(true);
     setTimeout(() => setCopiado(false), 1500);
   }
 
-  // ==========================================
-  //   TELAS DE ERRO / LOADING
-  // ==========================================
   if (erro) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -75,39 +64,30 @@ export default function PixCheckoutPage() {
 
   if (loading || !qrCode) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-700 text-lg">Gerando PIX...</p>
+      <div className="min-h-screen flex items-center justify-center text-lg text-gray-700">
+        Gerando PIX...
       </div>
     );
   }
 
-  // ==========================================
-  //   TELA FINAL — QR CODE + COPIA/COLA
-  // ==========================================
   return (
     <div className="min-h-screen p-6 flex flex-col items-center">
       <h1 className="text-3xl font-bold mb-6">Pagamento via PIX</h1>
 
-      <img
-        src={qrCode}
-        alt="QR Code"
-        className="w-64 h-64 mb-6 rounded-lg shadow"
-      />
+      <img src={qrCode} alt="QR Code" className="w-64 h-64 mb-6" />
 
       <button
         onClick={copiarCodigo}
-        className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg mb-4"
+        className="bg-green-600 text-white px-6 py-3 rounded-lg mb-4"
       >
         {copiado ? "COPIADO!" : "Copiar código PIX"}
       </button>
 
-      <p className="text-gray-700 text-center break-all max-w-xl mb-10">
-        {copiaCola}
-      </p>
+      <p className="text-gray-700 text-center break-all max-w-xl">{copiaCola}</p>
 
       <a
         href="/comprar"
-        className="inline-block bg-gray-200 px-5 py-2 rounded hover:bg-gray-300"
+        className="mt-10 inline-block bg-gray-200 px-5 py-2 rounded hover:bg-gray-300"
       >
         Voltar
       </a>

@@ -1,4 +1,3 @@
-// app/api/pix/status/route.ts
 import { NextResponse } from "next/server";
 
 export async function GET(req: Request) {
@@ -22,72 +21,49 @@ export async function GET(req: Request) {
       );
     }
 
-    const pagamentoResp = await fetch(
+    const pagamento = await fetch(
       `https://www.asaas.com/api/v3/payments/${id}`,
       {
         method: "GET",
         headers: {
           accept: "application/json",
-          // incluir as duas formas para compatibilidade
-          access_token: asaasKey,
-          Authorization: `Bearer ${asaasKey}`,
+          access_token: process.env.ASAAS_API_KEY!,
         },
       }
     );
 
-    // se a requisição falhar, devolver erro com corpo do ASAAS
-    if (!pagamentoResp.ok) {
-      const t = await pagamentoResp.text();
-      return NextResponse.json(
-        { success: false, error: "Erro no ASAAS: " + t },
-        { status: pagamentoResp.status }
-      );
-    }
+    const dados = await pagamento.json();
 
-    const dados = await pagamentoResp.json();
-
-    // se ASAAS devolveu errors
-    if (dados?.errors) {
+    if (dados.errors) {
       return NextResponse.json(
         { success: false, error: dados.errors },
         { status: 400 }
       );
     }
 
-    // Normalizar os campos possíveis que o ASAAS pode devolver:
-    // - imagem do QR: pixQrCodeImage / pixQrCode / pix_qr_code_image / qrCode
-    // - copia e cola: pixCopiaECola / pixTransaction / pix_copy_paste / copiaCola
-    const qrCandidates = [
-      dados.pixQrCodeImage,
-      dados.pixQrCode,
-      dados.pix_qr_code_image,
-      dados.qrCode,
-      dados.qr_code,
-    ];
+    // 👇 AS PARTES IMPORTANTES (ANTES ESTAVA ERRADO)
+    const qrCode =
+      dados.pixQrCodeImage ??
+      dados.raw?.pixQrCodeImage ??
+      dados.raw?.bankSlip?.pix?.encodedImage ??
+      null;
 
-    const copyCandidates = [
-      dados.pixCopiaECola,
-      dados.pixTransaction,
-      dados.pix_copy_paste,
-      dados.copiaCola,
-      dados.pixCopiaCola,
-      dados.pix_copy_and_paste,
-    ];
-
-    const qrCode = qrCandidates.find(Boolean) ?? null;
-    const copiaCola = copyCandidates.find(Boolean) ?? null;
+    const copiaCola =
+      dados.pixTransaction ??
+      dados.raw?.pixTransaction ??
+      dados.raw?.bankSlip?.pix?.payload ??
+      null;
 
     return NextResponse.json({
       success: true,
-      // devolve os originais também para facilitar debugging front
-      raw: dados,
       qrCode,
       copiaCola,
+      raw: dados, // útil para debugar depois
     });
-  } catch (err: any) {
-    console.error("ERROR /api/pix/status:", err);
+  } catch (err) {
+    console.error("STATUS ERROR:", err);
     return NextResponse.json(
-      { success: false, error: "Erro inesperado", detail: String(err) },
+      { success: false, error: "Erro inesperado" },
       { status: 500 }
     );
   }

@@ -91,7 +91,7 @@ export default function ComprarPage() {
       }
 
       // 🔥 VOLTA PARA A TELA ANTIGA DE QR CODE
-      window.location.href = `/comprar/pix`;
+      window.location.href = `/comprar/pix?pedido=${data.id}&cpf=${cpfCnpj}&valor=${amountBRL}`;
       
       // Você acessa o QR pela tela /comprar/pix
       localStorage.setItem("pix_qr", data.qrCode);

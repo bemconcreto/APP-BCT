@@ -27,7 +27,7 @@ export async function GET(req: Request) {
         method: "GET",
         headers: {
           accept: "application/json",
-          access_token: process.env.ASAAS_API_KEY!,
+          access_token: asaasKey,
         },
       }
     );
@@ -41,16 +41,16 @@ export async function GET(req: Request) {
       );
     }
 
-    // 👇 AS PARTES IMPORTANTES (ANTES ESTAVA ERRADO)
+    // AQUI ESTÁ A MÁGICA:
     const qrCode =
       dados.pixQrCodeImage ??
-      dados.raw?.pixQrCodeImage ??
+      dados.bankSlip?.pix?.encodedImage ??
       dados.raw?.bankSlip?.pix?.encodedImage ??
       null;
 
     const copiaCola =
       dados.pixTransaction ??
-      dados.raw?.pixTransaction ??
+      dados.bankSlip?.pix?.payload ??
       dados.raw?.bankSlip?.pix?.payload ??
       null;
 
@@ -58,7 +58,7 @@ export async function GET(req: Request) {
       success: true,
       qrCode,
       copiaCola,
-      raw: dados, // útil para debugar depois
+      raw: dados,
     });
   } catch (err) {
     console.error("STATUS ERROR:", err);

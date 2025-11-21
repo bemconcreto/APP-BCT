@@ -13,19 +13,21 @@ export default function PixPage() {
     setErro("");
 
     const { data: session } = await supabase.auth.getSession();
-    const user = session?.session?.user;
 
-    if (!user) {
+    // ⚠ PROTEÇÃO OBRIGATÓRIA PARA O TYPECHECK DA NEXT 15
+    if (!session || !session.session || !session.session.user) {
       setErro("Faça login novamente.");
       return;
     }
+
+    const user = session.session.user;
 
     const res = await fetch("/api/asaas/pix", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         amountBRL: Number(amount),
-        cpfCnpj: session.session.user.user_metadata.cpf,
+        cpfCnpj: user.user_metadata?.cpf ?? "",
         user_id: user.id,
         wallet: user.id,
       }),

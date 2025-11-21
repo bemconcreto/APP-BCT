@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-export default function CartaoPage() {
+export default function CartaoCheckout() {
   const [nome, setNome] = useState("");
   const [numero, setNumero] = useState("");
   const [mes, setMes] = useState("");
@@ -41,31 +41,56 @@ export default function CartaoPage() {
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-4">Pagamento com Cartão</h1>
 
-      {erro && <p className="bg-red-200 p-2 mb-4">{erro}</p>}
+      {erro && <p className="bg-red-200 p-2">{erro}</p>}
 
-      <input placeholder="Nome no cartão" className="border p-2 w-full mb-3"
-        value={nome} onChange={e => setNome(e.target.value)} />
+      <input
+        placeholder="Nome no Cartão"
+        className="border p-2 w-full mb-3"
+        value={nome}
+        onChange={(e) => setNome(e.target.value)}
+      />
 
-      <input placeholder="Número do cartão" className="border p-2 w-full mb-3"
-        value={numero} onChange={e => setNumero(e.target.value)} />
+      <input
+        placeholder="Número do Cartão"
+        className="border p-2 w-full mb-3"
+        value={numero}
+        onChange={(e) => setNumero(e.target.value)}
+      />
 
       <div className="flex gap-2 mb-3">
-        <input placeholder="MM" className="border p-2 w-1/2"
-          value={mes} onChange={e => setMes(e.target.value)} />
-
-        <input placeholder="AA" className="border p-2 w-1/2"
-          value={ano} onChange={e => setAno(e.target.value)} />
+        <input
+          placeholder="MM"
+          className="border p-2 w-1/2"
+          value={mes}
+          onChange={(e) => setMes(e.target.value)}
+        />
+        <input
+          placeholder="AA"
+          className="border p-2 w-1/2"
+          value={ano}
+          onChange={(e) => setAno(e.target.value)}
+        />
       </div>
 
-      <input placeholder="CVV" className="border p-2 w-full mb-3"
-        value={cvv} onChange={e => setCvv(e.target.value)} />
-
-      <input placeholder="Valor (R$)" type="number"
+      <input
+        placeholder="CVV"
         className="border p-2 w-full mb-3"
-        value={amount} onChange={e => setAmount(e.target.value)} />
+        value={cvv}
+        onChange={(e) => setCvv(e.target.value)}
+      />
 
-      <button onClick={pagar}
-        className="bg-blue-600 p-3 rounded text-white w-full">
+      <input
+        placeholder="Valor (R$)"
+        type="number"
+        className="border p-2 w-full mb-3"
+        value={amount}
+        onChange={(e) => setAmount(e.target.value)}
+      />
+
+      <button
+        onClick={pagar}
+        className="bg-blue-600 p-3 rounded text-white w-full"
+      >
         Pagar
       </button>
     </div>

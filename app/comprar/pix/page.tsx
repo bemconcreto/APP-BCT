@@ -1,8 +1,12 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
-export default function PixPage() {
+export default function PixCheckoutPage() {
+  const searchParams = useSearchParams();
+  const pedidoId = searchParams.get("pedido");
+
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState("");
   const [qrCode, setQrCode] = useState("");
@@ -10,43 +14,19 @@ export default function PixPage() {
   const [copiado, setCopiado] = useState(false);
 
   useEffect(() => {
-    async function gerarPix() {
-      setLoading(true);
+    async function carregar() {
+      if (!pedidoId) {
+        setErro("Pedido não encontrado.");
+        setLoading(false);
+        return;
+      }
 
       try {
-        const dadosBrutos = sessionStorage.getItem("BCT_PIX_DATA");
-
-        if (!dadosBrutos) {
-          setErro("Dados do PIX não encontrados.");
-          setLoading(false);
-          return;
-        }
-
-        const dados = JSON.parse(dadosBrutos);
-
-        if (!dados.amountBRL || !dados.cpfCnpj) {
-          setErro("Dados do PIX não encontrados.");
-          setLoading(false);
-          return;
-        }
-
-        const res = await fetch("/api/asaas/pix", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(dados),
-        });
-
-        let data;
-        try {
-          data = await res.json();
-        } catch {
-          setErro("Erro inesperado.");
-          setLoading(false);
-          return;
-        }
+        const res = await fetch(`/api/asaas/pix/status?id=${pedidoId}`);
+        const data = await res.json();
 
         if (!data.success) {
-          setErro("Erro ao gerar PIX.");
+          setErro("Erro ao carregar PIX.");
           setLoading(false);
           return;
         }
@@ -60,10 +40,10 @@ export default function PixPage() {
       setLoading(false);
     }
 
-    gerarPix();
-  }, []);
+    carregar();
+  }, [pedidoId]);
 
-  function copiarCodigo() {
+  function copiar() {
     navigator.clipboard.writeText(copiaCola);
     setCopiado(true);
     setTimeout(() => setCopiado(false), 1500);
@@ -77,10 +57,10 @@ export default function PixPage() {
     );
   }
 
-  if (loading || !qrCode) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center text-lg text-gray-700">
-        Gerando PIX...
+        Carregando PIX...
       </div>
     );
   }
@@ -92,13 +72,15 @@ export default function PixPage() {
       <img src={qrCode} alt="QR Code" className="w-64 h-64 mb-6" />
 
       <button
-        onClick={copiarCodigo}
+        onClick={copiar}
         className="bg-green-600 text-white px-6 py-3 rounded-lg mb-4"
       >
         {copiado ? "COPIADO!" : "Copiar código PIX"}
       </button>
 
-      <p className="text-gray-700 text-center break-all max-w-xl">{copiaCola}</p>
+      <p className="text-gray-700 text-center break-all max-w-xl">
+        {copiaCola}
+      </p>
 
       <a
         href="/comprar"

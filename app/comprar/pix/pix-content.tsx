@@ -1,4 +1,3 @@
-// app/comprar/pix/pix-content.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -10,68 +9,55 @@ export default function PixContent() {
 
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState("");
-  const [qrCode, setQrCode] = useState<string | null>(null);
-  const [copiaCola, setCopiaCola] = useState<string | null>(null);
+  const [qrCode, setQrCode] = useState("");
+  const [copiaCola, setCopiaCola] = useState("");
   const [copiado, setCopiado] = useState(false);
 
+  // 🔥 FUNÇÃO QUE BUSCA O STATUS
+  async function consultarStatus() {
+    try {
+      const res = await fetch(`/api/pix/status?id=${pedidoId}`);
+      const data = await res.json();
+
+      if (!data.success) return;
+
+      // ASAAS às vezes demora para gerar esses campos
+      const qr =
+        data.qrCode ??
+        data.pixQrCodeImage ??
+        data.raw?.pixQrCodeImage ??
+        null;
+
+      const copy =
+        data.copiaCola ??
+        data.pixTransaction ??
+        data.raw?.pixTransaction ??
+        null;
+
+      if (qr) setQrCode(qr);
+      if (copy) setCopiaCola(copy);
+
+      // Se ainda não veio, continua tentando
+      if (!qr || !copy) {
+        setTimeout(consultarStatus, 3000);
+      } else {
+        setLoading(false);
+      }
+
+    } catch (e) {
+      setErro("Erro inesperado.");
+      setLoading(false);
+    }
+  }
+
   useEffect(() => {
-    async function carregarPagamento() {
-      if (!pedidoId) {
-        setErro("Dados do PIX não encontrados.");
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const res = await fetch(`/api/pix/status?id=${pedidoId}`);
-
-        if (!res.ok) {
-          // tenta mostrar mensagem do backend (se houver)
-          try {
-            const txt = await res.text();
-            setErro("Erro ao consultar o status do PIX: " + txt);
-          } catch {
-            setErro("Erro ao consultar o status do PIX.");
-          }
-          setLoading(false);
-          return;
-        }
-
-        const data = await res.json();
-
-        if (!data || !data.success) {
-          setErro(
-            "Dados do PIX não encontrados. " +
-              (data?.error ? JSON.stringify(data.error) : "")
-          );
-          setLoading(false);
-          return;
-        }
-
-        // aqui usamos os campos normalizados que o status devolve
-        // mas também aceitaremos `raw` caso algo mude
-        const qr =
-          data.qrCode ??
-          data.raw?.pixQrCodeImage ??
-          data.raw?.pixQrCode ??
-          null;
-        const copy =
-          data.copiaCola ??
-          data.raw?.pixCopiaECola ??
-          data.raw?.pixTransaction ??
-          data.raw?.pix_copy_paste ??
-          null;
-
-        setQrCode(qr);
-        setCopiaCola(copy ?? null);
-      } catch (e) {
-        setErro("Erro inesperado ao buscar status do PIX.");
-      } finally {
-        setLoading(false);
-      }
+    if (!pedidoId) {
+      setErro("Dados do PIX não encontrados.");
+      setLoading(false);
+      return;
     }
 
-    carregarPagamento();
+    consultarStatus();
   }, [pedidoId]);
 
   function copiarCodigo() {
@@ -89,22 +75,16 @@ export default function PixContent() {
     );
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-lg text-gray-700">
-        Carregando PIX...
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen p-6 flex flex-col items-center">
       <h1 className="text-3xl font-bold mb-6">Pagamento via PIX</h1>
 
+      {loading && <p className="text-gray-600 mb-4">Gerando PIX...</p>}
+
       {qrCode ? (
         <img src={qrCode} alt="QR Code" className="w-64 h-64 mb-6" />
       ) : (
-        <p className="text-red-500 mb-4">QR Code não disponível.</p>
+        <p className="text-red-500 mb-4">QR Code ainda não disponível...</p>
       )}
 
       <button
@@ -115,7 +95,7 @@ export default function PixContent() {
       </button>
 
       <p className="text-gray-700 text-center break-all max-w-xl">
-        {copiaCola ?? "Código PIX não disponível."}
+        {copiaCola || "Aguardando código PIX..."}
       </p>
 
       <a

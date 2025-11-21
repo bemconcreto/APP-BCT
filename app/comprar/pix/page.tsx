@@ -1,66 +1,69 @@
 "use client";
 
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
 
-export default function PixCheckoutPage() {
-  const params = useSearchParams();
-  const pedido = params.get("pedido");
+function PixContent() {
+  const searchParams = useSearchParams();
+  const pedido = searchParams.get("pedido");
 
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [erro, setErro] = useState("");
   const [qrCode, setQrCode] = useState("");
-  const [copiaCola, setCopiaCola] = useState("");
+  const [copia, setCopia] = useState("");
 
   useEffect(() => {
-    async function carregarPagamento() {
+    async function carregar() {
       if (!pedido) {
-        setError("Pedido inválido.");
-        setLoading(false);
+        setErro("Dados não encontrados.");
         return;
       }
 
       try {
-        const resp = await fetch(`/api/asaas/consulta?payment_id=${pedido}`);
-        const data = await resp.json();
+        const res = await fetch(
+          `/api/asaas/pix/status?id=${pedido}`,
+          { method: "GET" }
+        );
 
-        if (!resp.ok || !data.success) {
-          setError("Erro ao carregar pagamento.");
-        } else {
-          setQrCode(data.qrCode);
-          setCopiaCola(data.copiaCola);
+        const data = await res.json();
+
+        if (!data.success) {
+          setErro("Erro inesperado.");
+          return;
         }
-      } catch {
-        setError("Erro inesperado.");
-      }
 
-      setLoading(false);
+        setQrCode(data.qrCode);
+        setCopia(data.copiaCola);
+      } catch (e) {
+        console.error(e);
+        setErro("Erro inesperado.");
+      }
     }
 
-    carregarPagamento();
+    carregar();
   }, [pedido]);
 
   return (
-    <div className="min-h-screen bg-gray-100 p-8 flex flex-col items-center">
-      <div className="bg-white p-6 rounded-xl shadow max-w-md w-full">
-        <h1 className="text-2xl font-bold text-center mb-4">Pagamento via PIX</h1>
+    <div className="p-6">
+      <h1 className="text-2xl font-bold mb-4">Pagamento via PIX</h1>
 
-        {loading && <p className="text-center">Carregando...</p>}
+      {erro && (
+        <p className="bg-red-200 p-3 rounded mb-4">{erro}</p>
+      )}
 
-        {error && (
-          <p className="bg-red-200 text-red-800 p-3 rounded text-center mb-4">
-            {error}
-          </p>
-        )}
-
-        {!loading && !error && (
-          <>
-            <img src={qrCode} className="w-64 mx-auto" alt="QR Code PIX" />
-            <p className="mt-6 font-semibold text-center">Copia e Cola:</p>
-            <p className="break-all bg-gray-100 p-3 rounded text-sm">{copiaCola}</p>
-          </>
-        )}
-      </div>
+      {qrCode && (
+        <div className="text-center mt-6">
+          <img src={qrCode} className="mx-auto w-64" />
+          <p className="mt-4 break-all">{copia}</p>
+        </div>
+      )}
     </div>
+  );
+}
+
+export default function Page() {
+  return (
+    <Suspense fallback={<p>Carregando...</p>}>
+      <PixContent />
+    </Suspense>
   );
 }

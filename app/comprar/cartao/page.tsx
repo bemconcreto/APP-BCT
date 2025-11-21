@@ -60,7 +60,8 @@ export default function CartaoPage() {
       <input placeholder="CVV" className="border p-2 w-full mb-3"
         value={cvv} onChange={e => setCvv(e.target.value)} />
 
-      <input placeholder="Valor (R$)" type="number" className="border p-2 w-full mb-3"
+      <input placeholder="Valor (R$)" type="number"
+        className="border p-2 w-full mb-3"
         value={amount} onChange={e => setAmount(e.target.value)} />
 
       <button onClick={pagar}

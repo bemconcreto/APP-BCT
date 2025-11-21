@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 
-export default function PixContent() {
+function PixContentInternal() {
   const searchParams = useSearchParams();
   const pedidoId = searchParams.get("pedido");
 
@@ -14,7 +14,7 @@ export default function PixContent() {
   const [copiado, setCopiado] = useState(false);
 
   useEffect(() => {
-    async function carregarPagamento() {
+    async function carregar() {
       if (!pedidoId) {
         setErro("Dados do PIX não encontrados.");
         setLoading(false);
@@ -22,22 +22,19 @@ export default function PixContent() {
       }
 
       try {
-        const res = await fetch(`/api/asaas/pix/status?id=${pedidoId}`, {
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
-        });
-
+        const res = await fetch(`/api/pix/status?id=${pedidoId}`);
         const data = await res.json();
 
         if (!data.success) {
-          setErro("Erro ao carregar PIX.");
+          setErro("Dados do PIX não encontrados.");
           setLoading(false);
           return;
         }
 
-        // 🔥 AGORA EXIBE O QR - CODE E O COPIA E COLA VERDADEIRO
-        setQrCode(data.qrCode);
-        setCopiaCola(data.copiaCola);
+        // CAMPOS CORRETOS DO ASAAS:
+        setQrCode(data.qrCode);           // invoiceUrl vira QR code
+        setCopiaCola(data.copiaCola);     // identificationField vira copia e cola
+
       } catch (e) {
         setErro("Erro inesperado.");
       }
@@ -45,7 +42,7 @@ export default function PixContent() {
       setLoading(false);
     }
 
-    carregarPagamento();
+    carregar();
   }, [pedidoId]);
 
   function copiarCodigo() {
@@ -94,5 +91,13 @@ export default function PixContent() {
         Voltar
       </a>
     </div>
+  );
+}
+
+export default function PixContent() {
+  return (
+    <Suspense fallback={<p>Carregando...</p>}>
+      <PixContentInternal />
+    </Suspense>
   );
 }

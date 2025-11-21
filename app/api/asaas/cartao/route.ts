@@ -3,8 +3,7 @@ import { NextResponse } from "next/server";
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-
-    const { nome, numero, mes, ano, cvv, valor } = body;
+    const { nome, numero, mes, ano, cvv, amountBRL } = body;
 
     if (!nome || !numero || !mes || !ano || !cvv) {
       return NextResponse.json(
@@ -13,7 +12,8 @@ export async function POST(req: Request) {
       );
     }
 
-    const pagamento = await fetch("https://www.asaas.com/api/v3/payments", {
+    // ASAAS CARTÃO
+    const resp = await fetch("https://www.asaas.com/api/v3/payments", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -22,7 +22,8 @@ export async function POST(req: Request) {
       body: JSON.stringify({
         customer: process.env.ASAAS_CUSTOMER_ID!,
         billingType: "CREDIT_CARD",
-        value: valor,
+        value: amountBRL,
+        description: "Pagamento BCT",
         creditCard: {
           holderName: nome,
           number: numero,
@@ -33,21 +34,20 @@ export async function POST(req: Request) {
       }),
     });
 
-    const data = await pagamento.json();
+    const data = await resp.json();
 
-    if (!pagamento.ok) {
+    if (!resp.ok) {
       return NextResponse.json(
-        { success: false, error: data?.errors?.[0]?.description || "Erro ao processar cartão." },
+        { success: false, error: data?.errors?.[0]?.description || "Falha" },
         { status: 400 }
       );
     }
 
-    return NextResponse.json({ success: true, data });
-
+    return NextResponse.json({ success: true, id: data.id });
   } catch (e) {
     console.error("ERRO CARTÃO:", e);
     return NextResponse.json(
-      { success: false, error: "Erro interno." },
+      { success: false, error: "Erro interno" },
       { status: 500 }
     );
   }

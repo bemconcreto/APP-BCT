@@ -3,49 +3,71 @@ import { createClient } from "@supabase/supabase-js";
 
 export async function POST(req: Request) {
   try {
+    // ==============================
+    // LOG DETALHADO DO REQUEST
+    // ==============================
     const body = await req.json();
-    const { amountBRL, cpfCnpj, tokens, email, nome } = body;
+    const authHeader = req.headers.get("authorization") || null;
 
-    // validação simples
+    console.log("📥 BODY RECEBIDO:", body);
+    console.log("🔐 AUTH HEADER RECEBIDO:", authHeader);
+
+    const { amountBRL, cpfCnpj, tokens } = body;
+
     if (!amountBRL || Number(amountBRL) <= 0) {
-      return NextResponse.json({ success: false, error: "Valor inválido." }, { status: 400 });
+      return NextResponse.json(
+        { success: false, error: "Valor inválido." },
+        { status: 400 }
+      );
     }
 
-    // cria client com SERVICE ROLE (server-side)
-    const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+    // =========================================
+    //      VALIDA USER VIA TOKEN (CORRETO)
+    // =========================================
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
 
-    // pega Authorization Bearer token do header (se enviado)
-    const authHeader = req.headers.get("authorization") || "";
-    const token = authHeader.startsWith("Bearer ") ? authHeader.split(" ")[1] : authHeader || null;
-
-    // tenta obter usuário a partir do token (segurança)
     let userId: string | null = null;
-    if (token) {
-      const { data: userData, error: userErr } = await supabase.auth.getUser(token);
-      if (userErr) {
-        console.log("⚠️ supabase.auth.getUser error:", userErr);
-      } else {
-        userId = userData?.user?.id ?? null;
+
+    if (authHeader?.startsWith("Bearer ")) {
+      const token = authHeader.split(" ")[1];
+
+      const { data, error } = await supabase.auth.getUser(token);
+
+      console.log("👤 RESULTADO getUser:", data, error);
+
+      if (data?.user?.id) {
+        userId = data.user.id;
       }
     }
 
-    // se cliente não enviou token ou não conseguimos user, tentamos aceitar user_id vindo no body (fallback)
+    // Fallback caso front mande user_id
     if (!userId && body.user_id) {
       userId = body.user_id;
     }
 
     if (!userId) {
-      // fail safe: não inserir compra sem user_id se tabela exige NOT NULL
-      return NextResponse.json({ success: false, error: "Usuário não autenticado." }, { status: 401 });
+      console.log("❌ Nenhum user_id encontrado.");
+      return NextResponse.json(
+        { success: false, error: "Usuário não autenticado." },
+        { status: 401 }
+      );
     }
 
-    // cálculo tokens se não foi enviado
+    // =========================================
+    //   CALCULA TOKENS
+    // =========================================
     const precoUSD = 0.4482;
     const dolar = 5.3;
     const precoBRL = precoUSD * dolar;
-    const calculatedTokens = tokens ?? Number((Number(amountBRL) / precoBRL).toFixed(6));
+    const calculatedTokens =
+      tokens ?? Number((Number(amountBRL) / precoBRL).toFixed(6));
 
-    // registra compra pendente
+    // =========================================
+    //   REGISTRA COMPRA (AQUI DAVA ERRO)
+    // =========================================
     const { data: compra, error: compraErr } = await supabase
       .from("compras_bct")
       .insert({
@@ -57,12 +79,17 @@ export async function POST(req: Request) {
       .select()
       .single();
 
-    if (compraErr || !compra) {
-      console.log("ERRO AO REGISTRAR COMPRA:", compraErr);
-      return NextResponse.json({ success: false, error: "Erro ao registrar compra." }, { status: 500 });
+    if (compraErr) {
+      console.log("❌ ERRO AO REGISTRAR COMPRA:", compraErr);
+      return NextResponse.json(
+        { success: false, error: "Erro ao registrar compra." },
+        { status: 500 }
+      );
     }
 
-    // chama Asaas para gerar PIX
+    // =========================================
+    //   GERA PIX NO ASAAS
+    // =========================================
     const resp = await fetch("https://www.asaas.com/api/v3/payments", {
       method: "POST",
       headers: {
@@ -76,18 +103,23 @@ export async function POST(req: Request) {
         description: `Compra de ${calculatedTokens} BCT`,
         dueDate: new Date().toISOString().split("T")[0],
         cpfCnpj,
-        // opcional: email, externalReference etc
       }),
     });
 
     const pagamento = await resp.json();
-    if (!resp.ok || !pagamento?.id) {
-      console.log("ERRO PIX (ASAAS):", pagamento);
-      return NextResponse.json({ success: false, error: "Erro ao gerar PIX." }, { status: 500 });
+
+    if (!resp.ok || !pagamento.id) {
+      console.log("❌ ERRO PIX ASAAS:", pagamento);
+      return NextResponse.json(
+        { success: false, error: "Erro ao gerar PIX." },
+        { status: 500 }
+      );
     }
 
-    // atualiza compra com payment_id do Asaas
-    await supabase.from("compras_bct").update({ payment_id: pagamento.id }).eq("id", compra.id);
+    await supabase
+      .from("compras_bct")
+      .update({ payment_id: pagamento.id })
+      .eq("id", compra.id);
 
     return NextResponse.json({
       success: true,
@@ -96,8 +128,11 @@ export async function POST(req: Request) {
       copiaCola: pagamento.pixCopiaECola,
     });
   } catch (err) {
-    console.error("ERRO PIX ROUTE:", err);
-    return NextResponse.json({ success: false, error: "Erro interno." }, { status: 500 });
+    console.error("❌ ERRO PIX ROUTE:", err);
+    return NextResponse.json(
+      { success: false, error: "Erro interno." },
+      { status: 500 }
+    );
   }
 }
 

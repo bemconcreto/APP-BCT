@@ -8,18 +8,15 @@ export default function PixPage() {
   const [erro, setErro] = useState("");
   const [qrCode, setQrCode] = useState("");
   const [copia, setCopia] = useState("");
-  const [loading, setLoading] = useState(false);
 
   async function gerarPix() {
     setErro("");
-    setLoading(true);
 
     const { data: session } = await supabase.auth.getSession();
     const user = session?.session?.user;
 
     if (!user) {
       setErro("Faça login novamente.");
-      setLoading(false);
       return;
     }
 
@@ -30,15 +27,13 @@ export default function PixPage() {
         amountBRL: Number(amount),
         cpfCnpj: user.user_metadata.cpf,
         user_id: user.id,
-        wallet: user.id,
       }),
     });
 
     const data = await res.json();
-    setLoading(false);
 
     if (!data.success) {
-      setErro(data.error || "Erro ao gerar PIX.");
+      setErro("Erro ao gerar PIX.");
       return;
     }
 
@@ -64,9 +59,8 @@ export default function PixPage() {
           <button
             onClick={gerarPix}
             className="bg-green-600 p-3 rounded text-white w-full"
-            disabled={loading}
           >
-            {loading ? "Gerando..." : "Gerar PIX"}
+            Gerar PIX
           </button>
         </>
       )}

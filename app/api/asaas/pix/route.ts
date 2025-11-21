@@ -25,12 +25,11 @@ export async function POST(req: Request) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    // Registrar compra pendente
+    // Registrar compra pendente (SEM wallet!)
     const { data: compra, error: compraErr } = await supabase
       .from("compras_bct")
       .insert({
         user_id,
-        wallet: user_id, // ← ESSA LINHA É CRUCIAL
         tokens,
         valor_pago: amountBRL,
         status: "pending",
@@ -73,7 +72,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // Atualizar compra com o payment_id
+    // Atualiza compra com o payment_id
     await supabase
       .from("compras_bct")
       .update({ payment_id: pagamento.id })
@@ -85,6 +84,7 @@ export async function POST(req: Request) {
       qrCode: pagamento.pixQrCode,
       copiaCola: pagamento.pixCopiaECola,
     });
+
   } catch (error) {
     console.error("ERRO PIX:", error);
     return NextResponse.json(

@@ -3,8 +3,9 @@ import { NextResponse } from "next/server";
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { nome, numero, mes, ano, cvv, amountBRL } = body;
+    const { nome, numero, mes, ano, cvv, amountBRL, cpfCnpj, email } = body;
 
+    // 1. Validação básica
     if (!nome || !numero || !mes || !ano || !cvv) {
       return NextResponse.json(
         { success: false, error: "Dados do cartão incompletos." },
@@ -12,7 +13,15 @@ export async function POST(req: Request) {
       );
     }
 
-    // ASAAS CARTÃO
+    // 2. Validação ASAAS
+    if (!cpfCnpj || !email) {
+      return NextResponse.json(
+        { success: false, error: "CPF e email são obrigatórios." },
+        { status: 400 }
+      );
+    }
+
+    // 3. Montagem do pagamento
     const resp = await fetch("https://www.asaas.com/api/v3/payments", {
       method: "POST",
       headers: {
@@ -24,13 +33,25 @@ export async function POST(req: Request) {
         billingType: "CREDIT_CARD",
         value: amountBRL,
         description: "Pagamento BCT",
+
         creditCard: {
           holderName: nome,
-          number: numero,
+          number: numero.replace(/\s/g, ""),
           expiryMonth: mes,
           expiryYear: ano,
           ccv: cvv,
         },
+
+        creditCardHolderInfo: {
+          name: nome,
+          email,
+          cpfCnpj,
+          postalCode: "00000000",
+          address: "Não informado",
+          addressNumber: "0",
+          phone: "11999999999"
+        },
+
       }),
     });
 
@@ -38,16 +59,17 @@ export async function POST(req: Request) {
 
     if (!resp.ok) {
       return NextResponse.json(
-        { success: false, error: data?.errors?.[0]?.description || "Falha" },
+        { success: false, error: data?.errors?.[0]?.description || "Falha no pagamento." },
         { status: 400 }
       );
     }
 
     return NextResponse.json({ success: true, id: data.id });
+
   } catch (e) {
     console.error("ERRO CARTÃO:", e);
     return NextResponse.json(
-      { success: false, error: "Erro interno" },
+      { success: false, error: "Erro interno no servidor." },
       { status: 500 }
     );
   }

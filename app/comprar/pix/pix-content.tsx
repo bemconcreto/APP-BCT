@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
-function PixContentInternal() {
+export default function PixContent() {
   const searchParams = useSearchParams();
   const pedidoId = searchParams.get("pedido");
 
@@ -14,52 +14,50 @@ function PixContentInternal() {
   const [copiado, setCopiado] = useState(false);
 
   useEffect(() => {
-    async function carregar() {
-      if (!pedidoId) {
-        setErro("Dados do PIX não encontrados.");
-        setLoading(false);
-        return;
-      }
+    if (!pedidoId) return; // Aguarda até searchParams estar carregado
 
+    async function carregarPagamento() {
       try {
         const res = await fetch(`/api/pix/status?id=${pedidoId}`);
         const data = await res.json();
 
         if (!data.success) {
           setErro("Dados do PIX não encontrados.");
-          setLoading(false);
-          return;
+        } else {
+          setQrCode(data.qrCode);
+          setCopiaCola(data.copiaCola);
         }
-
-        // CAMPOS CORRETOS DO ASAAS:
-        setQrCode(data.qrCode);           // invoiceUrl vira QR code
-        setCopiaCola(data.copiaCola);     // identificationField vira copia e cola
-
-      } catch (e) {
+      } catch (err) {
         setErro("Erro inesperado.");
       }
 
       setLoading(false);
     }
 
-    carregar();
+    carregarPagamento();
   }, [pedidoId]);
 
-  function copiarCodigo() {
-    navigator.clipboard.writeText(copiaCola);
-    setCopiado(true);
-    setTimeout(() => setCopiado(false), 1500);
+  if (!pedidoId) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="bg-red-200 text-red-800 px-6 py-3 rounded">
+          Dados do PIX não encontrados.
+        </p>
+      </div>
+    );
   }
 
   if (erro) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p className="bg-red-200 text-red-800 px-6 py-3 rounded">{erro}</p>
+        <p className="bg-red-200 text-red-800 px-6 py-3 rounded">
+          {erro}
+        </p>
       </div>
     );
   }
 
-  if (loading || !qrCode) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center text-lg text-gray-700">
         Carregando PIX...
@@ -74,7 +72,11 @@ function PixContentInternal() {
       <img src={qrCode} alt="QR Code" className="w-64 h-64 mb-6" />
 
       <button
-        onClick={copiarCodigo}
+        onClick={() => {
+          navigator.clipboard.writeText(copiaCola);
+          setCopiado(true);
+          setTimeout(() => setCopiado(false), 1500);
+        }}
         className="bg-green-600 text-white px-6 py-3 rounded-lg mb-4"
       >
         {copiado ? "COPIADO!" : "Copiar código PIX"}
@@ -91,13 +93,5 @@ function PixContentInternal() {
         Voltar
       </a>
     </div>
-  );
-}
-
-export default function PixContent() {
-  return (
-    <Suspense fallback={<p>Carregando...</p>}>
-      <PixContentInternal />
-    </Suspense>
   );
 }

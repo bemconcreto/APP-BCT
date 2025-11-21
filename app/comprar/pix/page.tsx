@@ -14,9 +14,17 @@ export default function PixPage() {
       setLoading(true);
 
       try {
-        const dados = JSON.parse(sessionStorage.getItem("BCT_PIX_DATA") || "{}");
+        const dadosBrutos = sessionStorage.getItem("BCT_PIX_DATA");
 
-        if (!dados.amountBRL || !dados.cpfCnpj || !dados.tokens) {
+        if (!dadosBrutos) {
+          setErro("Dados do PIX não encontrados.");
+          setLoading(false);
+          return;
+        }
+
+        const dados = JSON.parse(dadosBrutos);
+
+        if (!dados.amountBRL || !dados.cpfCnpj) {
           setErro("Dados do PIX não encontrados.");
           setLoading(false);
           return;
@@ -28,7 +36,14 @@ export default function PixPage() {
           body: JSON.stringify(dados),
         });
 
-        const data = await res.json();
+        let data;
+        try {
+          data = await res.json();
+        } catch {
+          setErro("Erro inesperado.");
+          setLoading(false);
+          return;
+        }
 
         if (!data.success) {
           setErro("Erro ao gerar PIX.");

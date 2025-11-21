@@ -5,35 +5,35 @@ import { useSearchParams } from "next/navigation";
 
 export default function PixContent() {
   const searchParams = useSearchParams();
-  const pedidoId = searchParams.get("pedido");
+  const pedido = searchParams.get("pedido");
 
-  const [loading, setLoading] = useState(true);
-  const [erro, setErro] = useState("");
   const [qrCode, setQrCode] = useState("");
   const [copiaCola, setCopiaCola] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [erro, setErro] = useState("");
   const [copiado, setCopiado] = useState(false);
 
   useEffect(() => {
     async function carregar() {
-      if (!pedidoId) {
-        setErro("Pedido não encontrado.");
+      if (!pedido) {
+        setErro("Pedido inválido.");
         setLoading(false);
         return;
       }
 
       try {
-        const res = await fetch(`/api/asaas/pix/status?id=${pedidoId}`);
+        const res = await fetch(`/api/asaas/pix/status?id=${pedido}`);
         const data = await res.json();
 
         if (!data.success) {
-          setErro("Erro ao buscar dados do PIX.");
+          setErro("Erro ao carregar PIX.");
           setLoading(false);
           return;
         }
 
         setQrCode(data.qrCode);
         setCopiaCola(data.copiaCola);
-      } catch {
+      } catch (e) {
         setErro("Erro inesperado.");
       }
 
@@ -41,7 +41,7 @@ export default function PixContent() {
     }
 
     carregar();
-  }, [pedidoId]);
+  }, [pedido]);
 
   function copiar() {
     navigator.clipboard.writeText(copiaCola);
@@ -52,9 +52,7 @@ export default function PixContent() {
   if (erro) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p className="bg-red-200 text-red-800 px-6 py-3 rounded">
-          {erro}
-        </p>
+        <p className="bg-red-200 text-red-800 px-6 py-3 rounded">{erro}</p>
       </div>
     );
   }
@@ -71,11 +69,7 @@ export default function PixContent() {
     <div className="min-h-screen p-6 flex flex-col items-center">
       <h1 className="text-3xl font-bold mb-6">Pagamento via PIX</h1>
 
-      <img
-        src={qrCode}
-        alt="QR Code"
-        className="w-64 h-64 mb-6 border rounded"
-      />
+      <img src={qrCode} alt="QR Code" className="w-64 h-64 mb-6" />
 
       <button
         onClick={copiar}

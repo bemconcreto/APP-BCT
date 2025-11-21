@@ -13,51 +13,52 @@ export default function PixContent() {
   const [copiaCola, setCopiaCola] = useState("");
   const [copiado, setCopiado] = useState(false);
 
-  // 🔥 FUNÇÃO QUE BUSCA O STATUS
-  async function consultarStatus() {
-    try {
-      const res = await fetch(`/api/pix/status?id=${pedidoId}`);
-      const data = await res.json();
-
-      if (!data.success) return;
-
-      // ASAAS às vezes demora para gerar esses campos
-      const qr =
-        data.qrCode ??
-        data.pixQrCodeImage ??
-        data.raw?.pixQrCodeImage ??
-        null;
-
-      const copy =
-        data.copiaCola ??
-        data.pixTransaction ??
-        data.raw?.pixTransaction ??
-        null;
-
-      if (qr) setQrCode(qr);
-      if (copy) setCopiaCola(copy);
-
-      // Se ainda não veio, continua tentando
-      if (!qr || !copy) {
-        setTimeout(consultarStatus, 3000);
-      } else {
+  useEffect(() => {
+    async function carregarPagamento() {
+      if (!pedidoId) {
+        setErro("Dados do PIX não encontrados.");
         setLoading(false);
+        return;
       }
 
-    } catch (e) {
-      setErro("Erro inesperado.");
+      try {
+        const res = await fetch(`/api/pix/status?id=${pedidoId}`);
+        const data = await res.json();
+
+        if (!data.success) {
+          setErro("Não foi possível carregar o pagamento.");
+          setLoading(false);
+          return;
+        }
+
+        // Primeiro tenta pegar direto da API
+        let qr = data.qrCode;
+        let copy = data.copiaCola;
+
+        // Se estiverem nulos, tentamos buscar do invoiceUrl
+        if ((!qr || !copy) && data.raw?.invoiceUrl) {
+          const invoiceUrl = data.raw.invoiceUrl;
+
+          // Busca o HTML da página da cobrança
+          const html = await fetch(invoiceUrl).then(r => r.text());
+
+          // Extrai texto "copia e cola"
+          const matchCopy = html.match(/([0-9A-Za-z]{30,})/);
+          if (matchCopy) {
+            copy = matchCopy[1];
+          }
+        }
+
+        setQrCode(qr || "");
+        setCopiaCola(copy || "");
+      } catch (e) {
+        setErro("Erro ao carregar o PIX.");
+      }
+
       setLoading(false);
     }
-  }
 
-  useEffect(() => {
-    if (!pedidoId) {
-      setErro("Dados do PIX não encontrados.");
-      setLoading(false);
-      return;
-    }
-
-    consultarStatus();
+    carregarPagamento();
   }, [pedidoId]);
 
   function copiarCodigo() {
@@ -75,11 +76,17 @@ export default function PixContent() {
     );
   }
 
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-lg text-gray-700">
+        Gerando PIX...
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen p-6 flex flex-col items-center">
       <h1 className="text-3xl font-bold mb-6">Pagamento via PIX</h1>
-
-      {loading && <p className="text-gray-600 mb-4">Gerando PIX...</p>}
 
       {qrCode ? (
         <img src={qrCode} alt="QR Code" className="w-64 h-64 mb-6" />

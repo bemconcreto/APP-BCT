@@ -13,46 +13,76 @@ export default function PixContent() {
   const [copiaCola, setCopiaCola] = useState("");
   const [copiado, setCopiado] = useState(false);
 
-  useEffect(() => {
-    if (!pedidoId) return; // Aguarda até searchParams estar carregado
+  // -------------------------------------------------
+  // FUNÇÃO QUE TENTA CARREGAR O STATUS DO ASAAS
+  // -------------------------------------------------
+  async function buscarStatus() {
+    try {
+      const res = await fetch(`/api/pix/status?id=${pedidoId}`);
+      const data = await res.json();
 
-    async function carregarPagamento() {
-      try {
-        const res = await fetch(`/api/pix/status?id=${pedidoId}`);
-        const data = await res.json();
-
-        if (!data.success) {
-          setErro("Dados do PIX não encontrados.");
-        } else {
-          setQrCode(data.qrCode);
-          setCopiaCola(data.copiaCola);
-        }
-      } catch (err) {
-        setErro("Erro inesperado.");
+      if (!data.success || !data.qrCode || !data.copiaCola) {
+        return null; // volta para tentar novamente
       }
 
-      setLoading(false);
+      return {
+        qr: data.qrCode,
+        copia: data.copiaCola,
+      };
+    } catch (e) {
+      return null;
     }
-
-    carregarPagamento();
-  }, [pedidoId]);
-
-  if (!pedidoId) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="bg-red-200 text-red-800 px-6 py-3 rounded">
-          Dados do PIX não encontrados.
-        </p>
-      </div>
-    );
   }
 
+  // -------------------------------------------------
+  // LOOP ATÉ O ASAAS GERAR O QR CODE
+  // -------------------------------------------------
+  useEffect(() => {
+    if (!pedidoId) {
+      setErro("Dados do PIX não encontrados.");
+      setLoading(false);
+      return;
+    }
+
+    let tentativas = 0;
+
+    async function tentar() {
+      const resultado = await buscarStatus();
+
+      if (resultado) {
+        setQrCode(resultado.qr);
+        setCopiaCola(resultado.copia);
+        setLoading(false);
+        return;
+      }
+
+      tentativas++;
+
+      if (tentativas >= 8) {
+        setErro("Erro ao carregar PIX.");
+        setLoading(false);
+        return;
+      }
+
+      setTimeout(tentar, 600); // tenta novamente
+    }
+
+    tentar();
+  }, [pedidoId]);
+
+  function copiarCodigo() {
+    navigator.clipboard.writeText(copiaCola);
+    setCopiado(true);
+    setTimeout(() => setCopiado(false), 1500);
+  }
+
+  // -------------------------------------------------
+  // UI
+  // -------------------------------------------------
   if (erro) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p className="bg-red-200 text-red-800 px-6 py-3 rounded">
-          {erro}
-        </p>
+        <p className="bg-red-200 text-red-800 px-6 py-3 rounded">{erro}</p>
       </div>
     );
   }
@@ -72,11 +102,7 @@ export default function PixContent() {
       <img src={qrCode} alt="QR Code" className="w-64 h-64 mb-6" />
 
       <button
-        onClick={() => {
-          navigator.clipboard.writeText(copiaCola);
-          setCopiado(true);
-          setTimeout(() => setCopiado(false), 1500);
-        }}
+        onClick={copiarCodigo}
         className="bg-green-600 text-white px-6 py-3 rounded-lg mb-4"
       >
         {copiado ? "COPIADO!" : "Copiar código PIX"}

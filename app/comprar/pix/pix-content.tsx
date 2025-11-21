@@ -38,9 +38,13 @@ export default function PixContent() {
           return;
         }
 
-        setQrCode(data.qrCode || "");
-        setCopiaCola(data.copiaCola || "");
-      } catch {
+        // 🔥 Trata todas as possibilidades
+        const qr = data.qrCode ?? data.pixQrCode ?? data.pixQrCodeImage ?? "";
+        const copy = data.copiaCola ?? data.pixCopyPaste ?? "";
+
+        setQrCode(qr);
+        setCopiaCola(copy);
+      } catch (e) {
         setErro("Erro inesperado.");
       }
 

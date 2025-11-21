@@ -20,12 +20,20 @@ export default function PixPage() {
       return;
     }
 
+    // ✅ CORREÇÃO: pegar o CPF com segurança
+    const cpfCnpj = user.user_metadata?.cpf || "";
+
+    if (!cpfCnpj) {
+      setErro("Seu CPF não foi encontrado no cadastro.");
+      return;
+    }
+
     const res = await fetch("/api/asaas/pix", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         amountBRL: Number(amount),
-        cpfCnpj: user.user_metadata.cpf,
+        cpfCnpj,   // <-- AGORA CORRETO
         user_id: user.id,
       }),
     });
@@ -56,6 +64,7 @@ export default function PixPage() {
             className="border p-2 w-full mb-4"
             placeholder="Valor"
           />
+
           <button
             onClick={gerarPix}
             className="bg-green-600 p-3 rounded text-white w-full"

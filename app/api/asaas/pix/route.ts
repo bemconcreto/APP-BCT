@@ -19,17 +19,18 @@ export async function POST(req: Request) {
     const precoBRL = precoUSD * dolar;
     const tokens = Number((amountBRL / precoBRL).toFixed(6));
 
-    // 🟢 SUPABASE CLIENT
+    // Supabase client
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    // 🟢 REGISTRAR COMPRA
+    // Registrar compra pendente
     const { data: compra, error: compraErr } = await supabase
       .from("compras_bct")
       .insert({
         user_id,
+        wallet: user_id, // ← ESSA LINHA É CRUCIAL
         tokens,
         valor_pago: amountBRL,
         status: "pending",
@@ -38,14 +39,14 @@ export async function POST(req: Request) {
       .single();
 
     if (compraErr || !compra) {
-      console.log("❌ ERRO AO REGISTRAR COMPRA:", compraErr);
+      console.log("ERRO AO REGISTRAR COMPRA:", compraErr);
       return NextResponse.json(
         { success: false, error: "Erro ao registrar compra." },
         { status: 500 }
       );
     }
 
-    // 🟢 CRIAÇÃO DO PIX NO ASAAS
+    // ===== ASAAS PIX =====
     const response = await fetch("https://www.asaas.com/api/v3/payments", {
       method: "POST",
       headers: {
@@ -65,14 +66,14 @@ export async function POST(req: Request) {
     const pagamento = await response.json();
 
     if (!response.ok || !pagamento?.id) {
-      console.log("❌ ERRO AO GERAR PIX:", pagamento);
+      console.log("ERRO PIX:", pagamento);
       return NextResponse.json(
         { success: false, error: "Erro ao gerar PIX." },
         { status: 500 }
       );
     }
 
-    // 🟢 GRAVAR payment_id NA COMPRA
+    // Atualizar compra com o payment_id
     await supabase
       .from("compras_bct")
       .update({ payment_id: pagamento.id })
@@ -84,9 +85,8 @@ export async function POST(req: Request) {
       qrCode: pagamento.pixQrCode,
       copiaCola: pagamento.pixCopiaECola,
     });
-
   } catch (error) {
-    console.error("❌ ERRO INTERNO PIX:", error);
+    console.error("ERRO PIX:", error);
     return NextResponse.json(
       { success: false, error: "Erro interno." },
       { status: 500 }

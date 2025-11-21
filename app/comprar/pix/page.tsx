@@ -12,19 +12,21 @@ export default function PixPage() {
   async function gerarPix() {
     setErro("");
 
-    const { data: session } = await supabase.auth.getSession();
-    const user = session?.session?.user;
+    // 🔥 PEGA SESSÃO COM SEGURANÇA
+    const { data } = await supabase.auth.getSession();
+    const session = data?.session;
 
-    if (!user) {
-      setErro("Faça login novamente.");
+    if (!session || !session.user) {
+      setErro("Sessão expirada. Faça login novamente.");
       return;
     }
 
-    // ✅ CORREÇÃO: pegar o CPF com segurança
-    const cpfCnpj = user.user_metadata?.cpf || "";
+    const user = session.user;
 
+    // 🔥 CPF seguro
+    const cpfCnpj = user.user_metadata?.cpf;
     if (!cpfCnpj) {
-      setErro("Seu CPF não foi encontrado no cadastro.");
+      setErro("Seu CPF não está cadastrado.");
       return;
     }
 
@@ -33,20 +35,21 @@ export default function PixPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         amountBRL: Number(amount),
-        cpfCnpj,   // <-- AGORA CORRETO
-        user_id: user.id,
+        cpfCnpj,
+        user_id: user.id, // <-- AGORA GARANTIDO QUE NÃO É NULL
       }),
     });
 
-    const data = await res.json();
+    const json = await res.json();
 
-    if (!data.success) {
+    if (!json.success) {
+      console.log(json);
       setErro("Erro ao gerar PIX.");
       return;
     }
 
-    setQrCode(data.qrCode);
-    setCopia(data.copiaCola);
+    setQrCode(json.qrCode);
+    setCopia(json.copiaCola);
   }
 
   return (

@@ -14,36 +14,36 @@ export default function PixContent() {
   const [copiado, setCopiado] = useState(false);
 
   useEffect(() => {
-    async function carregarPagamento() {
+    async function carregar() {
       if (!pedidoId) {
-        setErro("Dados do PIX não encontrados.");
+        setErro("Pedido não encontrado.");
         setLoading(false);
         return;
       }
 
       try {
-        const res = await fetch(`/api/pix/status?id=${pedidoId}`);
+        const res = await fetch(`/api/asaas/pix/status?id=${pedidoId}`);
         const data = await res.json();
 
         if (!data.success) {
-          setErro("Dados do PIX não encontrados.");
+          setErro("Erro ao buscar dados do PIX.");
           setLoading(false);
           return;
         }
 
         setQrCode(data.qrCode);
         setCopiaCola(data.copiaCola);
-      } catch (e) {
+      } catch {
         setErro("Erro inesperado.");
       }
 
       setLoading(false);
     }
 
-    carregarPagamento();
+    carregar();
   }, [pedidoId]);
 
-  function copiarCodigo() {
+  function copiar() {
     navigator.clipboard.writeText(copiaCola);
     setCopiado(true);
     setTimeout(() => setCopiado(false), 1500);
@@ -52,12 +52,14 @@ export default function PixContent() {
   if (erro) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p className="bg-red-200 text-red-800 px-6 py-3 rounded">{erro}</p>
+        <p className="bg-red-200 text-red-800 px-6 py-3 rounded">
+          {erro}
+        </p>
       </div>
     );
   }
 
-  if (loading) {
+  if (loading || !qrCode) {
     return (
       <div className="min-h-screen flex items-center justify-center text-lg text-gray-700">
         Carregando PIX...
@@ -69,10 +71,14 @@ export default function PixContent() {
     <div className="min-h-screen p-6 flex flex-col items-center">
       <h1 className="text-3xl font-bold mb-6">Pagamento via PIX</h1>
 
-      <img src={qrCode} alt="QR Code" className="w-64 h-64 mb-6" />
+      <img
+        src={qrCode}
+        alt="QR Code"
+        className="w-64 h-64 mb-6 border rounded"
+      />
 
       <button
-        onClick={copiarCodigo}
+        onClick={copiar}
         className="bg-green-600 text-white px-6 py-3 rounded-lg mb-4"
       >
         {copiado ? "COPIADO!" : "Copiar código PIX"}

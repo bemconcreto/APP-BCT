@@ -38,13 +38,11 @@ export default function PixContent() {
           return;
         }
 
-        // 🔥 Trata todas as possibilidades
-        const qr = data.qrCode ?? data.pixQrCode ?? data.pixQrCodeImage ?? "";
-        const copy = data.copiaCola ?? data.pixCopyPaste ?? "";
+        // 🔥 usa EXATAMENTE o que a rota devolve
+        setQrCode(data.qrCode || "");
+        setCopiaCola(data.copiaCola || "");
 
-        setQrCode(qr);
-        setCopiaCola(copy);
-      } catch (e) {
+      } catch {
         setErro("Erro inesperado.");
       }
 
@@ -56,6 +54,7 @@ export default function PixContent() {
 
   function copiarCodigo() {
     if (!copiaCola) return;
+
     navigator.clipboard.writeText(copiaCola);
     setCopiado(true);
     setTimeout(() => setCopiado(false), 1500);

@@ -1,194 +1,108 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import { supabase } from "../../../src/lib/supabaseClient";
 
 export default function CartaoPage() {
-  const [loading, setLoading] = useState(false);
-  const [erro, setErro] = useState("");
   const [form, setForm] = useState({
-    amountBRL: "",
-    holderName: "",
-    cpfCnpj: "",
-    email: "",
-    cardNumber: "",
-    expiryMonth: "",
-    expiryYear: "",
+    nome: "",
+    numero: "",
+    mes: "",
+    ano: "",
     cvv: "",
+    valor: ""
   });
 
-  function updateField(key: string, value: string) {
-    setForm((prev) => ({ ...prev, [key]: value }));
+  const [erro, setErro] = useState("");
+
+  function atualizar(e: any) {
+    setForm({
+      ...form,
+      [e.target.name]: e.target.value
+    });
   }
 
-  async function pagarCartao() {
+  async function pagar() {
     setErro("");
-    setLoading(true);
 
-    try {
-      // 🔥 Buscar usuário logado + token JWT
-      const { data: session } = await supabase.auth.getSession();
-      const user = session?.session?.user;
-      const token = session?.session?.access_token;
-
-      if (!user || !token) {
-        setErro("Token não encontrado. Faça login novamente.");
-        setLoading(false);
-        return;
-      }
-
-      const user_id = user.id;
-      const wallet = user.id;
-
-      // 🔥 Asaas exige ANO COMPLETO
-      const ano = form.expiryYear.length === 2 
-        ? `20${form.expiryYear}` 
-        : form.expiryYear;
-
-      // 🔥 Enviar no FORMATO EXATO do backend
-      const res = await fetch("/api/asaas/cartao", {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          amountBRL: Number(form.amountBRL),
-          cpfCnpj: form.cpfCnpj,
-          email: form.email,
-          nome: form.holderName,
-
-          user_id,
-          wallet,
-
-          // 🔥 ENVIANDO DADOS DO CARTÃO
-          cardNumber: form.cardNumber,
-          expiryMonth: form.expiryMonth.padStart(2, "0"),
-          expiryYear: ano,
-          cvv: form.cvv,
-        }),
-      });
-
-      const data = await res.json();
-      console.log("RES:", data);
-
-      if (!data.success) {
-        setErro(data.error || "Erro ao pagar.");
-        setLoading(false);
-        return;
-      }
-
-      // Sucesso → vai para página de sucesso
-      window.location.href = `/comprar/sucesso?id=${data.id}`;
-
-    } catch (e) {
-      console.error(e);
-      setErro("Erro inesperado ao processar pagamento.");
+    if (!form.nome || !form.numero || !form.mes || !form.ano || !form.cvv) {
+      setErro("Preencha todos os dados do cartão.");
+      return;
     }
 
-    setLoading(false);
+    const res = await fetch("/api/asaas/cartao", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        nome: form.nome,
+        numero: form.numero,
+        mes: form.mes,
+        ano: form.ano,
+        cvv: form.cvv,
+        valor: Number(form.valor),
+      }),
+    });
+
+    const data = await res.json();
+
+    if (!data.success) {
+      setErro(`Erro ao gerar pagamento com cartão: ${data.error}`);
+      return;
+    }
+
+    alert("Pagamento aprovado!");
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 p-8">
-      <div className="max-w-xl mx-auto bg-white shadow-md rounded-xl p-8">
+    <div className="p-6 max-w-md mx-auto">
+      <h1 className="text-2xl font-bold mb-4">Pagamento com Cartão</h1>
 
-        <h1 className="text-3xl font-bold text-center mb-6">
-          Pagamento com Cartão
-        </h1>
+      {erro && <p className="bg-red-200 p-2 mb-4">{erro}</p>}
 
-        {erro && (
-          <p className="bg-red-100 text-red-700 p-3 rounded mb-4 text-center">
-            ❌ {erro}
-          </p>
-        )}
-
-        <div className="grid grid-cols-1 gap-4 mb-6">
-
-          <input
-            type="number"
-            placeholder="Valor em Reais"
-            className="border p-3 rounded"
-            value={form.amountBRL}
-            onChange={(e) => updateField("amountBRL", e.target.value)}
-          />
-
-          <input
-            type="text"
-            placeholder="Nome do Titular"
-            className="border p-3 rounded"
-            value={form.holderName}
-            onChange={(e) => updateField("holderName", e.target.value)}
-          />
-
-          <input
-            type="text"
-            placeholder="CPF ou CNPJ"
-            className="border p-3 rounded"
-            value={form.cpfCnpj}
-            onChange={(e) => updateField("cpfCnpj", e.target.value)}
-          />
-
-          <input
-            type="email"
-            placeholder="E-mail"
-            className="border p-3 rounded"
-            value={form.email}
-            onChange={(e) => updateField("email", e.target.value)}
-          />
-
-          <input
-            type="text"
-            placeholder="Número do Cartão"
-            className="border p-3 rounded"
-            value={form.cardNumber}
-            onChange={(e) => updateField("cardNumber", e.target.value)}
-          />
-
-          <div className="grid grid-cols-2 gap-4">
-            <input
-              type="text"
-              placeholder="Mês (MM)"
-              className="border p-3 rounded"
-              value={form.expiryMonth}
-              onChange={(e) => updateField("expiryMonth", e.target.value)}
-            />
-            <input
-              type="text"
-              placeholder="Ano (AA ou AAAA)"
-              className="border p-3 rounded"
-              value={form.expiryYear}
-              onChange={(e) => updateField("expiryYear", e.target.value)}
-            />
-          </div>
-
-          <input
-            type="text"
-            placeholder="CVV"
-            className="border p-3 rounded"
-            value={form.cvv}
-            onChange={(e) => updateField("cvv", e.target.value)}
-          />
-        </div>
-
-        <button
-          onClick={pagarCartao}
-          disabled={loading}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white p-4 rounded text-lg"
-        >
-          {loading ? "Processando..." : "Pagar agora"}
-        </button>
-
-        <div className="text-center mt-6">
-          <Link href="/comprar">
-            <span className="text-gray-600 underline cursor-pointer">
-              Voltar
-            </span>
-          </Link>
-        </div>
-
+      <input
+        name="nome"
+        placeholder="Nome no cartão"
+        className="border p-2 w-full mb-3"
+        onChange={atualizar}
+      />
+      <input
+        name="numero"
+        placeholder="Número do cartão"
+        className="border p-2 w-full mb-3"
+        onChange={atualizar}
+      />
+      <div className="flex gap-2">
+        <input
+          name="mes"
+          placeholder="Mês (MM)"
+          className="border p-2 w-full mb-3"
+          onChange={atualizar}
+        />
+        <input
+          name="ano"
+          placeholder="Ano (AAAA)"
+          className="border p-2 w-full mb-3"
+          onChange={atualizar}
+        />
       </div>
+      <input
+        name="cvv"
+        placeholder="CVV"
+        className="border p-2 w-full mb-3"
+        onChange={atualizar}
+      />
+      <input
+        name="valor"
+        placeholder="Valor"
+        className="border p-2 w-full mb-3"
+        onChange={atualizar}
+      />
+
+      <button
+        onClick={pagar}
+        className="bg-blue-600 text-white p-3 rounded w-full"
+      >
+        Pagar
+      </button>
     </div>
   );
 }

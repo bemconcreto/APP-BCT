@@ -4,6 +4,16 @@ import { createClient } from "@supabase/supabase-js";
 export async function POST(req: Request) {
   try {
     const body = await req.json();
+
+    // ⛔ SE USER_ID NÃO EXISTIR → ERRO DIRETO
+    if (!body.user_id) {
+      console.log("❌ user_id NÃO RECEBIDO DO FRONT:", body);
+      return NextResponse.json(
+        { success: false, error: "user_id não enviado." },
+        { status: 400 }
+      );
+    }
+
     const { amountBRL, cpfCnpj, user_id } = body;
 
     if (!amountBRL || amountBRL <= 0) {
@@ -25,11 +35,11 @@ export async function POST(req: Request) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    // Registrar compra pendente (SEM WALLET!)
+    // Registrar compra pendente
     const { data: compra, error: compraErr } = await supabase
       .from("compras_bct")
       .insert({
-        user_id,
+        user_id,         // <-- AGORA GARANTIDO
         tokens,
         valor_pago: amountBRL,
         status: "pending",
@@ -45,7 +55,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // Criar cobrança PIX no ASAAS
+    // ===== ASAAS PIX =====
     const response = await fetch("https://www.asaas.com/api/v3/payments", {
       method: "POST",
       headers: {

@@ -12,22 +12,18 @@ export default function PixPage() {
   async function gerarPix() {
     setErro("");
 
-    // 🔥 CORRETO — PUXA A SESSION CERTA
-    const { data } = await supabase.auth.getSession();
-    const session = data.session;
+    const { data: session } = await supabase.auth.getSession();
+    const user = session?.session?.user;
 
-    if (!session || !session.user) {
+    if (!user) {
       setErro("Faça login novamente.");
       return;
     }
 
-    // usuário correto
-    const user = session.user;
-
-    // cpf correto
     const cpfCnpj = user.user_metadata?.cpf || "";
+
     if (!cpfCnpj) {
-      setErro("Seu CPF não foi encontrado no cadastro.");
+      setErro("Seu CPF não foi encontrado.");
       return;
     }
 
@@ -37,19 +33,19 @@ export default function PixPage() {
       body: JSON.stringify({
         amountBRL: Number(amount),
         cpfCnpj,
-        user_id: user.id,  // 🔥 AGORA ISSO NUNCA É NULL
+        user_id: user.id, // <--- GARANTIDO
       }),
     });
 
-    const result = await res.json();
+    const data = await res.json();
 
-    if (!result.success) {
-      setErro("Erro ao gerar PIX.");
+    if (!data.success) {
+      setErro(data.error || "Erro ao gerar PIX.");
       return;
     }
 
-    setQrCode(result.qrCode);
-    setCopia(result.copiaCola);
+    setQrCode(data.qrCode);
+    setCopia(data.copiaCola);
   }
 
   return (

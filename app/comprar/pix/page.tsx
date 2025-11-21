@@ -2,6 +2,10 @@
 
 import PixContent from "./pix-content";
 
-export default function PixPageWrapper() {
-  return <PixContent />;
+export default function PixPage() {
+  return (
+    <div className="min-h-screen w-full flex items-center justify-center">
+      <PixContent />
+    </div>
+  );
 }

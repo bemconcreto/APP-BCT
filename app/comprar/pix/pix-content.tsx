@@ -1,32 +1,35 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
 
 export default function PixContent() {
-  const searchParams = useSearchParams();
-  const pedido = searchParams.get("pedido");
-
-  const [qrCode, setQrCode] = useState("");
-  const [copiaCola, setCopiaCola] = useState("");
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState("");
+  const [qrCode, setQrCode] = useState("");
+  const [copiaCola, setCopiaCola] = useState("");
   const [copiado, setCopiado] = useState(false);
 
   useEffect(() => {
-    async function carregar() {
-      if (!pedido) {
-        setErro("Pedido inválido.");
-        setLoading(false);
-        return;
-      }
-
+    async function gerarPix() {
       try {
-        const res = await fetch(`/api/asaas/pix/status?id=${pedido}`);
+        const dados = JSON.parse(localStorage.getItem("BCT_PIX_DATA") || "{}");
+
+        if (!dados.amountBRL || !dados.cpfCnpj || !dados.tokens) {
+          setErro("Dados do PIX não encontrados.");
+          setLoading(false);
+          return;
+        }
+
+        const res = await fetch("/api/asaas/pix", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(dados),
+        });
+
         const data = await res.json();
 
         if (!data.success) {
-          setErro("Erro ao carregar PIX.");
+          setErro("Erro ao gerar PIX.");
           setLoading(false);
           return;
         }
@@ -40,10 +43,10 @@ export default function PixContent() {
       setLoading(false);
     }
 
-    carregar();
-  }, [pedido]);
+    gerarPix();
+  }, []);
 
-  function copiar() {
+  function copiarCodigo() {
     navigator.clipboard.writeText(copiaCola);
     setCopiado(true);
     setTimeout(() => setCopiado(false), 1500);
@@ -60,7 +63,7 @@ export default function PixContent() {
   if (loading || !qrCode) {
     return (
       <div className="min-h-screen flex items-center justify-center text-lg text-gray-700">
-        Carregando PIX...
+        Gerando PIX...
       </div>
     );
   }
@@ -72,7 +75,7 @@ export default function PixContent() {
       <img src={qrCode} alt="QR Code" className="w-64 h-64 mb-6" />
 
       <button
-        onClick={copiar}
+        onClick={copiarCodigo}
         className="bg-green-600 text-white px-6 py-3 rounded-lg mb-4"
       >
         {copiado ? "COPIADO!" : "Copiar código PIX"}

@@ -1,94 +1,103 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useState } from "react";
 
 export default function PixCheckoutPage() {
-  const searchParams = useSearchParams();
-  const pedidoId = searchParams.get("pedido");
-
-  const [loading, setLoading] = useState(false);
+  const [amount, setAmount] = useState("");
   const [erro, setErro] = useState("");
   const [qrCode, setQrCode] = useState("");
-  const [copiaCola, setCopiaCola] = useState("");
+  const [copia, setCopia] = useState("");
   const [copiado, setCopiado] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    async function carregarPagamento() {
-      if (!pedidoId) {
-        setErro("Pedido inválido.");
+  async function gerarPix() {
+    setErro("");
+
+    setLoading(true);
+
+    try {
+      const res = await fetch("/api/asaas/pix", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amountBRL: Number(amount) }),
+      });
+
+      const data = await res.json();
+
+      if (!data.success) {
+        setErro("Erro ao gerar PIX.");
+        setLoading(false);
         return;
       }
 
-      setLoading(true);
-
-      try {
-        const res = await fetch(`/api/asaas/pix/status?id=${pedidoId}`);
-
-        const data = await res.json();
-        if (!data.success) {
-          setErro("Erro ao carregar pagamento.");
-          setLoading(false);
-          return;
-        }
-
-        setQrCode(data.qrCode);
-        setCopiaCola(data.copiaCola);
-      } catch (err) {
-        setErro("Erro inesperado.");
-      }
-
-      setLoading(false);
+      setQrCode(data.qrCode);
+      setCopia(data.copiaCola);
+    } catch (err) {
+      setErro("Erro inesperado.");
     }
 
-    carregarPagamento();
-  }, [pedidoId]);
+    setLoading(false);
+  }
 
   function copiarCodigo() {
-    navigator.clipboard.writeText(copiaCola);
+    navigator.clipboard.writeText(copia);
     setCopiado(true);
-    setTimeout(() => setCopiado(false), 1500);
-  }
-
-  if (erro) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="bg-red-200 text-red-800 px-6 py-3 rounded">{erro}</p>
-      </div>
-    );
-  }
-
-  if (loading || !qrCode) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-600 text-lg">Carregando PIX...</p>
-      </div>
-    );
+    setTimeout(() => setCopiado(false), 1000);
   }
 
   return (
-    <div className="min-h-screen p-6 flex flex-col items-center">
+    <div className="min-h-screen flex flex-col items-center p-6">
+
       <h1 className="text-3xl font-bold mb-6">Pagamento via PIX</h1>
 
-      <img src={qrCode} alt="QR Code" className="w-64 h-64 mb-6" />
+      {!qrCode && (
+        <div className="w-full max-w-md bg-white p-6 rounded-lg shadow">
+          {erro && (
+            <p className="bg-red-200 text-red-800 p-3 rounded mb-3">{erro}</p>
+          )}
 
-      <button
-        onClick={copiarCodigo}
-        className="bg-green-600 text-white px-6 py-3 rounded-lg mb-4"
-      >
-        {copiado ? "COPIADO!" : "Copiar código PIX"}
-      </button>
+          <input
+            type="number"
+            placeholder="Valor em Reais"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            className="border rounded p-3 w-full mb-4"
+          />
 
-      <p className="text-gray-700 text-center break-all max-w-xl">
-        {copiaCola}
-      </p>
+          <button
+            onClick={gerarPix}
+            disabled={loading}
+            className="bg-green-600 text-white w-full p-3 rounded text-lg"
+          >
+            {loading ? "Gerando PIX..." : "Gerar PIX"}
+          </button>
+        </div>
+      )}
 
-      <a
-        href="/comprar"
-        className="mt-10 inline-block bg-gray-200 px-5 py-2 rounded hover:bg-gray-300"
-      >
-        Voltar
-      </a>
+      {qrCode && (
+        <div className="flex flex-col items-center">
+          <img src={qrCode} className="w-64 h-64 mb-6" />
+
+          <button
+            onClick={copiarCodigo}
+            className="bg-green-600 text-white px-6 py-3 rounded-lg mb-4"
+          >
+            {copiado ? "COPIADO!" : "Copiar código PIX"}
+          </button>
+
+          <p className="text-gray-700 break-all text-center max-w-xl mb-6">
+            {copia}
+          </p>
+
+          <a
+            href="/comprar"
+            className="bg-gray-200 px-5 py-2 rounded hover:bg-gray-300"
+          >
+            Voltar
+          </a>
+        </div>
+      )}
+
     </div>
   );
 }

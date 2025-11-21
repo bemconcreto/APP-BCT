@@ -19,13 +19,13 @@ export async function POST(req: Request) {
     const precoBRL = precoUSD * dolar;
     const tokens = Number((amountBRL / precoBRL).toFixed(6));
 
-    // Supabase
+    // Supabase client
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    // Registrar compra pendente
+    // Registrar compra pendente (SEM WALLET!)
     const { data: compra, error: compraErr } = await supabase
       .from("compras_bct")
       .insert({
@@ -45,7 +45,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // ==== PIX ASAAS ====
+    // Criar cobrança PIX no ASAAS
     const response = await fetch("https://www.asaas.com/api/v3/payments", {
       method: "POST",
       headers: {
@@ -72,7 +72,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // Atualizar compra com payment_id
+    // Atualiza compra com o payment_id
     await supabase
       .from("compras_bct")
       .update({ payment_id: pagamento.id })

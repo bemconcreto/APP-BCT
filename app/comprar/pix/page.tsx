@@ -1,11 +1,12 @@
 "use client";
 
+import { Suspense } from "react";
 import PixContent from "./pix-content";
 
-export default function PixPage() {
+export default function Page() {
   return (
-    <div className="min-h-screen w-full flex items-center justify-center">
+    <Suspense>
       <PixContent />
-    </div>
+    </Suspense>
   );
 }

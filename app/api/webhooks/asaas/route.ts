@@ -4,85 +4,69 @@ import { createClient } from "@supabase/supabase-js";
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    console.log("📥 Webhook recebido do ASAAS:", body);
+    console.log("📥 Webhook ASAAS recebido:", body);
 
-    // Proteção caso o ASAAS envie payload incompleto
     if (!body?.event || !body?.payment?.id) {
-      console.log("❗ Webhook ignorado — dados incompletos");
       return NextResponse.json({ ok: true }, { status: 200 });
     }
 
     const { event, payment } = body;
 
-    // 🔥 Só processa pagamento confirmado
     if (event !== "PAYMENT_CONFIRMED") {
-      console.log("📌 Evento ignorado:", event);
       return NextResponse.json({ ok: true }, { status: 200 });
     }
 
     const paymentId = payment.id;
-    const valorPago = Number(payment.value);
 
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    // 1️⃣ Buscar compra no Supabase
-    const { data: compra, error: compraErr } = await supabase
+    const { data: compra } = await supabase
       .from("compras_bct")
       .select("*")
       .eq("payment_id", paymentId)
       .single();
 
-    if (compraErr || !compra) {
-      console.log("❗ Compra não encontrada:", paymentId);
+    if (!compra) {
+      console.log("⚠ Compra não encontrada no Supabase");
       return NextResponse.json({ ok: true }, { status: 200 });
     }
 
     const user_id = compra.user_id;
     const tokens = Number(compra.tokens);
 
-    // 2️⃣ Buscar saldo existente
-    const { data: wallet, error: walletErr } = await supabase
+    const { data: wallet } = await supabase
       .from("wallet_saldos")
       .select("*")
       .eq("user_id", user_id)
       .maybeSingle();
 
-    // Caso não exista — criar a carteira do usuário
     if (!wallet) {
-      console.log("🟢 Criando novo saldo para usuário...");
-
-      await supabase.from("wallet_saldos").insert({
-        user_id,
-        saldo_bct: tokens,
-      });
-
-    } else {
-      // Caso exista — somar tokens
-      const novoSaldo = Number(wallet.saldo_bct) + tokens;
-
-      console.log("🟢 Atualizando saldo:", novoSaldo);
-
       await supabase
         .from("wallet_saldos")
-        .update({ saldo_bct: novoSaldo })
+        .insert({
+          user_id,
+          saldo_bct: tokens
+        });
+    } else {
+      await supabase
+        .from("wallet_saldos")
+        .update({
+          saldo_bct: Number(wallet.saldo_bct) + tokens
+        })
         .eq("user_id", user_id);
     }
 
-    // 3️⃣ Marcar compra como paga
     await supabase
       .from("compras_bct")
       .update({ status: "paid" })
       .eq("id", compra.id);
 
-    console.log("🎉 Tokens creditados com sucesso!");
+    console.log("🎉 Tokens creditados!");
 
-    // 4️⃣ Redirecionar o usuário para PIX CONFIRMADO
-    return NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_SITE_URL}/pix-confirmado?pedido=${paymentId}`
-    );
+    return NextResponse.json({ ok: true }, { status: 200 });
 
   } catch (error) {
     console.error("❌ ERRO WEBHOOK:", error);
@@ -91,5 +75,5 @@ export async function POST(req: Request) {
 }
 
 export function GET() {
-  return NextResponse.json({ message: "Webhook ASAAS ativo" });
+  return NextResponse.json({ ok: true });
 }

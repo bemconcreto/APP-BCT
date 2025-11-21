@@ -5,17 +5,17 @@ export async function POST(req: Request) {
     const body = await req.json();
     console.log("BODY RECEBIDO:", body);
 
-    const { nome, numero, mes, ano, cvv, amountBRL, cpfCnpj, email } = body;
+    const { nome, numero, mes, ano, cvv, amountBRL } = body;
 
-    // 🔥 VALIDAÇÃO
-    if (!nome || !numero || !mes || !ano || !cvv || !amountBRL || !cpfCnpj || !email) {
+    // 🔎 VALIDAÇÃO SIMPLES
+    if (!nome || !numero || !mes || !ano || !cvv || !amountBRL) {
       return NextResponse.json(
         { success: false, error: "Dados incompletos para pagamento com cartão." },
         { status: 400 }
       );
     }
 
-    // 🔥 REQUISIÇÃO CORRETA PARA CARTÃO NO ASAAS
+    // === REQUISIÇÃO ASAAS ===
     const resp = await fetch("https://www.asaas.com/api/v3/payments", {
       method: "POST",
       headers: {
@@ -26,27 +26,24 @@ export async function POST(req: Request) {
         customer: process.env.ASAAS_CUSTOMER_ID!,
         billingType: "CREDIT_CARD",
         value: amountBRL,
-        description: "Compra de BCT",
-        dueDate: new Date().toISOString().split("T")[0],
+        description: "Pagamento BCT",
 
         creditCard: {
           holderName: nome,
           number: numero,
           expiryMonth: mes,
-          expiryYear: ano,
-          ccv: cvv
+          expiryYear: ano.length === 2 ? `20${ano}` : ano,
+          ccv: cvv, // ✔ ccv correto
         },
 
         creditCardHolderInfo: {
           name: nome,
-          email: email,
-          cpfCnpj: cpfCnpj,
         },
       }),
     });
 
     const data = await resp.json();
-    console.log("RESPOSTA ASAAS:", data);
+    console.log("ASAAS RESPONSE:", data);
 
     if (!resp.ok) {
       return NextResponse.json(
@@ -60,7 +57,7 @@ export async function POST(req: Request) {
   } catch (e) {
     console.error("ERRO CARTÃO:", e);
     return NextResponse.json(
-      { success: false, error: "Erro interno" },
+      { success: false, error: "Erro interno no servidor." },
       { status: 500 }
     );
   }

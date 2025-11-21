@@ -16,6 +16,7 @@ export async function POST(req: Request) {
     const precoUSD = 0.4482;
     const dolar = 5.30;
     const precoBRL = precoUSD * dolar;
+
     const tokens = Number((amountBRL / precoBRL).toFixed(6));
 
     const supabase = createClient(

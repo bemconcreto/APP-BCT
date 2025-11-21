@@ -8,35 +8,37 @@ export default function PixPage() {
   const [erro, setErro] = useState("");
   const [qrCode, setQrCode] = useState("");
   const [copia, setCopia] = useState("");
+  const [loading, setLoading] = useState(false);
 
   async function gerarPix() {
     setErro("");
+    setLoading(true);
 
     const { data: session } = await supabase.auth.getSession();
+    const user = session?.session?.user;
 
-    // ⚠ PROTEÇÃO OBRIGATÓRIA PARA O TYPECHECK DA NEXT 15
-    if (!session || !session.session || !session.session.user) {
+    if (!user) {
       setErro("Faça login novamente.");
+      setLoading(false);
       return;
     }
-
-    const user = session.session.user;
 
     const res = await fetch("/api/asaas/pix", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         amountBRL: Number(amount),
-        cpfCnpj: user.user_metadata?.cpf ?? "",
+        cpfCnpj: user.user_metadata.cpf,
         user_id: user.id,
         wallet: user.id,
       }),
     });
 
     const data = await res.json();
+    setLoading(false);
 
     if (!data.success) {
-      setErro("Erro ao gerar PIX.");
+      setErro(data.error || "Erro ao gerar PIX.");
       return;
     }
 
@@ -62,8 +64,9 @@ export default function PixPage() {
           <button
             onClick={gerarPix}
             className="bg-green-600 p-3 rounded text-white w-full"
+            disabled={loading}
           >
-            Gerar PIX
+            {loading ? "Gerando..." : "Gerar PIX"}
           </button>
         </>
       )}

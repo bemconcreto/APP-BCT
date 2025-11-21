@@ -26,9 +26,9 @@ export async function GET(req: Request) {
       {
         method: "GET",
         headers: {
-          accept: "application/json",
-          access_token: asaasKey,
-        },
+  "Content-Type": "application/json",
+  access_token: process.env.ASAAS_API_KEY!,
+}
       }
     );
 

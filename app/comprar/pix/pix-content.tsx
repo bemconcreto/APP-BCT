@@ -22,15 +22,20 @@ export default function PixContent() {
       }
 
       try {
-        const res = await fetch(`/api/pix/status?id=${pedidoId}`);
+        const res = await fetch(`/api/asaas/pix/status?id=${pedidoId}`, {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        });
+
         const data = await res.json();
 
         if (!data.success) {
-          setErro("Dados do PIX não encontrados.");
+          setErro("Erro ao carregar PIX.");
           setLoading(false);
           return;
         }
 
+        // 🔥 AGORA EXIBE O QR - CODE E O COPIA E COLA VERDADEIRO
         setQrCode(data.qrCode);
         setCopiaCola(data.copiaCola);
       } catch (e) {
@@ -57,7 +62,7 @@ export default function PixContent() {
     );
   }
 
-  if (loading) {
+  if (loading || !qrCode) {
     return (
       <div className="min-h-screen flex items-center justify-center text-lg text-gray-700">
         Carregando PIX...

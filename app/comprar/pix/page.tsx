@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { supabase } from "../../../src/lib/supabaseClient";
 
 export default function PixPage() {
   const [amount, setAmount] = useState("");
@@ -12,18 +11,13 @@ export default function PixPage() {
   async function gerarPix() {
     setErro("");
 
-    const { data: session } = await supabase.auth.getSession();
-    const user = session?.session?.user;
+    const params = new URLSearchParams(window.location.search);
+    const pedido = params.get("pedido"); // ID da cobrança do Asaas (se vier)
+    const cpfCnpj = params.get("cpfCnpj");
+    const user_id = params.get("user_id");
 
-    if (!user) {
-      setErro("Faça login novamente.");
-      return;
-    }
-
-    const cpfCnpj = user.user_metadata?.cpf || "";
-
-    if (!cpfCnpj) {
-      setErro("Seu CPF não foi encontrado.");
+    if (!cpfCnpj || !user_id) {
+      setErro("Dados não encontrados.");
       return;
     }
 
@@ -33,7 +27,7 @@ export default function PixPage() {
       body: JSON.stringify({
         amountBRL: Number(amount),
         cpfCnpj,
-        user_id: user.id, // <--- GARANTIDO
+        user_id,
       }),
     });
 

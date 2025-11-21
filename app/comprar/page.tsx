@@ -59,18 +59,10 @@ export default function ComprarPage() {
   async function pagarPix() {
     const token = await getSupabaseToken();
 
-    if (!token) {
-      alert("Você precisa estar logado.");
-      return;
-    }
-    if (!cpfCnpj) {
-      alert("Digite seu CPF/CNPJ.");
-      return;
-    }
-    if (!amountBRL || Number(amountBRL) <= 0) {
-      alert("Digite um valor válido.");
-      return;
-    }
+    if (!token) return alert("Você precisa estar logado.");
+    if (!cpfCnpj) return alert("Digite seu CPF/CNPJ.");
+    if (!amountBRL || Number(amountBRL) <= 0)
+      return alert("Digite um valor válido.");
 
     setLoading(true);
 
@@ -97,7 +89,13 @@ export default function ComprarPage() {
         return;
       }
 
-      window.location.href = `/comprar/pix?pedido=${data.id}`;
+      // 🔥 VOLTA PARA A TELA ANTIGA DE QR CODE
+      window.location.href = `/comprar/pix`;
+      
+      // Você acessa o QR pela tela /comprar/pix
+      localStorage.setItem("pix_qr", data.qrCode);
+      localStorage.setItem("pix_copia", data.copiaCola);
+
     } catch (err) {
       console.error(err);
       alert("Erro inesperado no PIX.");
@@ -112,18 +110,10 @@ export default function ComprarPage() {
   async function pagarCartao() {
     const token = await getSupabaseToken();
 
-    if (!token) {
-      alert("Você precisa estar logado.");
-      return;
-    }
-    if (!cpfCnpj) {
-      alert("Digite seu CPF/CNPJ.");
-      return;
-    }
-    if (!amountBRL || Number(amountBRL) <= 0) {
-      alert("Digite um valor válido.");
-      return;
-    }
+    if (!token) return alert("Você precisa estar logado.");
+    if (!cpfCnpj) return alert("Digite seu CPF/CNPJ.");
+    if (!amountBRL || Number(amountBRL) <= 0)
+      return alert("Digite um valor válido.");
 
     setLoading(true);
 
@@ -146,7 +136,9 @@ export default function ComprarPage() {
       const data = await res.json();
 
       if (!data.success) {
-        alert("Erro ao gerar pagamento com cartão: " + JSON.stringify(data.error));
+        alert(
+          "Erro ao gerar pagamento com cartão: " + JSON.stringify(data.error)
+        );
         return;
       }
 
@@ -221,12 +213,12 @@ export default function ComprarPage() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           <button
-  onClick={pagarCartao}
-  disabled={loading}
-  className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg p-6"
->
-  <h2 className="text-xl font-semibold">Cartão (Débito ou Crédito)</h2>
-</button>
+            onClick={pagarCartao}
+            disabled={loading}
+            className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg p-6"
+          >
+            <h2 className="text-xl font-semibold">Cartão (Débito ou Crédito)</h2>
+          </button>
 
           <button
             onClick={pagarPix}

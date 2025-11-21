@@ -1,141 +1,81 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 
 export async function POST(req: Request) {
   try {
-    // ==============================
-    // LOG DETALHADO DO REQUEST
-    // ==============================
-    const body = await req.json();
-    const authHeader = req.headers.get("authorization") || null;
+    // -----------------------------
+    // LER BODY SEM ERRO
+    // -----------------------------
+    let body: any = null;
 
-    console.log("📥 BODY RECEBIDO:", body);
-    console.log("🔐 AUTH HEADER RECEBIDO:", authHeader);
-
-    const { amountBRL, cpfCnpj, tokens } = body;
-
-    if (!amountBRL || Number(amountBRL) <= 0) {
+    try {
+      body = await req.json();
+    } catch (e) {
       return NextResponse.json(
-        { success: false, error: "Valor inválido." },
+        { success: false, error: "Body inválido" },
         { status: 400 }
       );
     }
 
-    // =========================================
-    //      VALIDA USER VIA TOKEN (CORRETO)
-    // =========================================
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const { amountBRL, tokens, cpfCnpj, email, nome } = body || {};
 
-    let userId: string | null = null;
-
-    if (authHeader?.startsWith("Bearer ")) {
-      const token = authHeader.split(" ")[1];
-
-      const { data, error } = await supabase.auth.getUser(token);
-
-      console.log("👤 RESULTADO getUser:", data, error);
-
-      if (data?.user?.id) {
-        userId = data.user.id;
-      }
-    }
-
-    // Fallback caso front mande user_id
-    if (!userId && body.user_id) {
-      userId = body.user_id;
-    }
-
-    if (!userId) {
-      console.log("❌ Nenhum user_id encontrado.");
+    if (!amountBRL || !cpfCnpj || !email || !nome) {
       return NextResponse.json(
-        { success: false, error: "Usuário não autenticado." },
-        { status: 401 }
+        { success: false, error: "Dados incompletos" },
+        { status: 400 }
       );
     }
 
-    // =========================================
-    //   CALCULA TOKENS
-    // =========================================
-    const precoUSD = 0.4482;
-    const dolar = 5.3;
-    const precoBRL = precoUSD * dolar;
-    const calculatedTokens =
-      tokens ?? Number((Number(amountBRL) / precoBRL).toFixed(6));
+    const apiKey = process.env.ASAAS_API_KEY;
 
-    // =========================================
-    //   REGISTRA COMPRA (AQUI DAVA ERRO)
-    // =========================================
-    const { data: compra, error: compraErr } = await supabase
-      .from("compras_bct")
-      .insert({
-        user_id: userId,
-        tokens: calculatedTokens,
-        valor_pago: amountBRL,
-        status: "pending",
-      })
-      .select()
-      .single();
-
-    if (compraErr) {
-      console.log("❌ ERRO AO REGISTRAR COMPRA:", compraErr);
+    if (!apiKey) {
       return NextResponse.json(
-        { success: false, error: "Erro ao registrar compra." },
+        { success: false, error: "API KEY ausente" },
         { status: 500 }
       );
     }
 
-    // =========================================
-    //   GERA PIX NO ASAAS
-    // =========================================
-    const resp = await fetch("https://www.asaas.com/api/v3/payments", {
+    // -----------------------------
+    // CRIA PAGAMENTO PIX NO ASAAS
+    // -----------------------------
+    const payload = {
+      billingType: "PIX",
+      value: Number(amountBRL),
+      description: `Compra de ${tokens} BCT`,
+      customer: cpfCnpj,
+      dueDate: new Date().toISOString().slice(0, 10),
+      pix: true,
+    };
+
+    const resposta = await fetch("https://www.asaas.com/api/v3/payments", {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
-        access_token: process.env.ASAAS_API_KEY!,
+        accept: "application/json",
+        "content-type": "application/json",
+        access_token: apiKey,
       },
-      body: JSON.stringify({
-        customer: process.env.ASAAS_CUSTOMER_ID!,
-        billingType: "PIX",
-        value: amountBRL,
-        description: `Compra de ${calculatedTokens} BCT`,
-        dueDate: new Date().toISOString().split("T")[0],
-        cpfCnpj,
-      }),
+      body: JSON.stringify(payload),
     });
 
-    const pagamento = await resp.json();
+    const dados = await resposta.json();
 
-    if (!resp.ok || !pagamento.id) {
-      console.log("❌ ERRO PIX ASAAS:", pagamento);
+    if (dados.errors) {
       return NextResponse.json(
-        { success: false, error: "Erro ao gerar PIX." },
-        { status: 500 }
+        { success: false, error: dados.errors },
+        { status: 400 }
       );
     }
 
-    await supabase
-      .from("compras_bct")
-      .update({ payment_id: pagamento.id })
-      .eq("id", compra.id);
-
+    // resposta EXATA DO ASAAS
     return NextResponse.json({
       success: true,
-      id: pagamento.id,
-      qrCode: pagamento.pixQrCode,
-      copiaCola: pagamento.pixCopiaECola,
+      id: dados.id,
+      qrCode: dados.pixQrCodeImage,
+      copiaCola: dados.pixTransaction,
     });
-  } catch (err) {
-    console.error("❌ ERRO PIX ROUTE:", err);
+  } catch (e) {
     return NextResponse.json(
-      { success: false, error: "Erro interno." },
+      { success: false, error: "Erro inesperado no servidor" },
       { status: 500 }
     );
   }
-}
-
-export function GET() {
-  return NextResponse.json({ message: "PIX route ativa" });
 }

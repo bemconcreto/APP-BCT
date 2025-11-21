@@ -1,52 +1,41 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 export default function PixCheckoutPage() {
-  const searchParams = useSearchParams();
-  const pedidoId = searchParams.get("pedido");
-  const valor = searchParams.get("valor");
-  const cpf = searchParams.get("cpf");
+  const router = useRouter();
 
-  const [loading, setLoading] = useState(true);
-  const [erro, setErro] = useState("");
   const [qrCode, setQrCode] = useState("");
   const [copiaCola, setCopiaCola] = useState("");
   const [copiado, setCopiado] = useState(false);
 
   useEffect(() => {
-    async function carregar() {
-      if (!pedidoId || !cpf || !valor) {
-        setErro("Dados inválidos.");
-        setLoading(false);
-        return;
-      }
-
+    async function gerarPix() {
       try {
-        const res = await fetch(
-          `/api/asaas/pix/status?id=${pedidoId}&cpf=${cpf}&valor=${valor}`
-        );
+        const res = await fetch("/api/asaas/pix", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: sessionStorage.getItem("PIX_DATA")!, // <-- RECEBE OS DADOS DIRETO
+        });
 
         const data = await res.json();
 
         if (!data.success) {
-          setErro("Erro ao carregar PIX.");
-          setLoading(false);
+          alert("Erro ao gerar PIX.");
+          router.push("/comprar");
           return;
         }
 
         setQrCode(data.qrCode);
         setCopiaCola(data.copiaCola);
-      } catch {
-        setErro("Erro inesperado.");
+      } catch (err) {
+        alert("Erro inesperado.");
       }
-
-      setLoading(false);
     }
 
-    carregar();
-  }, [pedidoId, cpf, valor]);
+    gerarPix();
+  }, []);
 
   function copiar() {
     navigator.clipboard.writeText(copiaCola);
@@ -54,18 +43,10 @@ export default function PixCheckoutPage() {
     setTimeout(() => setCopiado(false), 1500);
   }
 
-  if (erro) {
+  if (!qrCode) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p className="bg-red-200 text-red-800 px-6 py-3 rounded">{erro}</p>
-      </div>
-    );
-  }
-
-  if (loading || !qrCode) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-600 text-lg">Carregando PIX...</p>
+        <p className="text-gray-800 text-lg">Gerando PIX...</p>
       </div>
     );
   }
@@ -74,7 +55,7 @@ export default function PixCheckoutPage() {
     <div className="min-h-screen p-6 flex flex-col items-center">
       <h1 className="text-3xl font-bold mb-6">Pagamento via PIX</h1>
 
-      <img src={qrCode} alt="QR Code" className="w-64 h-64 mb-6" />
+      <img src={qrCode} className="w-64 h-64 mb-6" />
 
       <button
         onClick={copiar}
@@ -83,15 +64,15 @@ export default function PixCheckoutPage() {
         {copiado ? "COPIADO!" : "Copiar código PIX"}
       </button>
 
-      <p className="text-gray-700 text-center break-all max-w-xl mb-10">
+      <p className="text-gray-700 text-center break-all max-w-xl">
         {copiaCola}
       </p>
 
       <a
         href="/comprar"
-        className="inline-block bg-gray-200 px-5 py-2 rounded hover:bg-gray-300"
+        className="mt-10 inline-block bg-gray-200 px-5 py-2 rounded hover:bg-gray-300"
       >
-        Voltar para compra
+        Voltar
       </a>
     </div>
   );

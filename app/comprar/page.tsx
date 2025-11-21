@@ -1,33 +1,21 @@
 "use client";
 
-export const dynamic = "force-dynamic";
-
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { supabase } from "../../src/lib/supabaseClient";
 
-// =======================================
-//   TOKEN DIRETO DO SUPABASE
-// =======================================
+export const dynamic = "force-dynamic";
+
+// TOKEN DO SUPABASE
 async function getSupabaseToken() {
-  try {
-    const { data } = await supabase.auth.getSession();
-    return data.session?.access_token ?? null;
-  } catch {
-    return null;
-  }
+  const { data } = await supabase.auth.getSession();
+  return data.session?.access_token ?? null;
 }
 
-// =======================================
-//       PEGA A SESSÃO DO USUÁRIO
-// =======================================
+// USUÁRIO LOGADO
 async function getUserSession() {
-  try {
-    const { data } = await supabase.auth.getUser();
-    return data.user ?? null;
-  } catch {
-    return null;
-  }
+  const { data } = await supabase.auth.getUser();
+  return data.user ?? null;
 }
 
 export default function ComprarPage() {
@@ -39,122 +27,93 @@ export default function ComprarPage() {
   const tokenPriceUSD = 0.4482;
   const usdToBrl = 5.3;
 
-  // CARREGA USUÁRIO AO ABRIR A PÁGINA
+  // CARREGAR USUÁRIO
   useEffect(() => {
-    async function loadUser() {
-      const u = await getUserSession();
-      setUser(u);
-    }
-    loadUser();
+    getUserSession().then(setUser);
   }, []);
 
-  // SIMULADOR
+  // SIMULAÇÃO
   const amountUSD = amountBRL ? Number(amountBRL) / usdToBrl : 0;
   const tokens = amountUSD ? amountUSD / tokenPriceUSD : 0;
-  const priceBRL = tokenPriceUSD * usdToBrl;
 
-  // =======================================
-  //               PAGAR PIX
-  // =======================================
+  // ==========================
+  // 🚀 PAGAR PIX
+  // ==========================
   async function pagarPix() {
-    localStorage.setItem("BCT_valor_pix", amountBRL);
     const token = await getSupabaseToken();
-
-    if (!token) return alert("Você precisa estar logado.");
-    if (!cpfCnpj) return alert("Digite seu CPF/CNPJ.");
-    if (!amountBRL || Number(amountBRL) <= 0)
-      return alert("Digite um valor válido.");
+    if (!token) return alert("Faça login.");
+    if (!cpfCnpj) return alert("Digite CPF/CNPJ.");
+    if (!amountBRL || Number(amountBRL) <= 0) return alert("Valor inválido.");
 
     setLoading(true);
 
-    try {
-      const res = await fetch("/api/asaas/pix", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          amountBRL: Number(amountBRL),
-          tokens: Number(tokens.toFixed(6)),
-          cpfCnpj,
-          email: user?.email ?? "",
-          nome: user?.user_metadata?.full_name ?? "Usuário",
-        }),
-      });
+    const res = await fetch("/api/asaas/pix", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        amountBRL: Number(amountBRL),
+        tokens: Number(tokens.toFixed(6)),
+        cpfCnpj,
+        email: user?.email ?? "",
+        nome: user?.user_metadata?.full_name ?? "Usuário",
+      }),
+    });
 
-      const data = await res.json();
+    const data = await res.json();
 
-      if (!data.success) {
-        alert("Erro ao gerar PIX: " + JSON.stringify(data.error));
-        return;
-      }
-
-      // 🔥 VOLTA PARA A TELA ANTIGA DE QR CODE
-      window.location.href = `/comprar/pix?pedido=${data.id}&cpf=${cpfCnpj}&valor=${amountBRL}`;
-      
-      // Você acessa o QR pela tela /comprar/pix
-      localStorage.setItem("pix_qr", data.qrCode);
-      localStorage.setItem("pix_copia", data.copiaCola);
-
-    } catch (err) {
-      console.error(err);
-      alert("Erro inesperado no PIX.");
+    if (!data.success) {
+      alert("Erro ao gerar PIX: " + JSON.stringify(data.error));
+      setLoading(false);
+      return;
     }
 
-    setLoading(false);
+    window.location.href = `/comprar/pix?pedido=${data.id}`;
   }
 
-  // =======================================
-  //        PAGAR CARTÃO (ASAAS)
-  // =======================================
+  // ==========================
+  // 🚀 PAGAR CARTÃO
+  // ==========================
   async function pagarCartao() {
     const token = await getSupabaseToken();
-
-    if (!token) return alert("Você precisa estar logado.");
-    if (!cpfCnpj) return alert("Digite seu CPF/CNPJ.");
-    if (!amountBRL || Number(amountBRL) <= 0)
-      return alert("Digite um valor válido.");
+    if (!token) return alert("Faça login.");
+    if (!cpfCnpj) return alert("Digite CPF/CNPJ.");
+    if (!amountBRL || Number(amountBRL) <= 0) return alert("Valor inválido.");
 
     setLoading(true);
 
-    try {
-      const res = await fetch("/api/asaas/cartao", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          amountBRL: Number(amountBRL),
-          tokens: Number(tokens.toFixed(4)),
-          cpfCnpj,
-          email: user?.email ?? "",
-          nome: user?.user_metadata?.full_name ?? "Usuário",
-        }),
-      });
+    const res = await fetch("/api/asaas/cartao", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        amountBRL: Number(amountBRL),
+        tokens: Number(tokens.toFixed(4)),
+        cpfCnpj,
+        email: user?.email ?? "",
+        nome: user?.user_metadata?.full_name ?? "Usuário",
+      }),
+    });
 
-      const data = await res.json();
+    const data = await res.json();
 
-      if (!data.success) {
-        alert(
-          "Erro ao gerar pagamento com cartão: " + JSON.stringify(data.error)
-        );
-        return;
-      }
-
-      window.location.href = `/comprar/cartao?pedido=${data.id}`;
-    } catch (err) {
-      console.error(err);
-      alert("Erro inesperado no pagamento com cartão.");
+    if (!data.success) {
+      alert("Erro ao gerar pagamento com cartão: " + JSON.stringify(data.error));
+      setLoading(false);
+      return;
     }
 
-    setLoading(false);
+    window.location.href = `/comprar/cartao?pedido=${data.id}`;
   }
 
-  // =======================================
-  //                 UI
-  // =======================================
+  // ==========================
+  // UI
+  // ==========================
+
   return (
     <div className="min-h-screen bg-gray-100 p-8">
       <div className="max-w-3xl mx-auto bg-white rounded-xl shadow-md p-8">
@@ -199,15 +158,12 @@ export default function ComprarPage() {
             Dólar: <strong>R$ {usdToBrl.toFixed(2)}</strong>
           </p>
           <p className="text-gray-800 mt-2 text-lg font-semibold">
-            Preço em BRL (por token): R$ {priceBRL.toFixed(4)}
-          </p>
-          <p className="text-gray-800 mt-1 text-lg font-semibold">
             Você receberá:{" "}
             <span className="text-green-800">{tokens.toFixed(6)} BCT</span>
           </p>
         </div>
 
-        {/* Botões */}
+        {/* BOTÕES */}
         <p className="text-gray-600 text-center mb-8">
           Escolha a forma de pagamento
         </p>
@@ -218,7 +174,7 @@ export default function ComprarPage() {
             disabled={loading}
             className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg p-6"
           >
-            <h2 className="text-xl font-semibold">Cartão (Débito ou Crédito)</h2>
+            <h2 className="text-xl font-semibold">Cartão</h2>
           </button>
 
           <button
@@ -233,7 +189,7 @@ export default function ComprarPage() {
         <div className="text-center mt-8">
           <Link href="/">
             <span className="text-gray-600 underline cursor-pointer">
-              Voltar ao Painel
+              Voltar ao painel
             </span>
           </Link>
         </div>

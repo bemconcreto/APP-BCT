@@ -7,65 +7,72 @@ export default function PixContent() {
   const searchParams = useSearchParams();
   const pedidoId = searchParams.get("pedido");
 
-  const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState("");
   const [qrCode, setQrCode] = useState("");
   const [copiaCola, setCopiaCola] = useState("");
+  const [carregando, setCarregando] = useState(true);
   const [copiado, setCopiado] = useState(false);
 
-  useEffect(() => {
-    async function carregarPagamento() {
-      if (!pedidoId) {
-        setErro("Dados do PIX não encontrados.");
-        setLoading(false);
+  async function buscarStatus() {
+    try {
+      const res = await fetch(`/api/pix/status?id=${pedidoId}`);
+      const data = await res.json();
+
+      if (!data.success) {
+        setErro("Erro ao carregar o PIX.");
         return;
       }
 
-      try {
-        const res = await fetch(`/api/pix/status?id=${pedidoId}`);
-        const data = await res.json();
-
-        if (!data.success) {
-          setErro("Não foi possível carregar o pagamento.");
-          setLoading(false);
-          return;
-        }
-
-        // Primeiro tenta pegar direto da API
-        let qr = data.qrCode;
-        let copy = data.copiaCola;
-
-        // Se estiverem nulos, tentamos buscar do invoiceUrl
-        if ((!qr || !copy) && data.raw?.invoiceUrl) {
-          const invoiceUrl = data.raw.invoiceUrl;
-
-          // Busca o HTML da página da cobrança
-          const html = await fetch(invoiceUrl).then(r => r.text());
-
-          // Extrai texto "copia e cola"
-          const matchCopy = html.match(/([0-9A-Za-z]{30,})/);
-          if (matchCopy) {
-            copy = matchCopy[1];
-          }
-        }
-
-        setQrCode(qr || "");
-        setCopiaCola(copy || "");
-      } catch (e) {
-        setErro("Erro ao carregar o PIX.");
+      // Se ainda não existe, continua tentando
+      if (!data.qrCode || !data.copiaCola) {
+        return false;
       }
 
-      setLoading(false);
+      // Quando finalmente chegar:
+      setQrCode(data.qrCode);
+      setCopiaCola(data.copiaCola);
+      return true;
+
+    } catch (e) {
+      setErro("Erro ao carregar o PIX.");
+    }
+  }
+
+  useEffect(() => {
+    if (!pedidoId) {
+      setErro("ID do PIX não encontrado.");
+      return;
     }
 
-    carregarPagamento();
+    let tentativas = 0;
+
+    const intervalo = setInterval(async () => {
+      const ok = await buscarStatus();
+      tentativas++;
+
+      // Quando conseguir
+      if (ok) {
+        clearInterval(intervalo);
+        setCarregando(false);
+      }
+
+      // Se passar de 15 segundos e nada...
+      if (tentativas > 15) {
+        clearInterval(intervalo);
+        setErro("Erro ao carregar o PIX.");
+        setCarregando(false);
+      }
+    }, 1000);
+
+    return () => clearInterval(intervalo);
   }, [pedidoId]);
 
   function copiarCodigo() {
-    if (!copiaCola) return;
-    navigator.clipboard.writeText(copiaCola);
-    setCopiado(true);
-    setTimeout(() => setCopiado(false), 1500);
+    if (copiaCola) {
+      navigator.clipboard.writeText(copiaCola);
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 1500);
+    }
   }
 
   if (erro) {
@@ -76,10 +83,11 @@ export default function PixContent() {
     );
   }
 
-  if (loading) {
+  if (carregando) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-lg text-gray-700">
-        Gerando PIX...
+      <div className="min-h-screen flex flex-col items-center justify-center">
+        <h2 className="text-xl mb-4">Gerando PIX...</h2>
+        <p className="text-red-600">Aguardando QR Code do Asaas...</p>
       </div>
     );
   }
@@ -88,11 +96,7 @@ export default function PixContent() {
     <div className="min-h-screen p-6 flex flex-col items-center">
       <h1 className="text-3xl font-bold mb-6">Pagamento via PIX</h1>
 
-      {qrCode ? (
-        <img src={qrCode} alt="QR Code" className="w-64 h-64 mb-6" />
-      ) : (
-        <p className="text-red-500 mb-4">QR Code ainda não disponível...</p>
-      )}
+      <img src={qrCode} alt="QR Code" className="w-64 h-64 mb-6" />
 
       <button
         onClick={copiarCodigo}
@@ -102,7 +106,7 @@ export default function PixContent() {
       </button>
 
       <p className="text-gray-700 text-center break-all max-w-xl">
-        {copiaCola || "Aguardando código PIX..."}
+        {copiaCola}
       </p>
 
       <a

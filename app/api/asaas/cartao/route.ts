@@ -5,17 +5,17 @@ export async function POST(req: Request) {
     const body = await req.json();
     console.log("BODY RECEBIDO:", body);
 
-    const { nome, numero, mes, ano, cvv, amountBRL } = body;
+    const { nome, numero, mes, ano, cvv, amountBRL, cpfCnpj, email } = body;
 
-    // Verificação de segurança
-    if (!nome || !numero || !mes || !ano || !cvv || !amountBRL) {
+    // 🔥 VALIDAÇÃO
+    if (!nome || !numero || !mes || !ano || !cvv || !amountBRL || !cpfCnpj || !email) {
       return NextResponse.json(
-        { success: false, error: "Dados do cartão incompletos." },
+        { success: false, error: "Dados incompletos para pagamento com cartão." },
         { status: 400 }
       );
     }
 
-    // Requisição ASAAS
+    // 🔥 REQUISIÇÃO CORRETA PARA CARTÃO NO ASAAS
     const resp = await fetch("https://www.asaas.com/api/v3/payments", {
       method: "POST",
       headers: {
@@ -26,23 +26,31 @@ export async function POST(req: Request) {
         customer: process.env.ASAAS_CUSTOMER_ID!,
         billingType: "CREDIT_CARD",
         value: amountBRL,
-        description: "Pagamento BCT",
+        description: "Compra de BCT",
+        dueDate: new Date().toISOString().split("T")[0],
+
         creditCard: {
           holderName: nome,
           number: numero,
           expiryMonth: mes,
           expiryYear: ano,
-          ccv: cvv,
+          ccv: cvv
+        },
+
+        creditCardHolderInfo: {
+          name: nome,
+          email: email,
+          cpfCnpj: cpfCnpj,
         },
       }),
     });
 
     const data = await resp.json();
-    console.log("RETORNO ASAAS:", data);
+    console.log("RESPOSTA ASAAS:", data);
 
     if (!resp.ok) {
       return NextResponse.json(
-        { success: false, error: data?.errors?.[0]?.description || "Falha no cartão." },
+        { success: false, error: data?.errors?.[0]?.description || "Falha no pagamento" },
         { status: 400 }
       );
     }
@@ -52,7 +60,7 @@ export async function POST(req: Request) {
   } catch (e) {
     console.error("ERRO CARTÃO:", e);
     return NextResponse.json(
-      { success: false, error: "Erro interno no servidor" },
+      { success: false, error: "Erro interno" },
       { status: 500 }
     );
   }

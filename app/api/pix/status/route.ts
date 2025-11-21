@@ -1,3 +1,4 @@
+// app/api/pix/status/route.ts
 import { NextResponse } from "next/server";
 
 export async function GET(req: Request) {
@@ -21,34 +22,72 @@ export async function GET(req: Request) {
       );
     }
 
-    const pagamento = await fetch(
+    const pagamentoResp = await fetch(
       `https://www.asaas.com/api/v3/payments/${id}`,
       {
         method: "GET",
         headers: {
-  "Content-Type": "application/json",
-  access_token: process.env.ASAAS_API_KEY!,
-}
+          accept: "application/json",
+          // incluir as duas formas para compatibilidade
+          access_token: asaasKey,
+          Authorization: `Bearer ${asaasKey}`,
+        },
       }
     );
 
-    const dados = await pagamento.json();
+    // se a requisição falhar, devolver erro com corpo do ASAAS
+    if (!pagamentoResp.ok) {
+      const t = await pagamentoResp.text();
+      return NextResponse.json(
+        { success: false, error: "Erro no ASAAS: " + t },
+        { status: pagamentoResp.status }
+      );
+    }
 
-    if (dados.errors) {
+    const dados = await pagamentoResp.json();
+
+    // se ASAAS devolveu errors
+    if (dados?.errors) {
       return NextResponse.json(
         { success: false, error: dados.errors },
         { status: 400 }
       );
     }
 
+    // Normalizar os campos possíveis que o ASAAS pode devolver:
+    // - imagem do QR: pixQrCodeImage / pixQrCode / pix_qr_code_image / qrCode
+    // - copia e cola: pixCopiaECola / pixTransaction / pix_copy_paste / copiaCola
+    const qrCandidates = [
+      dados.pixQrCodeImage,
+      dados.pixQrCode,
+      dados.pix_qr_code_image,
+      dados.qrCode,
+      dados.qr_code,
+    ];
+
+    const copyCandidates = [
+      dados.pixCopiaECola,
+      dados.pixTransaction,
+      dados.pix_copy_paste,
+      dados.copiaCola,
+      dados.pixCopiaCola,
+      dados.pix_copy_and_paste,
+    ];
+
+    const qrCode = qrCandidates.find(Boolean) ?? null;
+    const copiaCola = copyCandidates.find(Boolean) ?? null;
+
     return NextResponse.json({
       success: true,
-      qrCode: dados.pixQrCodeImage,
-      copiaCola: dados.pixTransaction,
+      // devolve os originais também para facilitar debugging front
+      raw: dados,
+      qrCode,
+      copiaCola,
     });
-  } catch (err) {
+  } catch (err: any) {
+    console.error("ERROR /api/pix/status:", err);
     return NextResponse.json(
-      { success: false, error: "Erro inesperado" },
+      { success: false, error: "Erro inesperado", detail: String(err) },
       { status: 500 }
     );
   }

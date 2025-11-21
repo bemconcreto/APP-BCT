@@ -1,3 +1,4 @@
+// app/comprar/pix/pix-content.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -9,8 +10,8 @@ export default function PixContent() {
 
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState("");
-  const [qrCode, setQrCode] = useState("");
-  const [copiaCola, setCopiaCola] = useState("");
+  const [qrCode, setQrCode] = useState<string | null>(null);
+  const [copiaCola, setCopiaCola] = useState<string | null>(null);
   const [copiado, setCopiado] = useState(false);
 
   useEffect(() => {
@@ -25,28 +26,49 @@ export default function PixContent() {
         const res = await fetch(`/api/pix/status?id=${pedidoId}`);
 
         if (!res.ok) {
-          setErro("Erro ao consultar o status do PIX.");
+          // tenta mostrar mensagem do backend (se houver)
+          try {
+            const txt = await res.text();
+            setErro("Erro ao consultar o status do PIX: " + txt);
+          } catch {
+            setErro("Erro ao consultar o status do PIX.");
+          }
           setLoading(false);
           return;
         }
 
         const data = await res.json();
 
-        if (!data.success) {
-          setErro("Dados do PIX não encontrados.");
+        if (!data || !data.success) {
+          setErro(
+            "Dados do PIX não encontrados. " +
+              (data?.error ? JSON.stringify(data.error) : "")
+          );
           setLoading(false);
           return;
         }
 
-        // 🔥 usa EXATAMENTE o que a rota devolve
-        setQrCode(data.qrCode || "");
-        setCopiaCola(data.copiaCola || "");
+        // aqui usamos os campos normalizados que o status devolve
+        // mas também aceitaremos `raw` caso algo mude
+        const qr =
+          data.qrCode ??
+          data.raw?.pixQrCodeImage ??
+          data.raw?.pixQrCode ??
+          null;
+        const copy =
+          data.copiaCola ??
+          data.raw?.pixCopiaECola ??
+          data.raw?.pixTransaction ??
+          data.raw?.pix_copy_paste ??
+          null;
 
-      } catch {
-        setErro("Erro inesperado.");
+        setQrCode(qr);
+        setCopiaCola(copy ?? null);
+      } catch (e) {
+        setErro("Erro inesperado ao buscar status do PIX.");
+      } finally {
+        setLoading(false);
       }
-
-      setLoading(false);
     }
 
     carregarPagamento();
@@ -54,7 +76,6 @@ export default function PixContent() {
 
   function copiarCodigo() {
     if (!copiaCola) return;
-
     navigator.clipboard.writeText(copiaCola);
     setCopiado(true);
     setTimeout(() => setCopiado(false), 1500);
@@ -94,7 +115,7 @@ export default function PixContent() {
       </button>
 
       <p className="text-gray-700 text-center break-all max-w-xl">
-        {copiaCola || "Código PIX não disponível."}
+        {copiaCola ?? "Código PIX não disponível."}
       </p>
 
       <a

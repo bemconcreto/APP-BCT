@@ -1,129 +1,127 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "../../../src/lib/supabaseClient";
 
-export default function PixPage() {
-  const [amount, setAmount] = useState("");
+export default function PixCheckoutPage() {
+  const router = useRouter();
+
+  const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState("");
   const [qrCode, setQrCode] = useState("");
-  const [copia, setCopia] = useState("");
+  const [copiaCola, setCopiaCola] = useState("");
   const [copiado, setCopiado] = useState(false);
-  const [loading, setLoading] = useState(false);
 
-  async function gerarPix() {
-    setErro("");
-    setLoading(true);
+  useEffect(() => {
+    async function gerarPixAutomatico() {
+      try {
+        const { data: session } = await supabase.auth.getSession();
+        const user = session?.session?.user;
 
-    const { data: session } = await supabase.auth.getSession();
-    const user = session?.session?.user;
+        if (!user) {
+          setErro("Faça login novamente.");
+          setLoading(false);
+          return;
+        }
 
-    if (!user) {
-      setErro("Faça login novamente.");
-      setLoading(false);
-      return;
-    }
+        const cpfCnpj =
+          user.user_metadata?.cpf ||
+          user.user_metadata?.cpfCnpj ||
+          user.user_metadata?.documento ||
+          "";
 
-    const cpfCnpj = user.user_metadata?.cpf || "";
+        if (!cpfCnpj) {
+          setErro("Seu CPF não foi encontrado.");
+          setLoading(false);
+          return;
+        }
 
-    if (!cpfCnpj) {
-      setErro("Seu CPF não foi encontrado.");
-      setLoading(false);
-      return;
-    }
+        // PEGAR ÚLTIMO VALOR DO LOCALSTORAGE (setado na página comprar)
+        const valor = localStorage.getItem("BCT_valor_pix");
 
-    try {
-      const res = await fetch("/api/asaas/pix", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          amountBRL: Number(amount),
-          cpfCnpj,
-          user_id: user.id,
-        }),
-      });
+        if (!valor || Number(valor) <= 0) {
+          setErro("Valor inválido.");
+          setLoading(false);
+          return;
+        }
 
-      const data = await res.json();
+        const res = await fetch("/api/asaas/pix", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            amountBRL: Number(valor),
+            cpfCnpj,
+            user_id: user.id,
+          }),
+        });
 
-      if (!data.success) {
-        setErro("Erro ao gerar PIX.");
+        const data = await res.json();
+
+        if (!data.success) {
+          setErro("Erro ao gerar PIX.");
+          setLoading(false);
+          return;
+        }
+
+        setQrCode(data.qrCode);
+        setCopiaCola(data.copiaCola);
         setLoading(false);
-        return;
+      } catch (err) {
+        console.log(err);
+        setErro("Erro inesperado.");
+        setLoading(false);
       }
-
-      setQrCode(data.qrCode);
-      setCopia(data.copiaCola);
-    } catch (e) {
-      setErro("Erro inesperado.");
     }
 
-    setLoading(false);
-  }
+    gerarPixAutomatico();
+  }, []);
 
   function copiarCodigo() {
-    navigator.clipboard.writeText(copia);
+    navigator.clipboard.writeText(copiaCola);
     setCopiado(true);
     setTimeout(() => setCopiado(false), 1500);
   }
 
-  // Tela de carregamento
-  if (loading) {
+  if (erro) {
     return (
-      <div className="p-6 flex justify-center">
+      <div className="min-h-screen flex items-center justify-center p-6">
+        <div className="bg-red-200 text-red-800 px-6 py-4 rounded">{erro}</div>
+      </div>
+    );
+  }
+
+  if (loading || !qrCode) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
         <p className="text-gray-600 text-lg">Gerando PIX...</p>
       </div>
     );
   }
 
   return (
-    <div className="p-6">
-      <h1 className="text-3xl font-bold mb-4 text-center">Pagamento via PIX</h1>
+    <div className="min-h-screen p-6 flex flex-col items-center">
+      <h1 className="text-3xl font-bold mb-6">Pagamento via PIX</h1>
 
-      {erro && <p className="bg-red-200 p-2 mb-4 text-center">{erro}</p>}
+      <img src={qrCode} alt="QR Code" className="w-64 h-64 mb-6" />
 
-      {!qrCode && (
-        <>
-          {/* Valor */}
-          <input
-            type="number"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            className="border p-2 w-full mb-4 rounded"
-            placeholder="Valor em Reais"
-          />
+      <button
+        onClick={copiarCodigo}
+        className="bg-green-600 text-white px-6 py-3 rounded-lg mb-4"
+      >
+        {copiado ? "COPIADO!" : "Copiar código PIX"}
+      </button>
 
-          <button
-            onClick={gerarPix}
-            className="bg-green-600 p-3 rounded text-white w-full"
-          >
-            Gerar PIX
-          </button>
-        </>
-      )}
+      <p className="text-gray-700 text-center break-all max-w-xl mb-10">
+        {copiaCola}
+      </p>
 
-      {qrCode && (
-        <div className="text-center mt-6">
-          <img src={qrCode} className="mx-auto w-64 mb-6" />
-
-          <button
-            onClick={copiarCodigo}
-            className="bg-blue-600 text-white px-6 py-3 rounded-lg mb-4"
-          >
-            {copiado ? "COPIADO!" : "Copiar código PIX"}
-          </button>
-
-          <p className="mt-4 break-all bg-gray-100 p-3 rounded max-w-xl mx-auto">
-            {copia}
-          </p>
-
-          <a
-            href="/comprar"
-            className="mt-10 inline-block bg-gray-200 px-5 py-2 rounded hover:bg-gray-300"
-          >
-            Voltar
-          </a>
-        </div>
-      )}
+      <button
+        onClick={() => router.push("/comprar")}
+        className="bg-gray-200 px-5 py-2 rounded hover:bg-gray-300"
+      >
+        Voltar
+      </button>
     </div>
   );
 }

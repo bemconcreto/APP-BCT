@@ -57,6 +57,7 @@ export default function ComprarPage() {
   //               PAGAR PIX
   // =======================================
   async function pagarPix() {
+    localStorage.setItem("BCT_valor_pix", amountBRL);
     const token = await getSupabaseToken();
 
     if (!token) return alert("Você precisa estar logado.");

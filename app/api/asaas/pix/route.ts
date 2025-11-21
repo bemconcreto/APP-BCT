@@ -4,7 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { amountBRL, cpfCnpj, user_id, wallet } = body;
+    const { amountBRL, cpfCnpj, user_id } = body;
 
     if (!amountBRL || amountBRL <= 0) {
       return NextResponse.json(
@@ -30,7 +30,6 @@ export async function POST(req: Request) {
       .from("compras_bct")
       .insert({
         user_id,
-        wallet,
         tokens,
         valor_pago: amountBRL,
         status: "pending",
@@ -39,14 +38,14 @@ export async function POST(req: Request) {
       .single();
 
     if (compraErr || !compra) {
-      console.error("❌ Erro ao registrar compra:", compraErr);
+      console.log("ERRO AO REGISTRAR COMPRA:", compraErr);
       return NextResponse.json(
         { success: false, error: "Erro ao registrar compra." },
         { status: 500 }
       );
     }
 
-    // Criar cobrança PIX no Asaas
+    // ===== ASAAS PIX =====
     const response = await fetch("https://www.asaas.com/api/v3/payments", {
       method: "POST",
       headers: {
@@ -66,8 +65,7 @@ export async function POST(req: Request) {
     const pagamento = await response.json();
 
     if (!response.ok || !pagamento?.id) {
-      console.error("❌ Erro ASAAS:", pagamento);
-
+      console.log("ERRO PIX:", pagamento);
       return NextResponse.json(
         { success: false, error: "Erro ao gerar PIX." },
         { status: 500 }
@@ -86,9 +84,8 @@ export async function POST(req: Request) {
       qrCode: pagamento.pixQrCode,
       copiaCola: pagamento.pixCopiaECola,
     });
-
   } catch (error) {
-    console.error("❌ ERRO PIX:", error);
+    console.error("ERRO PIX:", error);
     return NextResponse.json(
       { success: false, error: "Erro interno." },
       { status: 500 }

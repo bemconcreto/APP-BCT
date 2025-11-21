@@ -1,74 +1,52 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function PixPage() {
-  const [amount, setAmount] = useState("");
-  const [erro, setErro] = useState("");
   const [qrCode, setQrCode] = useState("");
   const [copia, setCopia] = useState("");
+  const [erro, setErro] = useState("");
 
-  async function gerarPix() {
-    setErro("");
-
+  useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const pedido = params.get("pedido"); // ID da cobrança do Asaas (se vier)
-    const cpfCnpj = params.get("cpfCnpj");
-    const user_id = params.get("user_id");
+    const pedido = params.get("pedido");
 
-    if (!cpfCnpj || !user_id) {
+    if (!pedido) {
       setErro("Dados não encontrados.");
       return;
     }
 
-    const res = await fetch("/api/asaas/pix", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        amountBRL: Number(amount),
-        cpfCnpj,
-        user_id,
-      }),
-    });
+    // buscar do Asaas a cobrança
+    fetch(`/api/asaas/pix-status?id=${pedido}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (!data.success) {
+          setErro("Erro ao buscar dados do PIX.");
+          return;
+        }
 
-    const data = await res.json();
+        setQrCode(data.qrCode);
+        setCopia(data.copiaCola);
+      })
+      .catch(() => setErro("Erro inesperado."));
+  }, []);
 
-    if (!data.success) {
-      setErro(data.error || "Erro ao gerar PIX.");
-      return;
-    }
-
-    setQrCode(data.qrCode);
-    setCopia(data.copiaCola);
+  if (erro) {
+    return (
+      <div className="p-6">
+        <p className="bg-red-200 p-3">{erro}</p>
+      </div>
+    );
   }
 
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-4">Pagamento via PIX</h1>
 
-      {erro && <p className="bg-red-200 p-2">{erro}</p>}
-
-      {!qrCode && (
-        <>
-          <input
-            type="number"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            className="border p-2 w-full mb-4"
-            placeholder="Valor"
-          />
-
-          <button
-            onClick={gerarPix}
-            className="bg-green-600 p-3 rounded text-white w-full"
-          >
-            Gerar PIX
-          </button>
-        </>
-      )}
+      {!qrCode && <p>Carregando...</p>}
 
       {qrCode && (
-        <div className="text-center mt-6">
+        <div className="text-center">
           <img src={qrCode} className="mx-auto w-64" />
           <p className="mt-4 break-all">{copia}</p>
         </div>

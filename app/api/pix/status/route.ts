@@ -5,43 +5,51 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
 
-    if (!id)
-      return NextResponse.json({ success: false, error: "ID não enviado" });
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: "ID não informado" },
+        { status: 400 }
+      );
+    }
 
-    const ASAAS_API_KEY = process.env.ASAAS_API_KEY;
-    if (!ASAAS_API_KEY)
-      return NextResponse.json({ success: false, error: "Asaas API Key faltando" });
+    const asaasKey = process.env.ASAAS_API_KEY;
 
-    // pega QR code
-    const qr = await fetch(`https://api.asaas.com/v3/payments/${id}/pixQrCode`, {
-      headers: {
-        "access_token": ASAAS_API_KEY,
-      },
-    });
+    if (!asaasKey) {
+      return NextResponse.json(
+        { success: false, error: "API KEY ausente" },
+        { status: 500 }
+      );
+    }
 
-    const qrData = await qr.json();
+    const pagamento = await fetch(
+      `https://www.asaas.com/api/v3/payments/${id}`,
+      {
+        method: "GET",
+        headers: {
+          accept: "application/json",
+          access_token: asaasKey,
+        },
+      }
+    );
 
-    // pega valor
-    const payment = await fetch(`https://api.asaas.com/v3/payments/${id}`, {
-      headers: {
-        "access_token": ASAAS_API_KEY,
-      },
-    });
+    const dados = await pagamento.json();
 
-    const payData = await payment.json();
+    if (dados.errors) {
+      return NextResponse.json(
+        { success: false, error: dados.errors },
+        { status: 400 }
+      );
+    }
 
     return NextResponse.json({
       success: true,
-      qrCodeBase64: qrData.encodedImage,
-      copiaECola: qrData.payload,
-      value: payData.value,
+      qrCode: dados.pixQrCodeImage,
+      copiaCola: dados.pixTransaction,
     });
-
-  } catch (e) {
-    console.error(e);
-    return NextResponse.json({
-      success: false,
-      error: "Erro interno",
-    });
+  } catch (err) {
+    return NextResponse.json(
+      { success: false, error: "Erro inesperado" },
+      { status: 500 }
+    );
   }
 }

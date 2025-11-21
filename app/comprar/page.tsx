@@ -1,119 +1,150 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { supabase } from "../../src/lib/supabaseClient";
 
-export const dynamic = "force-dynamic";
-
-// TOKEN DO SUPABASE
+// -----------------------------
+// PEGAR TOKEN DO SUPABASE
+// -----------------------------
 async function getSupabaseToken() {
-  const { data } = await supabase.auth.getSession();
-  return data.session?.access_token ?? null;
+  try {
+    const { data } = await supabase.auth.getSession();
+    return data.session?.access_token ?? null;
+  } catch {
+    return null;
+  }
 }
 
-// USUÁRIO LOGADO
+// -----------------------------
+// PEGAR USUÁRIO LOGADO
+// -----------------------------
 async function getUserSession() {
-  const { data } = await supabase.auth.getUser();
-  return data.user ?? null;
+  try {
+    const { data } = await supabase.auth.getUser();
+    return data.user ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export default function ComprarPage() {
   const [amountBRL, setAmountBRL] = useState("");
-  const [user, setUser] = useState<any>(null);
   const [cpfCnpj, setCpfCnpj] = useState("");
+  const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
   const tokenPriceUSD = 0.4482;
-  const usdToBrl = 5.3;
+  const usdToBRL = 5.3;
 
-  // CARREGAR USUÁRIO
+  // -----------------------------
+  // CARREGA USUÁRIO AO ABRIR
+  // -----------------------------
   useEffect(() => {
-    getUserSession().then(setUser);
+    async function loadUser() {
+      setUser(await getUserSession());
+    }
+    loadUser();
   }, []);
 
-  // SIMULAÇÃO
-  const amountUSD = amountBRL ? Number(amountBRL) / usdToBrl : 0;
-  const tokens = amountUSD ? amountUSD / tokenPriceUSD : 0;
+  // -----------------------------
+  // CÁLCULO DE TOKENS
+  // -----------------------------
+  const valorUSD = amountBRL ? Number(amountBRL) / usdToBRL : 0;
+  const tokens = valorUSD ? valorUSD / tokenPriceUSD : 0;
 
-  // ==========================
-  // 🚀 PAGAR PIX
-  // ==========================
+  // -----------------------------
+  // PAGAR VIA PIX
+  // -----------------------------
   async function pagarPix() {
     const token = await getSupabaseToken();
-    if (!token) return alert("Faça login.");
-    if (!cpfCnpj) return alert("Digite CPF/CNPJ.");
-    if (!amountBRL || Number(amountBRL) <= 0) return alert("Valor inválido.");
+
+    if (!token) return alert("Você precisa estar logado.");
+    if (!cpfCnpj) return alert("Digite seu CPF/CNPJ.");
+    if (!amountBRL || Number(amountBRL) <= 0) return alert("Digite um valor válido.");
 
     setLoading(true);
 
-    const res = await fetch("/api/asaas/pix", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        amountBRL: Number(amountBRL),
-        tokens: Number(tokens.toFixed(6)),
-        cpfCnpj,
-        email: user?.email ?? "",
-        nome: user?.user_metadata?.full_name ?? "Usuário",
-      }),
-    });
+    try {
+      const res = await fetch("/api/asaas/pix", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          amountBRL: Number(amountBRL),
+          tokens: Number(tokens.toFixed(6)),
+          cpfCnpj,
+          email: user?.email ?? "",
+          nome: user?.user_metadata?.full_name ?? "Usuário",
+        }),
+      });
 
-    const data = await res.json();
+      const data = await res.json();
 
-    if (!data.success) {
-      alert("Erro ao gerar PIX: " + JSON.stringify(data.error));
-      setLoading(false);
-      return;
+      if (!data.success) {
+        alert("Erro ao gerar PIX: " + JSON.stringify(data.error));
+        return;
+      }
+
+      // REDIRECIONA IMEDIATAMENTE PARA O CHECKOUT DO PIX
+      window.location.href = `/comprar/pix?pedido=${data.id}`;
+    } catch (e) {
+      alert("Erro inesperado no PIX.");
     }
 
-    window.location.href = `/comprar/pix?pedido=${data.id}`;
+    setLoading(false);
   }
 
-  // ==========================
-  // 🚀 PAGAR CARTÃO
-  // ==========================
+  // -----------------------------
+  // PAGAR VIA CARTÃO
+  // -----------------------------
   async function pagarCartao() {
     const token = await getSupabaseToken();
-    if (!token) return alert("Faça login.");
-    if (!cpfCnpj) return alert("Digite CPF/CNPJ.");
-    if (!amountBRL || Number(amountBRL) <= 0) return alert("Valor inválido.");
+
+    if (!token) return alert("Você precisa estar logado.");
+    if (!cpfCnpj) return alert("Digite seu CPF/CNPJ.");
+    if (!amountBRL || Number(amountBRL) <= 0) return alert("Digite um valor válido.");
 
     setLoading(true);
 
-    const res = await fetch("/api/asaas/cartao", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        amountBRL: Number(amountBRL),
-        tokens: Number(tokens.toFixed(4)),
-        cpfCnpj,
-        email: user?.email ?? "",
-        nome: user?.user_metadata?.full_name ?? "Usuário",
-      }),
-    });
+    try {
+      const res = await fetch("/api/asaas/cartao", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          amountBRL: Number(amountBRL),
+          tokens: Number(tokens.toFixed(4)),
+          cpfCnpj,
+          email: user?.email ?? "",
+          nome: user?.user_metadata?.full_name ?? "Usuário",
+        }),
+      });
 
-    const data = await res.json();
+      const data = await res.json();
 
-    if (!data.success) {
-      alert("Erro ao gerar pagamento com cartão: " + JSON.stringify(data.error));
-      setLoading(false);
-      return;
+      if (!data.success) {
+        alert("Erro ao gerar pagamento com cartão: " + JSON.stringify(data.error));
+        return;
+      }
+
+      window.location.href = `/comprar/cartao?pedido=${data.id}`;
+    } catch (e) {
+      alert("Erro inesperado no pagamento com cartão.");
     }
 
-    window.location.href = `/comprar/cartao?pedido=${data.id}`;
+    setLoading(false);
   }
 
-  // ==========================
+  // -----------------------------
   // UI
-  // ==========================
-
+  // -----------------------------
   return (
     <div className="min-h-screen bg-gray-100 p-8">
       <div className="max-w-3xl mx-auto bg-white rounded-xl shadow-md p-8">
@@ -121,58 +152,46 @@ export default function ComprarPage() {
           Comprar BCT
         </h1>
 
-        {/* CPF/CNPJ */}
+        {/* CPF */}
         <div className="mb-6">
-          <label className="block text-gray-700 font-semibold mb-2">
-            CPF ou CNPJ
-          </label>
+          <label className="block font-semibold mb-2">CPF ou CNPJ</label>
           <input
             type="text"
-            placeholder="Digite seu CPF ou CNPJ"
+            className="w-full px-4 py-3 border rounded-lg"
+            placeholder="Digite seu CPF/CNPJ"
             value={cpfCnpj}
             onChange={(e) => setCpfCnpj(e.target.value)}
-            className="w-full px-4 py-3 border rounded-lg"
           />
         </div>
 
         {/* Valor */}
-        <div className="mb-8">
-          <label className="block text-gray-700 font-semibold mb-2">
-            Valor (em Reais)
-          </label>
+        <div className="mb-6">
+          <label className="block font-semibold mb-2">Valor (R$)</label>
           <input
             type="number"
-            placeholder="Ex: 100,00"
+            className="w-full px-4 py-3 border rounded-lg"
+            placeholder="Ex: 100"
             value={amountBRL}
             onChange={(e) => setAmountBRL(e.target.value)}
-            className="w-full px-4 py-3 border rounded-lg"
           />
         </div>
 
-        {/* Simulador */}
+        {/* Simulação */}
         <div className="bg-gray-50 border rounded-lg p-4 mb-8">
-          <p className="text-gray-700">
-            Preço do BCT: <strong>US$ {tokenPriceUSD.toFixed(4)}</strong>
-          </p>
-          <p className="text-gray-700">
-            Dólar: <strong>R$ {usdToBrl.toFixed(2)}</strong>
-          </p>
-          <p className="text-gray-800 mt-2 text-lg font-semibold">
+          <p>Preço do BCT: US$ {tokenPriceUSD.toFixed(4)}</p>
+          <p>Dólar: R$ {usdToBRL.toFixed(2)}</p>
+          <p className="text-lg font-semibold mt-2">
             Você receberá:{" "}
-            <span className="text-green-800">{tokens.toFixed(6)} BCT</span>
+            <span className="text-green-700">{tokens.toFixed(6)} BCT</span>
           </p>
         </div>
 
-        {/* BOTÕES */}
-        <p className="text-gray-600 text-center mb-8">
-          Escolha a forma de pagamento
-        </p>
-
+        {/* Botões */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           <button
             onClick={pagarCartao}
             disabled={loading}
-            className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg p-6"
+            className="bg-blue-600 text-white rounded-lg p-6 hover:bg-blue-700"
           >
             <h2 className="text-xl font-semibold">Cartão</h2>
           </button>
@@ -180,7 +199,7 @@ export default function ComprarPage() {
           <button
             onClick={pagarPix}
             disabled={loading}
-            className="bg-green-600 hover:bg-green-700 text-white rounded-lg p-6"
+            className="bg-green-600 text-white rounded-lg p-6 hover:bg-green-700"
           >
             <h2 className="text-xl font-semibold">PIX</h2>
           </button>

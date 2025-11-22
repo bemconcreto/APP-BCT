@@ -10,8 +10,32 @@ export default function PixContent() {
   const [erro, setErro] = useState("");
   const [qrCode, setQrCode] = useState("");
   const [copiaCola, setCopiaCola] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [carregando, setCarregando] = useState(true);
   const [copiado, setCopiado] = useState(false);
+
+  async function buscarStatus() {
+    try {
+      const res = await fetch(`/api/pix/status?id=${pedidoId}`);
+      const data = await res.json();
+
+      if (!data.success) {
+        setErro("Erro ao carregar o PIX.");
+        return false;
+      }
+
+      if (!data.qrCode || !data.copiaCola) {
+        return false;
+      }
+
+      setQrCode(data.qrCode);
+      setCopiaCola(data.copiaCola);
+      return true;
+
+    } catch {
+      setErro("Erro ao carregar o PIX.");
+      return false;
+    }
+  }
 
   useEffect(() => {
     if (!pedidoId) {
@@ -19,33 +43,33 @@ export default function PixContent() {
       return;
     }
 
-    async function load() {
-      try {
-        const res = await fetch(`/api/pix/status?id=${pedidoId}`);
-        const data = await res.json();
+    let tentativas = 0;
 
-        if (!data.success) {
-          setErro("Erro ao carregar o PIX.");
-          return;
-        }
+    const intervalo = setInterval(async () => {
+      const ok = await buscarStatus();
+      tentativas++;
 
-        setQrCode(data.qrCode);
-        setCopiaCola(data.copiaCola);
-      } catch {
-        setErro("Erro ao carregar o PIX.");
+      if (ok) {
+        clearInterval(intervalo);
+        setCarregando(false);
       }
 
-      setLoading(false);
-    }
+      if (tentativas > 10) {
+        clearInterval(intervalo);
+        setErro("Erro ao carregar o PIX.");
+        setCarregando(false);
+      }
+    }, 1500);
 
-    load();
+    return () => clearInterval(intervalo);
   }, [pedidoId]);
 
-  function copiar() {
-    if (!copiaCola) return;
-    navigator.clipboard.writeText(copiaCola);
-    setCopiado(true);
-    setTimeout(() => setCopiado(false), 1200);
+  function copiarCodigo() {
+    if (copiaCola) {
+      navigator.clipboard.writeText(copiaCola);
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 1500);
+    }
   }
 
   if (erro) {
@@ -56,11 +80,11 @@ export default function PixContent() {
     );
   }
 
-  if (loading) {
+  if (carregando) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center">
-        <h2 className="text-xl mb-4">Carregando PIX...</h2>
-        <p className="text-gray-600">Obtendo dados do pagamento...</p>
+        <h2 className="text-xl mb-4">Gerando PIX...</h2>
+        <p className="text-red-600">Aguardando QR Code do Asaas...</p>
       </div>
     );
   }
@@ -69,29 +93,18 @@ export default function PixContent() {
     <div className="min-h-screen p-6 flex flex-col items-center">
       <h1 className="text-3xl font-bold mb-6">Pagamento via PIX</h1>
 
-      {!qrCode ? (
-        <p className="text-red-600 mb-4">QR Code não disponível.</p>
-      ) : (
-        <img src={qrCode} alt="QR Code" className="w-64 h-64 mb-6" />
-      )}
+      <img src={qrCode} alt="QR Code" className="w-64 h-64 mb-6" />
 
       <button
-        onClick={copiar}
+        onClick={copiarCodigo}
         className="bg-green-600 text-white px-6 py-3 rounded-lg mb-4"
       >
         {copiado ? "COPIADO!" : "Copiar código PIX"}
       </button>
 
       <p className="text-gray-700 text-center break-all max-w-xl">
-        {copiaCola || "Código PIX não disponível."}
+        {copiaCola}
       </p>
-
-      <a
-        href="/comprar"
-        className="mt-10 inline-block bg-gray-200 px-5 py-2 rounded hover:bg-gray-300"
-      >
-        Voltar
-      </a>
     </div>
   );
 }

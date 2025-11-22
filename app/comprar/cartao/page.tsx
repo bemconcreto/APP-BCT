@@ -1,7 +1,5 @@
 "use client";
-
 export const dynamic = "force-dynamic";
-export const fetchCache = "force-no-store";
 
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
@@ -10,10 +8,10 @@ export default function CartaoCheckout() {
   const params = useSearchParams();
 
   // dados vindos da página anterior
-  const amountBRL = params.get("amountBRL") || "";
-  const cpfCnpj = params.get("cpfCnpj") || "";
-  const email = params.get("email") || "";
-  const tokens = params.get("tokens") || "";
+  const amountBRL = params.get("amountBRL");
+  const cpfCnpj = params.get("cpfCnpj");
+  const email = params.get("email");
+  const tokens = params.get("tokens");
 
   // campos do cartão
   const [nome, setNome] = useState("");

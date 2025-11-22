@@ -1,16 +1,19 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 export default function CartaoCheckout() {
   const params = useSearchParams();
 
-  // parâmetros vindos da tela /comprar
-  const amountBRL = params.get("valor");
-  const cpfCnpj = params.get("cpf");
-  const email = params.get("email");
-  const tokens = params.get("tokens");
+  // dados vindos da página anterior
+  const amountBRL = params.get("amountBRL") || "";
+  const cpfCnpj = params.get("cpfCnpj") || "";
+  const email = params.get("email") || "";
+  const tokens = params.get("tokens") || "";
 
   // campos do cartão
   const [nome, setNome] = useState("");
@@ -47,7 +50,7 @@ export default function CartaoCheckout() {
     const data = await res.json();
 
     if (!data.success) {
-      setErro("Erro ao processar pagamento: " + data.error);
+      setErro("Erro ao gerar pagamento com cartão: " + data.error);
       return;
     }
 

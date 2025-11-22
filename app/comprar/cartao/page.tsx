@@ -12,30 +12,36 @@ export default function CartaoCheckout() {
   const [erro, setErro] = useState("");
 
   async function pagar() {
-    setErro("");
+  setErro("");
 
-    const res = await fetch("/api/asaas/cartao", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        nome,
-        numero,
-        mes,
-        ano,
-        cvv,
-        amountBRL: Number(amount),
-      }),
-    });
+  const res = await fetch("/api/asaas/cartao", {
+    method: "POST",
+    headers: { 
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${localStorage.getItem("sb-access-token")}` // envia token do Supabase
+    },
+    body: JSON.stringify({
+      nome,
+      numero,
+      mes,
+      ano,
+      cvv,
+      amountBRL: Number(amount),
+      cpfCnpj,
+      email,
+      tokens
+    }),
+  });
 
-    const data = await res.json();
+  const data = await res.json();
 
-    if (!data.success) {
-      setErro("Erro ao gerar pagamento com cartão: " + data.error);
-      return;
-    }
-
-    alert("Pagamento aprovado!");
+  if (!data.success) {
+    setErro("Erro ao gerar pagamento com cartão: " + data.error);
+    return;
   }
+
+  alert("Pagamento aprovado!");
+}
 
   return (
     <div className="p-6">

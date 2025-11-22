@@ -1,17 +1,52 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 
 export default function PixContent() {
   const searchParams = useSearchParams();
   const pedidoId = searchParams.get("pedido");
+  const router = useRouter();
 
   const [erro, setErro] = useState("");
-  const [qrCode, setQrCode] = useState("");
   const [copiaCola, setCopiaCola] = useState("");
   const [loading, setLoading] = useState(true);
   const [copiado, setCopiado] = useState(false);
+
+  async function atualizarSaldo() {
+    try {
+      const res = await fetch("/api/wallet/atualizar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paymentId: pedidoId }),
+      });
+
+      console.log("Saldo atualizado:", await res.json());
+    } catch (e) {
+      console.log("Erro ao atualizar saldo:", e);
+    }
+  }
+
+  async function verificarStatus() {
+    try {
+      const res = await fetch(`/api/pix/status?id=${pedidoId}`);
+      const data = await res.json();
+
+      if (!data.success) return;
+
+      setCopiaCola(data.copiaCola || "");
+
+      // 🟢 PAGAMENTO CONFIRMADO
+      if (data.status === "CONFIRMED") {
+        await atualizarSaldo();
+
+        // redireciona automático
+        router.push("/inicio#");
+      }
+    } catch (e) {
+      setErro("Erro ao verificar pagamento.");
+    }
+  }
 
   useEffect(() => {
     if (!pedidoId) {
@@ -19,26 +54,12 @@ export default function PixContent() {
       return;
     }
 
-    async function carregar() {
-      try {
-        const res = await fetch(`/api/pix/status?id=${pedidoId}`);
-        const data = await res.json();
+    let interval = setInterval(verificarStatus, 3000);
+    verificarStatus();
 
-        if (!data.success) {
-          setErro("Erro ao carregar o PIX.");
-          return;
-        }
+    setLoading(false);
 
-        setCopiaCola(data.copiaCola || "");
-
-      } catch (e) {
-        setErro("Erro ao carregar o PIX.");
-      }
-
-      setLoading(false);
-    }
-
-    carregar();
+    return () => clearInterval(interval);
   }, [pedidoId]);
 
   function copiarCodigo() {
@@ -68,7 +89,6 @@ export default function PixContent() {
   return (
     <div className="min-h-screen p-6 flex flex-col items-center">
       <h1 className="text-3xl font-bold mb-6">Pagamento via PIX</h1>
-
 
       <button
         onClick={copiarCodigo}

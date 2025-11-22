@@ -14,7 +14,7 @@ export async function GET(req: Request) {
 
     const key = process.env.ASAAS_API_KEY;
 
-    // 1️⃣ Buscar dados básicos do pagamento
+    // Dados do pagamento
     const base = await fetch(`https://www.asaas.com/api/v3/payments/${id}`, {
       headers: {
         accept: "application/json",
@@ -22,7 +22,7 @@ export async function GET(req: Request) {
       },
     }).then(r => r.json());
 
-    // 2️⃣ Buscar QR Code real
+    // QR Code e payload real
     const pix = await fetch(
       `https://www.asaas.com/api/v3/payments/${id}/pixQrCode`,
       {
@@ -35,9 +35,8 @@ export async function GET(req: Request) {
 
     return NextResponse.json({
       success: true,
-      status: base.status,               // aguardando pagamento, confirmado, etc
-      qrCode: pix?.encodedImage || null, // QR real
-      copiaCola: pix?.payload || null,   // copia e cola real
+      status: base.status,               // aguardando | confirmado | etc
+      copiaCola: pix?.payload || null,   // PIX copia e cola
     });
 
   } catch (e) {

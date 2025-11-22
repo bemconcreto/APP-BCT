@@ -193,7 +193,11 @@ export default function ComprarPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           <button
   onClick={() => {
-    window.location.href = `/comprar/cartao?valor=${amountBRL}&cpf=${cpfCnpj}`;
+    window.location.href =
+      `/comprar/cartao?amountBRL=${amountBRL}` +
+      `&cpfCnpj=${cpfCnpj}` +
+      `&email=${user?.email}` +
+      `&tokens=${tokens.toFixed(6)}`;
   }}
   disabled={loading}
   className="bg-blue-600 text-white rounded-lg p-6 hover:bg-blue-700"

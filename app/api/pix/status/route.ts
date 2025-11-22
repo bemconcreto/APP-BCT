@@ -12,22 +12,13 @@ export async function GET(req: Request) {
       );
     }
 
-    const asaasKey = process.env.ASAAS_API_KEY;
-
-    if (!asaasKey) {
-      return NextResponse.json(
-        { success: false, error: "API KEY ausente" },
-        { status: 500 }
-      );
-    }
-
     const pagamento = await fetch(
       `https://www.asaas.com/api/v3/payments/${id}`,
       {
         method: "GET",
         headers: {
           accept: "application/json",
-          access_token: asaasKey,
+          access_token: process.env.ASAAS_API_KEY!,
         },
       }
     );
@@ -41,18 +32,9 @@ export async function GET(req: Request) {
       );
     }
 
-    // AQUI ESTÁ A MÁGICA:
-    const qrCode =
-      dados.pixQrCodeImage ??
-      dados.bankSlip?.pix?.encodedImage ??
-      dados.raw?.bankSlip?.pix?.encodedImage ??
-      null;
-
-    const copiaCola =
-      dados.pixTransaction ??
-      dados.bankSlip?.pix?.payload ??
-      dados.raw?.bankSlip?.pix?.payload ??
-      null;
+    // CAMPOS CORRETOS DO ASAAS
+    const qrCode = dados.pixQrCodeImage ?? null;
+    const copiaCola = dados.pixTransaction ?? null;
 
     return NextResponse.json({
       success: true,

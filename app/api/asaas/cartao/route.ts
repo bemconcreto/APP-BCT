@@ -4,33 +4,55 @@ import { createClient } from "@supabase/supabase-js";
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { nome, numero, mes, ano, cvv, amountBRL, tokens, cpfCnpj, email } = body;
+    const {
+      nome,
+      numero,
+      mes,
+      ano,
+      cvv,
+      amountBRL,
+      tokens,
+      cpfCnpj,
+      email,
+      phone,
+      cep,
+      numeroCasa,
+    } = body;
 
-    // validação básica
     if (!nome || !numero || !mes || !ano || !cvv || !amountBRL) {
-      return NextResponse.json({ success: false, error: "Dados do cartão incompletos." }, { status: 400 });
+      return NextResponse.json(
+        { success: false, error: "Dados do cartão incompletos." },
+        { status: 400 }
+      );
     }
 
-    // supabase service client
-    const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
 
-    // extrai token do header (opcional) para identificar user
+    // 🔹 Identificar usuário autenticado
     const authHeader = req.headers.get("authorization") || "";
-    const token = authHeader.startsWith("Bearer ") ? authHeader.split(" ")[1] : authHeader || null;
+    const token = authHeader.startsWith("Bearer ")
+      ? authHeader.split(" ")[1]
+      : null;
+
     let userId: string | null = null;
+
     if (token) {
       const { data: userData } = await supabase.auth.getUser(token);
       userId = userData?.user?.id ?? null;
     }
-    if (!userId && body.user_id) userId = body.user_id;
 
     if (!userId) {
-      // se sua tabela exige NOT NULL em user_id, recuse aqui
-      return NextResponse.json({ success: false, error: "Usuário não autenticado." }, { status: 401 });
+      return NextResponse.json(
+        { success: false, error: "Usuário não autenticado." },
+        { status: 401 }
+      );
     }
 
-    // registra compra pendente antes do cartão (opcional) — assim você tem registro mesmo se cartão falhar
-    const { data: compra, error: compraErr } = await supabase
+    // 🔹 Criar compra pendente
+    const { data: compra } = await supabase
       .from("compras_bct")
       .insert({
         user_id: userId,
@@ -41,50 +63,102 @@ export async function POST(req: Request) {
       .select()
       .single();
 
-    if (compraErr || !compra) {
-      console.log("ERRO AO REGISTRAR COMPRA (CARTAO):", compraErr);
-      return NextResponse.json({ success: false, error: "Erro ao registrar compra." }, { status: 500 });
+    // 🔹 CRIAR CUSTOMER DINAMICAMENTE NO ASAAS
+    const customerRes = await fetch("https://www.asaas.com/api/v3/customers", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        access_token: process.env.ASAAS_API_KEY!,
+      },
+      body: JSON.stringify({
+        name: nome,
+        cpfCnpj,
+        email,
+        phone,
+      }),
+    });
+
+    const customerData = await customerRes.json();
+
+    if (!customerRes.ok) {
+      console.log("ERRO CUSTOMER ASAAS:", customerData);
+      return NextResponse.json(
+        { success: false, error: "Erro no cadastro ASAAS" },
+        { status: 400 }
+      );
     }
 
-    // chama ASAAS para pagar com cartão
+    const customerId = customerData.id;
+
+    // 🔹 PAGAMENTO COM CARTÃO
     const resp = await fetch("https://www.asaas.com/api/v3/payments", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        access_token: process.env.ASAAS_TOKEN!,
+        access_token: process.env.ASAAS_API_KEY!,
       },
       body: JSON.stringify({
-        customer: process.env.ASAAS_CUSTOMER_ID!,
+        customer: customerId,
         billingType: "CREDIT_CARD",
         value: amountBRL,
-        description: `Compra de ${tokens ?? 0} BCT`,
+        description: `Compra de ${tokens} BCT`,
         creditCard: {
           holderName: nome,
           number: numero,
           expiryMonth: mes,
           expiryYear: ano,
-          ccv: cvv, // alguns docs usam 'ccv' — se ASAAS pedir 'ccv' ou 'cvv' verifique (ajuste conforme resposta do ASAAS)
+          ccv: cvv,
         },
-        cpfCnpj,
-        email,
+        creditCardHolderInfo: {
+          name: nome,
+          email,
+          cpfCnpj,
+          postalCode: cep,
+          addressNumber: numeroCasa,
+          phone,
+        },
       }),
     });
 
     const data = await resp.json();
+
     if (!resp.ok) {
-      console.log("ASAAS CARTÃO ERRO:", data);
-      // atualizar compra para failed se quiser
-      await supabase.from("compras_bct").update({ status: "failed" }).eq("id", compra.id);
-      return NextResponse.json({ success: false, error: data?.errors?.[0]?.description || "Falha ao processar cartão." }, { status: 400 });
+      console.log("ERRO CARTÃO ASAAS:", data);
+
+      await supabase
+        .from("compras_bct")
+        .update({ status: "failed" })
+        .eq("id", compra.id);
+
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            data?.errors?.[0]?.description ||
+            data?.description ||
+            "Falha ao processar cartão.",
+        },
+        { status: 400 }
+      );
     }
 
-    // marcar como paid (ou dependendo do retorno do ASAAS, aguardar confirmação)
-    await supabase.from("compras_bct").update({ status: "paid", payment_id: data.id }).eq("id", compra.id);
+    // 🔹 Salva payment_id
+    await supabase
+      .from("compras_bct")
+      .update({ payment_id: data.id })
+      .eq("id", compra.id);
 
-    return NextResponse.json({ success: true, id: data.id, raw: data });
+    return NextResponse.json({
+      success: true,
+      id: data.id,
+      raw: data,
+    });
   } catch (e) {
     console.error("ERRO CARTAO ROUTE:", e);
-    return NextResponse.json({ success: false, error: "Erro interno." }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: "Erro interno." },
+      { status: 500 }
+    );
   }
 }
 

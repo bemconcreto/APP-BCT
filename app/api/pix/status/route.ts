@@ -12,38 +12,34 @@ export async function GET(req: Request) {
       );
     }
 
-    const key = process.env.ASAAS_API_KEY;
+    // Página pública do Asaas
+    const htmlRes = await fetch(`https://www.asaas.com/i/${id}`);
+    const html = await htmlRes.text();
 
-    // 1️⃣ Buscar dados básicos do pagamento
-    const base = await fetch(`https://www.asaas.com/api/v3/payments/${id}`, {
-      headers: {
-        accept: "application/json",
-        access_token: key!,
-      },
-    }).then(r => r.json());
+    // ====== EXTRAI QR CODE HIDDEN ======
+    const qrMatch = html.match(/data-code="([^"]+)"/);
+    const qrCode = qrMatch
+      ? `https://pix.asaas.com/qr/${qrMatch[1]}`
+      : null;
 
-    // 2️⃣ Buscar QR Code real
-    const pix = await fetch(
-      `https://www.asaas.com/api/v3/payments/${id}/pixQrCode`,
-      {
-        headers: {
-          accept: "application/json",
-          access_token: key!,
-        },
-      }
-    ).then(r => r.json());
+    // ====== EXTRAI PIX COPIA E COLA ======
+    const copiaMatch = html.match(/copyPixCode\('([^']+)'\)/);
+    const copiaCola = copiaMatch ? copiaMatch[1] : null;
+
+    // ====== STATUS ======
+    const statusMatch = html.match(/status-label[^>]*>([\s\S]*?)</);
+    const status = statusMatch ? statusMatch[1].trim() : "Aguardando";
 
     return NextResponse.json({
       success: true,
-      status: base.status,               // aguardando pagamento, confirmado, etc
-      qrCode: pix?.encodedImage || null, // QR real
-      copiaCola: pix?.payload || null,   // copia e cola real
+      qrCode,
+      copiaCola,
+      status,
     });
-
-  } catch (e) {
-    console.error("STATUS ERROR:", e);
+  } catch (err) {
+    console.error("STATUS ERROR:", err);
     return NextResponse.json(
-      { success: false, error: "Erro inesperado." },
+      { success: false, error: "Erro inesperado" },
       { status: 500 }
     );
   }

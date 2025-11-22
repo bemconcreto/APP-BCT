@@ -12,36 +12,51 @@ export async function GET(req: Request) {
       );
     }
 
-    // Consulta o pagamento no Asaas
-    const resp = await fetch(`https://www.asaas.com/api/v3/payments/${id}`, {
-      method: "GET",
-      headers: {
-        accept: "application/json",
-        access_token: process.env.ASAAS_API_KEY!,
-      },
-    });
-
-    const dados = await resp.json();
-
-    if (!resp.ok || dados.errors) {
+    const key = process.env.ASAAS_API_KEY;
+    if (!key) {
       return NextResponse.json(
-        { success: false, error: "Erro ao consultar status" },
+        { success: false, error: "API KEY ausente" },
+        { status: 500 }
+      );
+    }
+
+    const pagamento = await fetch(
+      `https://www.asaas.com/api/v3/payments/${id}`,
+      {
+        method: "GET",
+        headers: {
+          accept: "application/json",
+          access_token: key,
+        },
+      }
+    );
+
+    const dados = await pagamento.json();
+
+    if (dados.errors) {
+      return NextResponse.json(
+        { success: false, error: dados.errors },
         { status: 400 }
       );
     }
 
-    // ❗ LEIA ISSO:
-    // A rota GET /payments/{id} NÃO contém QR CODE nem COPIA E COLA
-    // Portanto sempre será necessário retornar esses valores como NULL
-    // Somente a rota de criação fornece o código PIX.
+    // 🔥 NOVO MAPEAMENTO CORRETO DO ASAAS
+    const qrCode =
+      dados.charge?.pixQrCode ??
+      dados.billingTypeInfo?.pixQrCode ??
+      null;
+
+    const copiaCola =
+      dados.charge?.pixCode ??
+      dados.billingTypeInfo?.pixCode ??
+      null;
 
     return NextResponse.json({
       success: true,
-      qrCode: dados.pixQrCodeImage ?? null,
-      copiaCola: dados.pixTransaction ?? null,
-      status: dados.status,
+      qrCode,
+      copiaCola,
+      raw: dados,
     });
-
   } catch (err) {
     console.error("STATUS ERROR:", err);
     return NextResponse.json(

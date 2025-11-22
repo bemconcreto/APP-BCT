@@ -61,16 +61,57 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: true });
     }
 
-    // 3️⃣ Atualizar tabela compras_bct
-    const { error } = await supabase
+    // 3️⃣ Buscar compra correspondente no Supabase
+    const { data: compra, error: compraErr } = await supabase
+      .from("compras_bct")
+      .select("*")
+      .eq("payment_id", paymentId)
+      .single();
+
+    if (compraErr || !compra) {
+      console.log("❌ COMPRA NÃO ENCONTRADA para paymentId:", paymentId);
+      return NextResponse.json({ success: true });
+    }
+
+    const userId = compra.user_id;
+    const tokens = Number(compra.tokens);
+
+    console.log("📌 Compra encontrada:", compra);
+    console.log("📌 Tokens:", tokens);
+
+    // 4️⃣ Marcar compra como paga
+    await supabase
       .from("compras_bct")
       .update({ status: "paid" })
       .eq("payment_id", paymentId);
 
-    if (error) {
-      console.log("❌ ERRO update compras_bct:", error);
+    console.log("✅ COMPRA MARCADA COMO PAGA!");
+
+    // 5️⃣ Atualizar ou criar saldo da wallet
+    const { data: wallet } = await supabase
+      .from("wallet_saldos")
+      .select("*")
+      .eq("user_id", userId)
+      .single();
+
+    if (!wallet) {
+      // Criar saldo novo
+      await supabase.from("wallet_saldos").insert({
+        user_id: userId,
+        saldo_bct: tokens,
+      });
+
+      console.log("💰 WALLET CRIADA com saldo:", tokens);
     } else {
-      console.log("✅ COMPRA MARCADA COMO PAGA!");
+      // Somar ao saldo existente
+      const novoSaldo = Number(wallet.saldo_bct) + tokens;
+
+      await supabase
+        .from("wallet_saldos")
+        .update({ saldo_bct: novoSaldo })
+        .eq("user_id", userId);
+
+      console.log("💰 WALLET ATUALIZADA → saldo:", novoSaldo);
     }
 
     return NextResponse.json({ success: true });

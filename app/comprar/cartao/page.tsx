@@ -1,21 +1,29 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 export default function CartaoCheckout() {
+  const params = useSearchParams();
+
+  // parâmetros vindos da tela /comprar
+  const amountBRL = params.get("valor");
+  const cpfCnpj = params.get("cpf");
+  const email = params.get("email");
+  const tokens = params.get("tokens");
+
+  // campos do cartão
   const [nome, setNome] = useState("");
   const [numero, setNumero] = useState("");
   const [mes, setMes] = useState("");
   const [ano, setAno] = useState("");
   const [cvv, setCvv] = useState("");
-  const [amount, setAmount] = useState("");
   const [erro, setErro] = useState("");
 
   async function pagar() {
     setErro("");
 
-    // 🚨 Validação no front (evita erro antes)
-    if (!nome || !numero || !mes || !ano || !cvv || !amount) {
+    if (!nome || !numero || !mes || !ano || !cvv) {
       setErro("Preencha todos os campos do cartão.");
       return;
     }
@@ -29,14 +37,17 @@ export default function CartaoCheckout() {
         mes,
         ano,
         cvv,
-        amountBRL: Number(amount),
+        amountBRL,
+        tokens,
+        cpfCnpj,
+        email,
       }),
     });
 
     const data = await res.json();
 
     if (!data.success) {
-      setErro("Erro ao gerar pagamento com cartão: " + data.error);
+      setErro("Erro ao processar pagamento: " + data.error);
       return;
     }
 
@@ -83,14 +94,6 @@ export default function CartaoCheckout() {
         className="border p-2 w-full mb-3"
         value={cvv}
         onChange={(e) => setCvv(e.target.value)}
-      />
-
-      <input
-        placeholder="Valor (R$)"
-        type="number"
-        className="border p-2 w-full mb-3"
-        value={amount}
-        onChange={(e) => setAmount(e.target.value)}
       />
 
       <button

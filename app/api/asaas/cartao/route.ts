@@ -4,6 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 export async function POST(req: Request) {
   try {
     const body = await req.json();
+
     const {
       nome,
       numero,
@@ -17,17 +18,16 @@ export async function POST(req: Request) {
       phone,
     } = body;
 
-    // validação forte somente NO CHECKOUT DO CARTÃO
-    if (!nome || !numero || !mes || !ano || !cvv) {
+    if (!nome || !numero || !mes || !ano || !cvv || !amountBRL) {
       return NextResponse.json(
         { success: false, error: "Dados do cartão incompletos." },
         { status: 400 }
       );
     }
 
-    if (!amountBRL || !cpfCnpj || !email) {
+    if (!cpfCnpj || !email) {
       return NextResponse.json(
-        { success: false, error: "Dados obrigatórios ausentes." },
+        { success: false, error: "CPF/CNPJ e e-mail são obrigatórios." },
         { status: 400 }
       );
     }
@@ -37,7 +37,7 @@ export async function POST(req: Request) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    // cria compra
+    // cria compra pendente
     const { data: compra } = await supabase
       .from("compras_bct")
       .insert({
@@ -49,6 +49,7 @@ export async function POST(req: Request) {
       .select()
       .single();
 
+    // chamada asaas
     const resp = await fetch("https://www.asaas.com/api/v3/payments", {
       method: "POST",
       headers: {
@@ -60,6 +61,7 @@ export async function POST(req: Request) {
         billingType: "CREDIT_CARD",
         value: amountBRL,
         description: `Compra de ${tokens} BCT`,
+
         creditCard: {
           holderName: nome,
           number: numero,
@@ -67,12 +69,13 @@ export async function POST(req: Request) {
           expiryYear: ano,
           ccv: cvv,
         },
+
         creditCardHolderInfo: {
           name: nome,
           email,
           cpfCnpj,
           postalCode: "00000000",
-          addressNumber: "0",
+          addressNumber: "1000",
           phone: phone || "11999999999",
         },
       }),
@@ -83,19 +86,23 @@ export async function POST(req: Request) {
     if (!resp.ok) {
       console.log("Erro ASAAS:", data);
       return NextResponse.json(
-        { success: false, error: data?.errors?.[0]?.description },
+        {
+          success: false,
+          error: data?.errors?.[0]?.description ?? "Erro no pagamento.",
+        },
         { status: 400 }
       );
     }
 
+    // atualiza compra
     await supabase
       .from("compras_bct")
       .update({ status: "paid", payment_id: data.id })
       .eq("id", compra.id);
 
     return NextResponse.json({ success: true, id: data.id });
-  } catch (e) {
-    console.error("ERRO CARTAO ROUTE:", e);
-    return NextResponse.json({ success: false, error: "Erro interno" });
+  } catch (err) {
+    console.error("ERRO:", err);
+    return NextResponse.json({ success: false, error: "Erro interno." });
   }
 }

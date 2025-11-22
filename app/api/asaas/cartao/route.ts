@@ -17,16 +17,17 @@ export async function POST(req: Request) {
       phone,
     } = body;
 
-    if (!nome || !numero || !mes || !ano || !cvv || !amountBRL) {
+    // validação forte somente NO CHECKOUT DO CARTÃO
+    if (!nome || !numero || !mes || !ano || !cvv) {
       return NextResponse.json(
         { success: false, error: "Dados do cartão incompletos." },
         { status: 400 }
       );
     }
 
-    if (!cpfCnpj || !email) {
+    if (!amountBRL || !cpfCnpj || !email) {
       return NextResponse.json(
-        { success: false, error: "CPF e e-mail são obrigatórios." },
+        { success: false, error: "Dados obrigatórios ausentes." },
         { status: 400 }
       );
     }
@@ -36,7 +37,7 @@ export async function POST(req: Request) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    // Cria compra pendente
+    // cria compra
     const { data: compra } = await supabase
       .from("compras_bct")
       .insert({
@@ -48,7 +49,6 @@ export async function POST(req: Request) {
       .select()
       .single();
 
-    // Requisição ASAAS
     const resp = await fetch("https://www.asaas.com/api/v3/payments", {
       method: "POST",
       headers: {
@@ -71,9 +71,9 @@ export async function POST(req: Request) {
           name: nome,
           email,
           cpfCnpj,
-          postalCode: "00000000", // obrigatório
-          addressNumber: "0", // obrigatório
-          phone: phone || "11999999999", // obrigatório
+          postalCode: "00000000",
+          addressNumber: "0",
+          phone: phone || "11999999999",
         },
       }),
     });
@@ -88,7 +88,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // Atualiza compra
     await supabase
       .from("compras_bct")
       .update({ status: "paid", payment_id: data.id })

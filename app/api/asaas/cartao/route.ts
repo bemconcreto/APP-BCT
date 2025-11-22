@@ -38,17 +38,24 @@ export async function POST(req: Request) {
     );
 
     // 👉 cria compra pendente
-    const { data: compra } = await supabase
-      .from("compras_bct")
-      .insert({
-        user_id: null,
-        tokens,
-        valor_pago: amountBRL,
-        status: "pending",
-      })
-      .select()
-      .single();
+const { data: compra, error: compraErro } = await supabase
+  .from("compras_bct")
+  .insert({
+    user_id: null,
+    tokens,
+    valor_pago: amountBRL,
+    status: "pending",
+  })
+  .select()
+  .single();
 
+if (compraErro || !compra) {
+  console.error("❌ ERRO AO CRIAR COMPRA NO SUPABASE:", compraErro);
+  return NextResponse.json(
+    { success: false, error: "Erro ao registrar compra." },
+    { status: 500 }
+  );
+}
     // 👉 chamada Asaas
     const resp = await fetch("https://www.asaas.com/api/v3/payments", {
       method: "POST",

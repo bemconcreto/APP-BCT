@@ -1,23 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 
 export default function CartaoCheckout() {
   const params = useSearchParams();
 
-  const amountBRL = params.get("amountBRL");
-  const cpfCnpj = params.get("cpfCnpj");
-  const email = params.get("email");
-  const tokens = params.get("tokens");
+  // dados vindos da página anterior
+  const amountBRL = params.get("valor");   // vindo do botão da página Comprar
+  const cpfCnpj = params.get("cpf");       // vindo do botão da página Comprar
 
+  // campos do cartão
   const [nome, setNome] = useState("");
   const [numero, setNumero] = useState("");
   const [mes, setMes] = useState("");
   const [ano, setAno] = useState("");
   const [cvv, setCvv] = useState("");
   const [erro, setErro] = useState("");
-  const [loading, setLoading] = useState(false); // 👈 NOVO
+  const [loading, setLoading] = useState(false);
 
   async function pagar() {
     setErro("");
@@ -27,41 +27,53 @@ export default function CartaoCheckout() {
       return;
     }
 
-    setLoading(true); // 👈 Evita clique duplo
-
-    const res = await fetch("/api/asaas/cartao", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        nome,
-        numero,
-        mes,
-        ano,
-        cvv,
-        amountBRL,
-        tokens,
-        cpfCnpj,
-        email,
-      }),
-    });
-
-    const data = await res.json();
-
-    setLoading(false); // 👈 libera botão apenas após retorno
-
-    if (!data.success) {
-      setErro("Erro ao gerar pagamento com cartão: " + data.error);
+    if (!amountBRL || !cpfCnpj) {
+      setErro("Dados do pedido ausentes. Volte e tente novamente.");
       return;
     }
 
-    alert("Pagamento aprovado!");
+    setLoading(true);
+
+    try {
+      const res = await fetch("/api/asaas/cartao", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nome,
+          numero,
+          mes,
+          ano,
+          cvv,
+          amountBRL,
+          tokens: 0, // backend calcula sozinho
+          cpfCnpj,
+          email: "no-email@temp.com", // backend não usa email daqui
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!data.success) {
+        setErro("Erro ao gerar pagamento com cartão: " + data.error);
+        setLoading(false);
+        return;
+      }
+
+      alert("Pagamento aprovado!");
+    } catch (e) {
+      setErro("Erro inesperado.");
+    }
+
+    setLoading(false);
   }
 
   return (
-    <div className="p-6">
+    <div className="p-6 pb-20">
       <h1 className="text-2xl font-bold mb-4">Pagamento com Cartão</h1>
 
-      {erro && <p className="bg-red-200 p-2 mb-3">{erro}</p>}
+      {erro && (
+        <p className="bg-red-200 text-red-900 p-2 mb-3 rounded">{erro}</p>
+      )}
 
       <input
         placeholder="Nome no Cartão"
@@ -100,13 +112,13 @@ export default function CartaoCheckout() {
       />
 
       <button
-        onClick={pagar}
+        onClick={loading ? undefined : pagar}
         disabled={loading}
         className={`p-3 rounded text-white w-full ${
           loading ? "bg-gray-400" : "bg-blue-600"
         }`}
       >
-        {loading ? "Processando pagamento..." : "Pagar"}
+        {loading ? "Processando..." : "Pagar"}
       </button>
     </div>
   );

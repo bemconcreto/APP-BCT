@@ -12,39 +12,42 @@ export default function CartaoCheckout() {
   const [erro, setErro] = useState("");
 
   async function pagar() {
-  setErro("");
+    setErro("");
 
-  const res = await fetch("/api/asaas/cartao", {
-    method: "POST",
-    headers: { 
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${localStorage.getItem("sb-access-token")}` // envia token do Supabase
-    },
-    body: JSON.stringify({
-      nome,
-      numero,
-      mes,
-      ano,
-      cvv,
-      amountBRL: Number(amount),
-    }),
-  });
+    // 🚨 Validação no front (evita erro antes)
+    if (!nome || !numero || !mes || !ano || !cvv || !amount) {
+      setErro("Preencha todos os campos do cartão.");
+      return;
+    }
 
-  const data = await res.json();
+    const res = await fetch("/api/asaas/cartao", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        nome,
+        numero,
+        mes,
+        ano,
+        cvv,
+        amountBRL: Number(amount),
+      }),
+    });
 
-  if (!data.success) {
-    setErro("Erro ao gerar pagamento com cartão: " + data.error);
-    return;
+    const data = await res.json();
+
+    if (!data.success) {
+      setErro("Erro ao gerar pagamento com cartão: " + data.error);
+      return;
+    }
+
+    alert("Pagamento aprovado!");
   }
-
-  alert("Pagamento aprovado!");
-}
 
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-4">Pagamento com Cartão</h1>
 
-      {erro && <p className="bg-red-200 p-2">{erro}</p>}
+      {erro && <p className="bg-red-200 p-2 mb-3">{erro}</p>}
 
       <input
         placeholder="Nome no Cartão"

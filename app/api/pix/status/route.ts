@@ -12,29 +12,43 @@ export async function GET(req: Request) {
       );
     }
 
+    const asaasKey = process.env.ASAAS_API_KEY;
+
+    if (!asaasKey) {
+      return NextResponse.json(
+        { success: false, error: "API KEY ausente" },
+        { status: 500 }
+      );
+    }
+
     const pagamento = await fetch(
       `https://www.asaas.com/api/v3/payments/${id}`,
       {
         method: "GET",
         headers: {
           accept: "application/json",
-          access_token: process.env.ASAAS_API_KEY!,
+          access_token: asaasKey,
         },
       }
     );
 
     const dados = await pagamento.json();
 
-    if (dados.errors) {
+    if (!pagamento.ok || dados.errors) {
       return NextResponse.json(
-        { success: false, error: dados.errors },
+        { success: false, error: "Erro ASAAS" },
         { status: 400 }
       );
     }
 
-    // CAMPOS CORRETOS DO ASAAS
-    const qrCode = dados.pixQrCodeImage ?? null;
-    const copiaCola = dados.pixTransaction ?? null;
+    // ====== CAMPOS CORRETOS DO ASAAS ======
+    const qrCode =
+      dados.bankSlip?.pix?.encodedImage ??
+      null;
+
+    const copiaCola =
+      dados.bankSlip?.pix?.payload ??
+      null;
 
     return NextResponse.json({
       success: true,
@@ -42,6 +56,7 @@ export async function GET(req: Request) {
       copiaCola,
       raw: dados,
     });
+
   } catch (err) {
     console.error("STATUS ERROR:", err);
     return NextResponse.json(

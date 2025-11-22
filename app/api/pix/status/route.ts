@@ -12,32 +12,40 @@ export async function GET(req: Request) {
       );
     }
 
-    // Página pública do Asaas
-    const htmlRes = await fetch(`https://www.asaas.com/i/${id}`);
-    const html = await htmlRes.text();
+    const asaasKey = process.env.ASAAS_API_KEY;
+    if (!asaasKey) {
+      return NextResponse.json(
+        { success: false, error: "API KEY ausente" },
+        { status: 500 }
+      );
+    }
 
-    // ====== EXTRAI QR CODE HIDDEN ======
-    const qrMatch = html.match(/data-code="([^"]+)"/);
-    const qrCode = qrMatch
-      ? `https://pix.asaas.com/qr/${qrMatch[1]}`
-      : null;
+    const resp = await fetch(`https://www.asaas.com/api/v3/payments/${id}`, {
+      headers: {
+        accept: "application/json",
+        access_token: asaasKey,
+      },
+    });
 
-    // ====== EXTRAI PIX COPIA E COLA ======
-    const copiaMatch = html.match(/copyPixCode\('([^']+)'\)/);
-    const copiaCola = copiaMatch ? copiaMatch[1] : null;
+    const dados = await resp.json();
 
-    // ====== STATUS ======
-    const statusMatch = html.match(/status-label[^>]*>([\s\S]*?)</);
-    const status = statusMatch ? statusMatch[1].trim() : "Aguardando";
+    if (!resp.ok) {
+      return NextResponse.json(
+        { success: false, error: "Erro ao consultar Asaas" },
+        { status: 500 }
+      );
+    }
+
+    const copiaCola =
+      dados.pixTransaction ??
+      dados.bankSlip?.pix?.payload ??
+      null;
 
     return NextResponse.json({
       success: true,
-      qrCode,
       copiaCola,
-      status,
     });
   } catch (err) {
-    console.error("STATUS ERROR:", err);
     return NextResponse.json(
       { success: false, error: "Erro inesperado" },
       { status: 500 }

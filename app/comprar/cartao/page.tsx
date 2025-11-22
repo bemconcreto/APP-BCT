@@ -27,9 +27,6 @@ export default function CartaoCheckout() {
       ano,
       cvv,
       amountBRL: Number(amount),
-      cpfCnpj,
-      email,
-      tokens
     }),
   });
 

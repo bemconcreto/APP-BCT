@@ -54,7 +54,7 @@ export async function POST(req: Request) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        access_token: process.env.ASAAS_TOKEN!,
+        access_token: process.env.ASAAS_API_KEY!,
       },
       body: JSON.stringify({
         customer: process.env.ASAAS_CUSTOMER_ID!,

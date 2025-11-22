@@ -4,8 +4,9 @@ import { createClient } from "@supabase/supabase-js";
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { nome, numero, mes, ano, cvv, amountBRL, tokens, cpfCnpj, email } = body;
+    const { nome, numero, mes, ano, cvv, amountBRL, cpfCnpj, email } = body;
 
+    // validação mínima
     if (!nome || !numero || !mes || !ano || !cvv || !amountBRL || !cpfCnpj || !email) {
       return NextResponse.json(
         { success: false, error: "Dados do cartão incompletos." },
@@ -13,38 +14,47 @@ export async function POST(req: Request) {
       );
     }
 
+    // supabase service role
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    // 🔐 valida usuário pelo token enviado no header
-    const authHeader = req.headers.get("authorization");
-    const token = authHeader?.startsWith("Bearer ") ? authHeader.split(" ")[1] : null;
+    // Identifica usuário logado
+    const authHeader = req.headers.get("authorization") || "";
+    const token = authHeader.startsWith("Bearer ") ? authHeader.split(" ")[1] : null;
 
-    let userId = null;
+    let userId: string | null = null;
+
     if (token) {
-      const { data } = await supabase.auth.getUser(token);
-      userId = data?.user?.id;
+      const { data: userData } = await supabase.auth.getUser(token);
+      userId = userData?.user?.id ?? null;
     }
 
     if (!userId) {
-      return NextResponse.json({ success: false, error: "Usuário não autenticado." }, { status: 401 });
+      return NextResponse.json(
+        { success: false, error: "Usuário não autenticado." },
+        { status: 401 }
+      );
     }
 
-    // 🔹 registra a compra pendente
-    const { data: compra } = await supabase
-      .from("compras_bct")
-      .insert({
-        user_id: userId,
-        tokens,
-        valor_pago: amountBRL,
-        status: "pending",
-      })
-      .select()
+    // pegar customer do usuário
+    const { data: wallet } = await supabase
+      .from("wallet_saldos")
+      .select("asaas_customer_id")
+      .eq("user_id", userId)
       .single();
 
-    // 🔹 chama ASAAS
+    if (!wallet?.asaas_customer_id) {
+      return NextResponse.json(
+        { success: false, error: "Customer ASAAS não encontrado." },
+        { status: 400 }
+      );
+    }
+
+    const customerId = wallet.asaas_customer_id;
+
+    // criar cobrança cartão
     const resp = await fetch("https://www.asaas.com/api/v3/payments", {
       method: "POST",
       headers: {
@@ -52,50 +62,41 @@ export async function POST(req: Request) {
         access_token: process.env.ASAAS_API_KEY!,
       },
       body: JSON.stringify({
-        customer: process.env.ASAAS_CUSTOMER_ID!,
+        customer: customerId,
         billingType: "CREDIT_CARD",
         value: amountBRL,
-        description: `Compra de ${tokens} BCT`,
+        description: `Compra BCT`,
         creditCard: {
           holderName: nome,
           number: numero,
           expiryMonth: mes,
           expiryYear: ano,
-          ccv: cvv,
+          ccv: cvv
         },
         creditCardHolderInfo: {
           name: nome,
-          email,
-          cpfCnpj,
+          email: email,
+          cpfCnpj: cpfCnpj,
           postalCode: "00000000",
-          addressNumber: "0",
-          phone: "11999999999"
-        },
-        remoteIp: "0.0.0.0"
+          addressNumber: "1"
+        }
       }),
     });
 
     const data = await resp.json();
 
     if (!resp.ok) {
-      await supabase.from("compras_bct").update({ status: "failed" }).eq("id", compra.id);
-      return NextResponse.json({ success: false, error: data?.errors?.[0]?.description }, { status: 400 });
+      console.log("ERRO ASAAS:", data);
+      return NextResponse.json(
+        { success: false, error: data?.errors?.[0]?.description || "Falha no cartão." },
+        { status: 400 }
+      );
     }
-
-    // sucesso! atualizar compra
-    await supabase
-      .from("compras_bct")
-      .update({ status: "paid", payment_id: data.id })
-      .eq("id", compra.id);
 
     return NextResponse.json({ success: true, raw: data });
 
   } catch (e) {
     console.error("ERRO CARTAO:", e);
-    return NextResponse.json({ success: false, error: "Erro interno" }, { status: 500 });
+    return NextResponse.json({ success: false, error: "Erro interno." }, { status: 500 });
   }
-}
-
-export function GET() {
-  return NextResponse.json({ ok: true });
 }

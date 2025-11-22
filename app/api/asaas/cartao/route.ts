@@ -37,7 +37,7 @@ export async function POST(req: Request) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    // cria compra pendente
+    // 👉 cria compra pendente
     const { data: compra } = await supabase
       .from("compras_bct")
       .insert({
@@ -49,7 +49,7 @@ export async function POST(req: Request) {
       .select()
       .single();
 
-    // chamada asaas
+    // 👉 chamada Asaas
     const resp = await fetch("https://www.asaas.com/api/v3/payments", {
       method: "POST",
       headers: {
@@ -57,29 +57,30 @@ export async function POST(req: Request) {
         access_token: process.env.ASAAS_API_KEY!,
       },
       body: JSON.stringify({
-  customer: process.env.ASAAS_CUSTOMER_ID!,
-  billingType: "CREDIT_CARD",
-  dueDate: new Date().toISOString().split("T")[0], // ← ADICIONE ISTO
-  value: amountBRL,
-  description: `Compra de ${tokens} BCT`,
+        customer: process.env.ASAAS_CUSTOMER_ID!,
+        billingType: "CREDIT_CARD",
+        dueDate: new Date().toISOString().split("T")[0],
+        value: amountBRL,
+        description: `Compra de ${tokens} BCT`,
+        externalReference: compra.id, //  <-- opcional, MAS MUITO BOM TER
 
-  creditCard: {
-    holderName: nome,
-    number: numero,
-    expiryMonth: mes,
-    expiryYear: ano,
-    ccv: cvv,
-  },
+        creditCard: {
+          holderName: nome,
+          number: numero,
+          expiryMonth: mes,
+          expiryYear: ano,
+          ccv: cvv,
+        },
 
-  creditCardHolderInfo: {
-    name: nome,
-    email,
-    cpfCnpj,
-    postalCode: "00000000",
-    addressNumber: "1000",
-    phone: phone || "11999999999",
-  }
-})
+        creditCardHolderInfo: {
+          name: nome,
+          email,
+          cpfCnpj,
+          postalCode: "00000000",
+          addressNumber: "1000",
+          phone: phone || "11999999999",
+        },
+      }),
     });
 
     const data = await resp.json();
@@ -95,10 +96,10 @@ export async function POST(req: Request) {
       );
     }
 
-    // atualiza compra
+    // 👉 SALVA APENAS payment_id
     await supabase
       .from("compras_bct")
-      .update({ status: "paid", payment_id: data.id })
+      .update({ payment_id: data.id })
       .eq("id", compra.id);
 
     return NextResponse.json({ success: true, id: data.id });

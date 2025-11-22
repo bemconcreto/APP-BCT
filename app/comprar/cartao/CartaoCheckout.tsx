@@ -17,6 +17,7 @@ export default function CartaoCheckout() {
   const [ano, setAno] = useState("");
   const [cvv, setCvv] = useState("");
   const [erro, setErro] = useState("");
+  const [loading, setLoading] = useState(false); // 👈 NOVO
 
   async function pagar() {
     setErro("");
@@ -25,6 +26,8 @@ export default function CartaoCheckout() {
       setErro("Preencha todos os campos do cartão.");
       return;
     }
+
+    setLoading(true); // 👈 Evita clique duplo
 
     const res = await fetch("/api/asaas/cartao", {
       method: "POST",
@@ -43,6 +46,8 @@ export default function CartaoCheckout() {
     });
 
     const data = await res.json();
+
+    setLoading(false); // 👈 libera botão apenas após retorno
 
     if (!data.success) {
       setErro("Erro ao gerar pagamento com cartão: " + data.error);
@@ -96,9 +101,12 @@ export default function CartaoCheckout() {
 
       <button
         onClick={pagar}
-        className="bg-blue-600 p-3 rounded text-white w-full"
+        disabled={loading}
+        className={`p-3 rounded text-white w-full ${
+          loading ? "bg-gray-400" : "bg-blue-600"
+        }`}
       >
-        Pagar
+        {loading ? "Processando pagamento..." : "Pagar"}
       </button>
     </div>
   );

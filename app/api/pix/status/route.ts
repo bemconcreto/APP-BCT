@@ -12,49 +12,38 @@ export async function GET(req: Request) {
       );
     }
 
-    const asaasKey = process.env.ASAAS_API_KEY;
-    if (!asaasKey) {
-      return NextResponse.json(
-        { success: false, error: "API KEY ausente" },
-        { status: 500 }
-      );
-    }
+    const key = process.env.ASAAS_API_KEY;
 
-    // Consulta pagamento no ASAAS
-    const pagamento = await fetch(
-      `https://www.asaas.com/api/v3/payments/${id}`,
+    // 1️⃣ Buscar dados básicos do pagamento
+    const base = await fetch(`https://www.asaas.com/api/v3/payments/${id}`, {
+      headers: {
+        accept: "application/json",
+        access_token: key!,
+      },
+    }).then(r => r.json());
+
+    // 2️⃣ Buscar QR Code real
+    const pix = await fetch(
+      `https://www.asaas.com/api/v3/payments/${id}/pixQrCode`,
       {
-        method: "GET",
         headers: {
           accept: "application/json",
-          access_token: asaasKey,
+          access_token: key!,
         },
       }
-    );
-
-    const dados = await pagamento.json();
-
-    if (dados.errors) {
-      return NextResponse.json(
-        { success: false, error: dados.errors },
-        { status: 400 }
-      );
-    }
-
-    // 🔥 Só copia-e-cola (QR code removido)
-    const copiaCola =
-      dados.pixTransaction ??
-      dados.bankSlip?.pix?.payload ??
-      null;
+    ).then(r => r.json());
 
     return NextResponse.json({
       success: true,
-      status: dados.status ?? "PENDING",
-      copiaCola,
+      status: base.status,               // aguardando pagamento, confirmado, etc
+      qrCode: pix?.encodedImage || null, // QR real
+      copiaCola: pix?.payload || null,   // copia e cola real
     });
-  } catch (err) {
+
+  } catch (e) {
+    console.error("STATUS ERROR:", e);
     return NextResponse.json(
-      { success: false, error: "Erro inesperado" },
+      { success: false, error: "Erro inesperado." },
       { status: 500 }
     );
   }

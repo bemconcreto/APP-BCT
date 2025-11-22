@@ -1,24 +1,25 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 export default function PixContent() {
   const searchParams = useSearchParams();
   const pedidoId = searchParams.get("pedido");
 
   const [erro, setErro] = useState("");
+  const [qrCode, setQrCode] = useState("");
   const [copiaCola, setCopiaCola] = useState("");
-  const [carregando, setCarregando] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [copiado, setCopiado] = useState(false);
 
   useEffect(() => {
-    async function carregarPIX() {
-      if (!pedidoId) {
-        setErro("Pedido não encontrado.");
-        return;
-      }
+    if (!pedidoId) {
+      setErro("ID do PIX não encontrado.");
+      return;
+    }
 
+    async function carregar() {
       try {
         const res = await fetch(`/api/pix/status?id=${pedidoId}`);
         const data = await res.json();
@@ -28,26 +29,24 @@ export default function PixContent() {
           return;
         }
 
-        if (!data.copiaCola) {
-          setErro("Código PIX indisponível.");
-          return;
-        }
+        setCopiaCola(data.copiaCola || "");
 
-        setCopiaCola(data.copiaCola);
       } catch (e) {
         setErro("Erro ao carregar o PIX.");
       }
 
-      setCarregando(false);
+      setLoading(false);
     }
 
-    carregarPIX();
+    carregar();
   }, [pedidoId]);
 
   function copiarCodigo() {
-    navigator.clipboard.writeText(copiaCola);
-    setCopiado(true);
-    setTimeout(() => setCopiado(false), 1500);
+    if (copiaCola) {
+      navigator.clipboard.writeText(copiaCola);
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 1500);
+    }
   }
 
   if (erro) {
@@ -58,10 +57,10 @@ export default function PixContent() {
     );
   }
 
-  if (carregando) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p>Carregando código PIX...</p>
+        <p className="text-gray-700">Carregando PIX...</p>
       </div>
     );
   }
@@ -69,6 +68,7 @@ export default function PixContent() {
   return (
     <div className="min-h-screen p-6 flex flex-col items-center">
       <h1 className="text-3xl font-bold mb-6">Pagamento via PIX</h1>
+
 
       <button
         onClick={copiarCodigo}
@@ -78,7 +78,7 @@ export default function PixContent() {
       </button>
 
       <p className="text-gray-700 text-center break-all max-w-xl">
-        {copiaCola}
+        {copiaCola || "Código PIX não disponível."}
       </p>
 
       <a

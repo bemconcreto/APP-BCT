@@ -57,28 +57,29 @@ export async function POST(req: Request) {
         access_token: process.env.ASAAS_API_KEY!,
       },
       body: JSON.stringify({
-        customer: process.env.ASAAS_CUSTOMER_ID!,
-        billingType: "CREDIT_CARD",
-        value: amountBRL,
-        description: `Compra de ${tokens} BCT`,
+  customer: process.env.ASAAS_CUSTOMER_ID!,
+  billingType: "CREDIT_CARD",
+  dueDate: new Date().toISOString().split("T")[0], // ← ADICIONE ISTO
+  value: amountBRL,
+  description: `Compra de ${tokens} BCT`,
 
-        creditCard: {
-          holderName: nome,
-          number: numero,
-          expiryMonth: mes,
-          expiryYear: ano,
-          ccv: cvv,
-        },
+  creditCard: {
+    holderName: nome,
+    number: numero,
+    expiryMonth: mes,
+    expiryYear: ano,
+    ccv: cvv,
+  },
 
-        creditCardHolderInfo: {
-          name: nome,
-          email,
-          cpfCnpj,
-          postalCode: "00000000",
-          addressNumber: "1000",
-          phone: phone || "11999999999",
-        },
-      }),
+  creditCardHolderInfo: {
+    name: nome,
+    email,
+    cpfCnpj,
+    postalCode: "00000000",
+    addressNumber: "1000",
+    phone: phone || "11999999999",
+  }
+})
     });
 
     const data = await resp.json();

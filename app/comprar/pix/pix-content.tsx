@@ -13,43 +13,39 @@ export default function PixContent() {
   const [carregando, setCarregando] = useState(true);
   const [copiado, setCopiado] = useState(false);
 
-  async function carregarPIX() {
-    try {
-      const res = await fetch(`/api/pix/status?id=${pedidoId}`);
-      const data = await res.json();
-
-      if (!data.success) {
-        setErro("Erro ao carregar o PIX.");
-        return;
-      }
-
-      if (data.qrCode && data.copiaCola) {
-        setQrCode(data.qrCode);
-        setCopiaCola(data.copiaCola);
-        setCarregando(false);
-      } else {
-        setErro("QR Code ainda não disponível.");
-      }
-
-    } catch (e) {
-      setErro("Erro ao carregar o PIX.");
-    }
-  }
-
   useEffect(() => {
     if (!pedidoId) {
       setErro("ID do PIX não encontrado.");
       return;
     }
 
-    carregarPIX();
+    async function carregar() {
+      try {
+        const res = await fetch(`/api/pix/status?id=${pedidoId}`);
+        const data = await res.json();
+
+        if (!data.success) {
+          setErro("Erro ao carregar o PIX.");
+          return;
+        }
+
+        setQrCode(data.qrCode || "");
+        setCopiaCola(data.copiaCola || "");
+        setCarregando(false);
+
+      } catch {
+        setErro("Erro ao carregar o PIX.");
+      }
+    }
+
+    carregar();
   }, [pedidoId]);
 
-  function copiarCodigo() {
+  function copiar() {
     if (copiaCola) {
       navigator.clipboard.writeText(copiaCola);
       setCopiado(true);
-      setTimeout(() => setCopiado(false), 1500);
+      setTimeout(() => setCopiado(false), 1200);
     }
   }
 
@@ -63,8 +59,8 @@ export default function PixContent() {
 
   if (carregando) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center">
-        <h2 className="text-xl mb-4">Carregando PIX...</h2>
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-gray-700 text-lg">Carregando PIX...</p>
       </div>
     );
   }
@@ -73,17 +69,21 @@ export default function PixContent() {
     <div className="min-h-screen p-6 flex flex-col items-center">
       <h1 className="text-3xl font-bold mb-6">Pagamento via PIX</h1>
 
-      <img src={qrCode} alt="QR Code" className="w-64 h-64 mb-6" />
+      {qrCode ? (
+        <img src={qrCode} alt="QR Code" className="w-64 h-64 mb-6" />
+      ) : (
+        <p className="text-red-500 mb-4">QR Code não disponível.</p>
+      )}
 
       <button
-        onClick={copiarCodigo}
+        onClick={copiar}
         className="bg-green-600 text-white px-6 py-3 rounded-lg mb-4"
       >
         {copiado ? "COPIADO!" : "Copiar código PIX"}
       </button>
 
       <p className="text-gray-700 text-center break-all max-w-xl">
-        {copiaCola}
+        {copiaCola || "Código PIX não disponível."}
       </p>
 
       <a

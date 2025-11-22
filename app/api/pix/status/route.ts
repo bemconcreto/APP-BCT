@@ -34,14 +34,16 @@ export async function GET(req: Request) {
 
     const dados = await pagamento.json();
 
-    if (!pagamento.ok || dados.errors) {
+    if (dados.errors) {
       return NextResponse.json(
-        { success: false, error: "Erro ASAAS" },
+        { success: false, error: dados.errors },
         { status: 400 }
       );
     }
 
-    // ====== CAMPOS CORRETOS DO ASAAS ======
+    // -------------------------
+    // CAMPOS CORRETOS DO ASAAS
+    // -------------------------
     const qrCode =
       dados.bankSlip?.pix?.encodedImage ??
       null;

@@ -1,23 +1,30 @@
 import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 
-// Next.js 13/14 NÃO usa mais bodyParser → remover totalmente
+// Asaas envia RAW
+export const config = {
+  api: { bodyParser: false },
+};
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 export async function POST(req: Request) {
   try {
-    // 1) RAW body (funciona no Next 13/14)
     const raw = await req.text();
-    let payload: any = {};
 
+    let payload: any = {};
     try {
       payload = JSON.parse(raw);
     } catch {
-      console.log("⚠️ Payload não era JSON válido. Conteúdo recebido:");
-      console.log(raw);
+      payload = {};
     }
 
     console.log("📌 WEBHOOK RECEBIDO:", payload);
 
-    // 2) Extrair o paymentId corretamente
+    // 1️⃣ Identificar pagamento
     const paymentId =
       payload?.payment?.id ||
       payload?.id ||
@@ -25,23 +32,50 @@ export async function POST(req: Request) {
       payload?.data?.id;
 
     if (!paymentId) {
-      console.log("❌ paymentId não encontrado.");
-      // Mesmo assim, sempre responder 200 pro Asaas
+      console.log("❌ paymentId ausente");
       return NextResponse.json({ success: true });
     }
 
-    console.log("📌 PAYMENT ID:", paymentId);
+    console.log("📌 paymentId:", paymentId);
 
-    // 👉 Aqui ainda NÃO processamos (para evitar 400)
-    // Por enquanto só precisamos que o Asaas aceite o endpoint
+    // 2️⃣ Consultar status real no ASAAS
+    const asaasRes = await fetch(
+      `https://www.asaas.com/api/v3/payments/${paymentId}`,
+      {
+        headers: {
+          accept: "application/json",
+          access_token: process.env.ASAAS_API_KEY!,
+        },
+      }
+    );
+
+    const dados = await asaasRes.json();
+    console.log("📌 STATUS REAL ASAAS:", dados.status);
+
+    const pago = ["RECEIVED", "CONFIRMED", "PAID", "SETTLED"].includes(
+      (dados.status || "").toUpperCase()
+    );
+
+    if (!pago) {
+      console.log("⏳ Pagamento ainda não confirmado:", dados.status);
+      return NextResponse.json({ success: true });
+    }
+
+    // 3️⃣ Atualizar tabela compras_bct
+    const { error } = await supabase
+      .from("compras_bct")
+      .update({ status: "paid" })
+      .eq("payment_id", paymentId);
+
+    if (error) {
+      console.log("❌ ERRO update compras_bct:", error);
+    } else {
+      console.log("✅ COMPRA MARCADA COMO PAGA!");
+    }
 
     return NextResponse.json({ success: true });
-
   } catch (err) {
-    console.error("❌ ERRO NO WEBHOOK:", err);
-    // Mesmo no erro → responder OK p/ Asaas não bloquear
+    console.error("❌ WEBHOOK ERROR:", err);
     return NextResponse.json({ success: true });
   }
 }
-
-// ❌ NÃO COLOCAR GET

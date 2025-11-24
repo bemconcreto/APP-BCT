@@ -3,11 +3,14 @@ import { createClient } from "@supabase/supabase-js";
 
 export async function POST(req: Request) {
   try {
+    // ==============================
+    // LOG DETALHADO DO REQUEST
+    // ==============================
     const body = await req.json();
     const authHeader = req.headers.get("authorization") || null;
 
-    console.log("📥 BODY CARTÃO:", body);
-    console.log("🔐 AUTH CARTÃO:", authHeader);
+    console.log("📥 BODY RECEBIDO:", body);
+    console.log("🔐 AUTH HEADER RECEBIDO:", authHeader);
 
     const {
       nome,
@@ -22,33 +25,29 @@ export async function POST(req: Request) {
       phone
     } = body;
 
-    // ============================
-    // VALIDAR CAMPOS
-    // ============================
+    // validação básica
     if (!nome || !numero || !mes || !ano || !cvv) {
       return NextResponse.json(
         { success: false, error: "Dados do cartão incompletos." },
         { status: 400 }
       );
     }
-
-    if (!amountBRL || amountBRL <= 0) {
+    if (!amountBRL || Number(amountBRL) <= 0) {
       return NextResponse.json(
         { success: false, error: "Valor inválido." },
         { status: 400 }
       );
     }
-
     if (!cpfCnpj || !email) {
       return NextResponse.json(
-        { success: false, error: "CPF/CNPJ e email são obrigatórios." },
+        { success: false, error: "CPF/CNPJ e e-mail obrigatórios." },
         { status: 400 }
       );
     }
 
-    // ============================
-    // VALIDAR USUÁRIO (MESMO PIX)
-    // ============================
+    // =========================================
+    //           VALIDAR USUÁRIO
+    // =========================================
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -58,9 +57,10 @@ export async function POST(req: Request) {
 
     if (authHeader?.startsWith("Bearer ")) {
       const token = authHeader.split(" ")[1];
+
       const { data, error } = await supabase.auth.getUser(token);
 
-      console.log("👤 RESULTADO getUser CARTÃO:", data, error);
+      console.log("👤 RESULTADO getUser:", data, error);
 
       if (data?.user?.id) {
         userId = data.user.id;
@@ -74,76 +74,76 @@ export async function POST(req: Request) {
       );
     }
 
-    // ============================
-    // CRIAR COMPRA PENDENTE
-    // ============================
+    // =========================================
+    //       REGISTRA COMPRA NO SUPABASE
+    // =========================================
     const { data: compra, error: compraErr } = await supabase
       .from("compras_bct")
       .insert({
         user_id: userId,
         tokens,
         valor_pago: amountBRL,
-        status: "pending"
+        status: "pending",
       })
       .select()
       .single();
 
     if (compraErr) {
-      console.log("❌ ERRO AO INSERIR COMPRA:", compraErr);
+      console.log("❌ ERRO AO REGISTRAR COMPRA:", compraErr);
       return NextResponse.json(
         { success: false, error: "Erro ao registrar compra." },
         { status: 500 }
       );
     }
 
-    // ============================
-    // CRIAR PAGAMENTO ASAAS
-    // ============================
+    // =========================================
+    //         CRIAR PAGAMENTO ASAAS
+    // =========================================
     const resp = await fetch("https://www.asaas.com/api/v3/payments", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        access_token: process.env.ASAAS_API_KEY!
+        access_token: process.env.ASAAS_API_KEY!,
       },
       body: JSON.stringify({
         customer: process.env.ASAAS_CUSTOMER_ID!,
         billingType: "CREDIT_CARD",
         value: amountBRL,
-        description: `Compra de ${tokens} BCT`,
         dueDate: new Date().toISOString().split("T")[0],
+        description: `Compra de ${tokens} BCT`,
 
         creditCard: {
           holderName: nome,
           number: numero,
           expiryMonth: mes,
           expiryYear: ano,
-          ccv: cvv
+          ccv: cvv,
         },
 
         creditCardHolderInfo: {
           name: nome,
-          cpfCnpj,
           email,
-          phone: phone || "11999999999",
+          cpfCnpj,
           postalCode: "00000000",
-          addressNumber: "1000"
-        }
-      })
+          addressNumber: "1000",
+          phone: phone || "11999999999",
+        },
+      }),
     });
 
     const pagamento = await resp.json();
 
     if (!resp.ok || !pagamento.id) {
-      console.log("❌ ERRO ASAAS CARTÃO:", pagamento);
+      console.log("❌ ERRO CARTÃO ASAAS:", pagamento);
       return NextResponse.json(
-        { success: false, error: pagamento?.errors?.[0]?.description ?? "Erro no cartão." },
+        { success: false, error: "Erro ao processar cartão." },
         { status: 500 }
       );
     }
 
-    // ============================
-    // SALVAR payment_id
-    // ============================
+    // =========================================
+    //       ATUALIZAR payment_id
+    // =========================================
     await supabase
       .from("compras_bct")
       .update({ payment_id: pagamento.id })
@@ -151,10 +151,10 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       success: true,
-      id: pagamento.id
+      id: pagamento.id,
     });
   } catch (err) {
-    console.error("❌ ERRO CARTÃO ROUTE:", err);
+    console.log("❌ ERRO GERAL CARTÃO:", err);
     return NextResponse.json(
       { success: false, error: "Erro interno." },
       { status: 500 }
@@ -163,5 +163,5 @@ export async function POST(req: Request) {
 }
 
 export function GET() {
-  return NextResponse.json({ message: "CARTÃO route ativa" });
+  return NextResponse.json({ message: "Cartão route ativa" });
 }

@@ -1,28 +1,11 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-// 🔥 Client que LÊ a sessão do usuário via cookies
-function supabaseClient(req: Request) {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      global: {
-        headers: {
-          // cookies HTTP-only já garantem a sessão
-          Authorization: req.headers.get("Authorization") || ""
-        }
-      }
-    }
-  );
-}
-
-// 🔥 Client ADMIN (pode gravar qualquer coisa)
-const supabaseAdmin = createClient(
+// 🔥 Cliente ADMIN (igual ao PIX)
+const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
-
 
 export async function POST(req: Request) {
   try {
@@ -41,7 +24,7 @@ export async function POST(req: Request) {
       phone
     } = body;
 
-    // validação
+    // validações simples
     if (!nome || !numero || !mes || !ano || !cvv || !amountBRL) {
       return NextResponse.json(
         { success: false, error: "Dados do cartão incompletos." },
@@ -49,31 +32,11 @@ export async function POST(req: Request) {
       );
     }
 
-    if (!cpfCnpj || !email) {
-      return NextResponse.json(
-        { success: false, error: "CPF/CNPJ e e-mail são obrigatórios." },
-        { status: 400 }
-      );
-    }
-
-    // 🔥 O MESMO SISTEMA DO PIX → LER USER DA SESSÃO
-    const supabase = supabaseClient(req);
-    const { data: sessionData } = await supabase.auth.getSession();
-
-    const userId = sessionData.session?.user?.id;
-
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, error: "Usuário não autenticado." },
-        { status: 401 }
-      );
-    }
-
-    // 🔥 CRIAR COMPRA PENDENTE (igual PIX)
-    const { data: compra, error: compraErr } = await supabaseAdmin
+    // 🔥 GRAVAR COMPRA COMO PENDENTE NO SUPABASE (SEM user_id)
+    const { data: compra, error: compraErr } = await supabase
       .from("compras_bct")
       .insert({
-        user_id: userId,
+        user_id: null, // ⚠ igual ao pix!
         tokens,
         valor_pago: amountBRL,
         status: "pending"
@@ -82,14 +45,14 @@ export async function POST(req: Request) {
       .single();
 
     if (compraErr) {
-      console.error("❌ ERRO AO CRIAR COMPRA:", compraErr);
+      console.error("❌ ERRO AO INSERIR COMPRA:", compraErr);
       return NextResponse.json(
         { success: false, error: "Erro ao registrar compra." },
         { status: 400 }
       );
     }
 
-    // 🔥 CHAMAR ASAAS
+    // 🔥 CHAMADA AO ASAAS
     const resp = await fetch("https://www.asaas.com/api/v3/payments", {
       method: "POST",
       headers: {
@@ -99,9 +62,11 @@ export async function POST(req: Request) {
       body: JSON.stringify({
         customer: process.env.ASAAS_CUSTOMER_ID!,
         billingType: "CREDIT_CARD",
-        dueDate: new Date().toISOString().split("T")[0],
         value: amountBRL,
+        dueDate: new Date().toISOString().split("T")[0],
+
         description: `Compra de ${tokens} BCT`,
+
         creditCard: {
           holderName: nome,
           number: numero,
@@ -109,6 +74,7 @@ export async function POST(req: Request) {
           expiryYear: ano,
           ccv: cvv,
         },
+
         creditCardHolderInfo: {
           name: nome,
           email,
@@ -116,33 +82,33 @@ export async function POST(req: Request) {
           postalCode: "00000000",
           addressNumber: "1000",
           phone: phone || "11999999999",
-        }
+        },
       })
     });
 
     const data = await resp.json();
 
     if (!resp.ok) {
-      console.error("Erro ASAAS:", data);
+      console.log("❌ ERRO ASAAS:", data);
       return NextResponse.json(
         {
           success: false,
-          error: data?.errors?.[0]?.description ?? "Erro no pagamento."
+          error: data?.errors?.[0]?.description ?? "Erro ao criar pagamento.",
         },
         { status: 400 }
       );
     }
 
-    // 🔥 Atualizar compra com payment_id
-    await supabaseAdmin
+    // 🔥 SALVAR payment_id no SUPABASE
+    await supabase
       .from("compras_bct")
       .update({ payment_id: data.id })
       .eq("id", compra.id);
 
     return NextResponse.json({ success: true, id: data.id });
 
-  } catch (e) {
-    console.error("❌ ERRO GERAL:", e);
+  } catch (err) {
+    console.error("❌ ERRO NO CARTÃO:", err);
     return NextResponse.json(
       { success: false, error: "Erro interno." },
       { status: 500 }

@@ -1,32 +1,33 @@
 import { NextResponse } from "next/server";
-import { createServerClient } from "@supabase/auth-helpers-nextjs";
-import { cookies } from "next/headers";
+import { createClient } from "@supabase/supabase-js";
+
+// 🔥 Client que LÊ a sessão do usuário via cookies
+function supabaseClient(req: Request) {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      global: {
+        headers: {
+          // cookies HTTP-only já garantem a sessão
+          Authorization: req.headers.get("Authorization") || ""
+        }
+      }
+    }
+  );
+}
+
+// 🔥 Client ADMIN (pode gravar qualquer coisa)
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+
 
 export async function POST(req: Request) {
   try {
-    // recup cookie da sessão
-    const cookieStore = cookies();
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      { cookies: () => cookieStore }
-    );
-
-    // pega a sessão REAL do usuário
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    const userId = session?.user?.id;
-
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, error: "Usuário não autenticado." },
-        { status: 401 }
-      );
-    }
-
     const body = await req.json();
+
     const {
       nome,
       numero,
@@ -37,46 +38,58 @@ export async function POST(req: Request) {
       tokens,
       cpfCnpj,
       email,
-      phone,
+      phone
     } = body;
 
-    if (!nome || !numero || !mes || !ano || !cvv) {
+    // validação
+    if (!nome || !numero || !mes || !ano || !cvv || !amountBRL) {
       return NextResponse.json(
         { success: false, error: "Dados do cartão incompletos." },
         { status: 400 }
       );
     }
 
-    // conectar ADMIN
-    const supabaseAdmin = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      {
-        cookies: () => cookieStore,
-      }
-    );
+    if (!cpfCnpj || !email) {
+      return NextResponse.json(
+        { success: false, error: "CPF/CNPJ e e-mail são obrigatórios." },
+        { status: 400 }
+      );
+    }
 
-    // registrar compra
+    // 🔥 O MESMO SISTEMA DO PIX → LER USER DA SESSÃO
+    const supabase = supabaseClient(req);
+    const { data: sessionData } = await supabase.auth.getSession();
+
+    const userId = sessionData.session?.user?.id;
+
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, error: "Usuário não autenticado." },
+        { status: 401 }
+      );
+    }
+
+    // 🔥 CRIAR COMPRA PENDENTE (igual PIX)
     const { data: compra, error: compraErr } = await supabaseAdmin
       .from("compras_bct")
       .insert({
         user_id: userId,
         tokens,
         valor_pago: amountBRL,
-        status: "pending",
+        status: "pending"
       })
       .select()
       .single();
 
     if (compraErr) {
-      console.log("Erro Supabase:", compraErr);
+      console.error("❌ ERRO AO CRIAR COMPRA:", compraErr);
       return NextResponse.json(
         { success: false, error: "Erro ao registrar compra." },
         { status: 400 }
       );
     }
 
-    // ASAAS
+    // 🔥 CHAMAR ASAAS
     const resp = await fetch("https://www.asaas.com/api/v3/payments", {
       method: "POST",
       headers: {
@@ -103,28 +116,36 @@ export async function POST(req: Request) {
           postalCode: "00000000",
           addressNumber: "1000",
           phone: phone || "11999999999",
-        },
-      }),
+        }
+      })
     });
 
-    const dataAsaas = await resp.json();
+    const data = await resp.json();
 
     if (!resp.ok) {
+      console.error("Erro ASAAS:", data);
       return NextResponse.json(
-        { success: false, error: dataAsaas?.errors?.[0]?.description },
+        {
+          success: false,
+          error: data?.errors?.[0]?.description ?? "Erro no pagamento."
+        },
         { status: 400 }
       );
     }
 
-    // salvar payment_id
+    // 🔥 Atualizar compra com payment_id
     await supabaseAdmin
       .from("compras_bct")
-      .update({ payment_id: dataAsaas.id })
+      .update({ payment_id: data.id })
       .eq("id", compra.id);
 
-    return NextResponse.json({ success: true, id: dataAsaas.id });
-  } catch (err) {
-    console.log("Erro interno:", err);
-    return NextResponse.json({ success: false, error: "Erro interno." });
+    return NextResponse.json({ success: true, id: data.id });
+
+  } catch (e) {
+    console.error("❌ ERRO GERAL:", e);
+    return NextResponse.json(
+      { success: false, error: "Erro interno." },
+      { status: 500 }
+    );
   }
 }

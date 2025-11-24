@@ -17,7 +17,7 @@ export default function CartaoCheckout({ amountBRL, tokens, cpfCnpj, email, phon
     setErro("");
     setLoading(true);
 
-    // 🔥 PEGAR TOKEN DO SUPABASE EXATAMENTE IGUAL O PIX
+    // 🔥 PEGAR TOKEN DO SUPABASE — IGUAL O PIX!
     const { data: sessionData } = await supabase.auth.getSession();
     const token = sessionData.session?.access_token;
 
@@ -32,7 +32,7 @@ export default function CartaoCheckout({ amountBRL, tokens, cpfCnpj, email, phon
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${token}`, // ENVIA O TOKEN DE AUTH
         },
         body: JSON.stringify({
           nome,
@@ -48,15 +48,16 @@ export default function CartaoCheckout({ amountBRL, tokens, cpfCnpj, email, phon
         }),
       });
 
-      const data = await resp.json();
+      const result = await resp.json();
 
-      if (!data.success) {
-        setErro(data.error || "Erro no pagamento.");
+      if (!result.success) {
+        setErro(result.error || "Erro no pagamento.");
       } else {
         alert("Pagamento aprovado!");
       }
     } catch (e) {
-      setErro("Erro interno ao processar.");
+      console.error("Erro:", e);
+      setErro("Erro interno ao processar pagamento.");
     }
 
     setLoading(false);
@@ -73,15 +74,37 @@ export default function CartaoCheckout({ amountBRL, tokens, cpfCnpj, email, phon
       )}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        <input placeholder="Nome" value={nome} onChange={(e) => setNome(e.target.value)} />
-        <input placeholder="Número" value={numero} onChange={(e) => setNumero(e.target.value)} />
+
+        <input
+          placeholder="Nome impresso no cartão"
+          value={nome}
+          onChange={(e) => setNome(e.target.value)}
+        />
+
+        <input
+          placeholder="Número do cartão"
+          value={numero}
+          onChange={(e) => setNumero(e.target.value)}
+        />
 
         <div style={{ display: "flex", gap: 10 }}>
-          <input placeholder="Mês" value={mes} onChange={(e) => setMes(e.target.value)} />
-          <input placeholder="Ano" value={ano} onChange={(e) => setAno(e.target.value)} />
+          <input
+            placeholder="Mês (MM)"
+            value={mes}
+            onChange={(e) => setMes(e.target.value)}
+          />
+          <input
+            placeholder="Ano (AA ou AAAA)"
+            value={ano}
+            onChange={(e) => setAno(e.target.value)}
+          />
         </div>
 
-        <input placeholder="CVV" value={cvv} onChange={(e) => setCvv(e.target.value)} />
+        <input
+          placeholder="CVV"
+          value={cvv}
+          onChange={(e) => setCvv(e.target.value)}
+        />
 
         <button
           onClick={pagar}

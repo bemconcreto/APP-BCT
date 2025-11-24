@@ -1,145 +1,152 @@
-import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+"use client";
 
-// 🔐 Criar cliente Admin
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { useState } from "react";
 
-// 🔐 Criar cliente público para recuperar sessão
-function supabaseClient(req: Request) {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      global: {
+export default function CartaoCheckout() {
+  const [loading, setLoading] = useState(false);
+
+  const [nome, setNome] = useState("");
+  const [numero, setNumero] = useState("");
+  const [mes, setMes] = useState("");
+  const [ano, setAno] = useState("");
+  const [cvv, setCvv] = useState("");
+  const [cpfCnpj, setCpfCnpj] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [mensagem, setMensagem] = useState("");
+
+  const tokens = 2.104855;
+  const amountBRL = 5;
+
+  const pagar = async () => {
+    setMensagem("");
+    setLoading(true);
+
+    try {
+      const resp = await fetch("/api/asaas/cartao", {
+        method: "POST",
         headers: {
-          Authorization: req.headers.get("Authorization") || "",
-        }
-      }
-    }
-  );
-}
-
-export async function POST(req: Request) {
-  try {
-    const body = await req.json();
-
-    const {
-      nome,
-      numero,
-      mes,
-      ano,
-      cvv,
-      amountBRL,
-      tokens,
-      cpfCnpj,
-      email,
-      phone
-    } = body;
-
-    // validação
-    if (!nome || !numero || !mes || !ano || !cvv || !amountBRL) {
-      return NextResponse.json(
-        { success: false, error: "Dados do cartão incompletos." },
-        { status: 400 }
-      );
-    }
-
-    if (!cpfCnpj || !email) {
-      return NextResponse.json(
-        { success: false, error: "CPF/CNPJ e e-mail são obrigatórios." },
-        { status: 400 }
-      );
-    }
-
-    // 🔥 RECUPERAR USUÁRIO LOGADO
-    const supabase = supabaseClient(req);
-    const { data: sessionData } = await supabase.auth.getSession();
-    const userId = sessionData.session?.user?.id;
-
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, error: "Usuário não autenticado." },
-        { status: 400 }
-      );
-    }
-
-    // 🔥 CRIAR COMPRA PENDENTE (AGORA COM user_id!!)
-    const { data: compra, error: compraErr } = await supabaseAdmin
-      .from("compras_bct")
-      .insert({
-        user_id: userId,
-        tokens,
-        valor_pago: amountBRL,
-        status: "pending"
-      })
-      .select()
-      .single();
-
-    if (compraErr) {
-      console.error("❌ ERRO AO CRIAR COMPRA NO SUPABASE:", compraErr);
-      return NextResponse.json(
-        { success: false, error: "Erro ao registrar compra." },
-        { status: 400 }
-      );
-    }
-
-    // 🔥 CHAMAR ASAAS
-    const resp = await fetch("https://www.asaas.com/api/v3/payments", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        access_token: process.env.ASAAS_API_KEY!,
-      },
-      body: JSON.stringify({
-        customer: process.env.ASAAS_CUSTOMER_ID!,
-        billingType: "CREDIT_CARD",
-        dueDate: new Date().toISOString().split("T")[0],
-        value: amountBRL,
-        description: `Compra de ${tokens} BCT`,
-        creditCard: {
-          holderName: nome,
-          number: numero,
-          expiryMonth: mes,
-          expiryYear: ano,
-          ccv: cvv,
+          "Content-Type": "application/json",
+          // 🔥 NECESSÁRIO PARA AUTENTICAÇÃO
+          Authorization: `Bearer ${localStorage.getItem("sb-access-token")}`,
         },
-        creditCardHolderInfo: {
-          name: nome,
-          email,
+        body: JSON.stringify({
+          nome,
+          numero,
+          mes,
+          ano,
+          cvv,
+          amountBRL,
+          tokens,
           cpfCnpj,
-          postalCode: "00000000",
-          addressNumber: "1000",
-          phone: phone || "11999999999",
-        }
-      })
-    });
+          email,
+          phone,
+        }),
+      });
 
-    const data = await resp.json();
+      const data = await resp.json();
 
-    if (!resp.ok) {
-      console.log("Erro ASAAS:", data);
-      return NextResponse.json(
-        {
-          success: false,
-          error: data?.errors?.[0]?.description ?? "Erro no pagamento.",
-        },
-        { status: 400 }
-      );
+      if (!resp.ok) {
+        setMensagem(`Erro ao gerar pagamento com cartão: ${data.error}`);
+      } else {
+        setMensagem("Pagamento gerado com sucesso! Aguarde a confirmação.");
+      }
+    } catch (err) {
+      setMensagem("Erro interno ao processar o pagamento.");
     }
 
-    // 🔥 SALVAR payment_id RETORNADO
-    await supabaseAdmin
-      .from("compras_bct")
-      .update({ status: "paid", payment_id: data.id })
-      .eq("id", compra.id);
+    setLoading(false);
+  };
 
-    return NextResponse.json({ success: true, id: data.id });
+  return (
+    <div style={{ padding: 20 }}>
+      <h1>Pagamento com Cartão</h1>
 
-  } catch (err) {
-    console.error("❌ ERRO:", err);
-    return NextResponse.json({ success: false, error: "Erro interno." });
-  }
+      {mensagem && (
+        <div
+          style={{
+            background: "#f8d7da",
+            padding: 12,
+            borderRadius: 6,
+            marginBottom: 15,
+          }}
+        >
+          {mensagem}
+        </div>
+      )}
+
+      <input
+        placeholder="Nome no cartão"
+        value={nome}
+        onChange={(e) => setNome(e.target.value)}
+      />
+      <br />
+
+      <input
+        placeholder="Número do cartão"
+        value={numero}
+        onChange={(e) => setNumero(e.target.value)}
+      />
+      <br />
+
+      <div style={{ display: "flex", gap: 10 }}>
+        <input
+          placeholder="Mês"
+          value={mes}
+          onChange={(e) => setMes(e.target.value)}
+        />
+        <input
+          placeholder="Ano"
+          value={ano}
+          onChange={(e) => setAno(e.target.value)}
+        />
+      </div>
+      <br />
+
+      <input
+        placeholder="CVV"
+        value={cvv}
+        onChange={(e) => setCvv(e.target.value)}
+      />
+      <br />
+
+      <input
+        placeholder="CPF/CNPJ"
+        value={cpfCnpj}
+        onChange={(e) => setCpfCnpj(e.target.value)}
+      />
+      <br />
+
+      <input
+        placeholder="E-mail"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+      />
+      <br />
+
+      <input
+        placeholder="Telefone"
+        value={phone}
+        onChange={(e) => setPhone(e.target.value)}
+      />
+      <br />
+
+      <button
+        onClick={pagar}
+        disabled={loading}
+        style={{
+          marginTop: 20,
+          padding: 12,
+          width: "100%",
+          background: loading ? "#999" : "#0066ff",
+          color: "#fff",
+          border: "none",
+          borderRadius: 6,
+          fontSize: 18,
+        }}
+      >
+        {loading ? "Processando..." : "Pagar"}
+      </button>
+    </div>
+  );
 }

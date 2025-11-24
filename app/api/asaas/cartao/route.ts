@@ -1,52 +1,14 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-// 🔐 CLIENTE ADMIN – escreve no Supabase SEM RLS
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
 export async function POST(req: Request) {
   try {
-    // ------------------------------------------
-    // 🔥 1. PEGAR TOKEN DO HEADER (igual o PIX!)
-    // ------------------------------------------
-    const authHeader = req.headers.get("authorization");
-
-    if (!authHeader) {
-      return NextResponse.json(
-        { success: false, error: "Usuário não autenticado." },
-        { status: 401 }
-      );
-    }
-
-    const token = authHeader.replace("Bearer ", "").trim();
-
-    // Criar cliente público para validar token
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        global: { headers: { Authorization: `Bearer ${token}` } },
-      }
-    );
-
-    const { data: userData, error: userErr } = await supabase.auth.getUser();
-
-    if (userErr || !userData?.user?.id) {
-      return NextResponse.json(
-        { success: false, error: "Usuário não autenticado." },
-        { status: 401 }
-      );
-    }
-
-    const userId = userData.user.id; // ← AGORA TEMOS O USER ID
-
-    // ------------------------------------------
-    // 🔥 2. RECEBE BODY
-    // ------------------------------------------
     const body = await req.json();
+    const authHeader = req.headers.get("authorization") || null;
+
+    console.log("📥 BODY CARTÃO:", body);
+    console.log("🔐 AUTH CARTÃO:", authHeader);
+
     const {
       nome,
       numero,
@@ -57,107 +19,149 @@ export async function POST(req: Request) {
       tokens,
       cpfCnpj,
       email,
-      phone,
+      phone
     } = body;
 
-    if (!nome || !numero || !mes || !ano || !cvv || !amountBRL) {
+    // ============================
+    // VALIDAR CAMPOS
+    // ============================
+    if (!nome || !numero || !mes || !ano || !cvv) {
       return NextResponse.json(
         { success: false, error: "Dados do cartão incompletos." },
         { status: 400 }
       );
     }
 
-    if (!cpfCnpj || !email) {
+    if (!amountBRL || amountBRL <= 0) {
       return NextResponse.json(
-        { success: false, error: "CPF/CNPJ e e-mail são obrigatórios." },
+        { success: false, error: "Valor inválido." },
         { status: 400 }
       );
     }
 
-    // ------------------------------------------
-    // 🔥 3. INSERIR COMPRA PENDENTE COM USER_ID
-    // ------------------------------------------
-    const { data: compra, error: compraErr } = await supabaseAdmin
+    if (!cpfCnpj || !email) {
+      return NextResponse.json(
+        { success: false, error: "CPF/CNPJ e email são obrigatórios." },
+        { status: 400 }
+      );
+    }
+
+    // ============================
+    // VALIDAR USUÁRIO (MESMO PIX)
+    // ============================
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    let userId: string | null = null;
+
+    if (authHeader?.startsWith("Bearer ")) {
+      const token = authHeader.split(" ")[1];
+      const { data, error } = await supabase.auth.getUser(token);
+
+      console.log("👤 RESULTADO getUser CARTÃO:", data, error);
+
+      if (data?.user?.id) {
+        userId = data.user.id;
+      }
+    }
+
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, error: "Usuário não autenticado." },
+        { status: 401 }
+      );
+    }
+
+    // ============================
+    // CRIAR COMPRA PENDENTE
+    // ============================
+    const { data: compra, error: compraErr } = await supabase
       .from("compras_bct")
       .insert({
         user_id: userId,
         tokens,
         valor_pago: amountBRL,
-        status: "pending",
+        status: "pending"
       })
       .select()
       .single();
 
     if (compraErr) {
-      console.error("❌ ERRO AO INSERIR COMPRA:", compraErr);
+      console.log("❌ ERRO AO INSERIR COMPRA:", compraErr);
       return NextResponse.json(
         { success: false, error: "Erro ao registrar compra." },
-        { status: 400 }
+        { status: 500 }
       );
     }
 
-    // ------------------------------------------
-    // 🔥 4. CHAMAR ASAAS
-    // ------------------------------------------
+    // ============================
+    // CRIAR PAGAMENTO ASAAS
+    // ============================
     const resp = await fetch("https://www.asaas.com/api/v3/payments", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        access_token: process.env.ASAAS_API_KEY!,
+        access_token: process.env.ASAAS_API_KEY!
       },
       body: JSON.stringify({
         customer: process.env.ASAAS_CUSTOMER_ID!,
         billingType: "CREDIT_CARD",
-        dueDate: new Date().toISOString().split("T")[0],
         value: amountBRL,
         description: `Compra de ${tokens} BCT`,
+        dueDate: new Date().toISOString().split("T")[0],
 
         creditCard: {
           holderName: nome,
           number: numero,
           expiryMonth: mes,
           expiryYear: ano,
-          ccv: cvv,
+          ccv: cvv
         },
 
         creditCardHolderInfo: {
           name: nome,
-          email,
           cpfCnpj,
-          postalCode: "00000000",
-          addressNumber: "1000",
+          email,
           phone: phone || "11999999999",
-        },
-      }),
+          postalCode: "00000000",
+          addressNumber: "1000"
+        }
+      })
     });
 
-    const data = await resp.json();
+    const pagamento = await resp.json();
 
-    if (!resp.ok) {
-      console.log("❌ Erro ASAAS:", data);
+    if (!resp.ok || !pagamento.id) {
+      console.log("❌ ERRO ASAAS CARTÃO:", pagamento);
       return NextResponse.json(
-        {
-          success: false,
-          error: data?.errors?.[0]?.description ?? "Erro no cartão.",
-        },
-        { status: 400 }
+        { success: false, error: pagamento?.errors?.[0]?.description ?? "Erro no cartão." },
+        { status: 500 }
       );
     }
 
-    // ------------------------------------------
-    // 🔥 5. ATUALIZAR payment_id
-    // ------------------------------------------
-    await supabaseAdmin
+    // ============================
+    // SALVAR payment_id
+    // ============================
+    await supabase
       .from("compras_bct")
-      .update({ payment_id: data.id })
+      .update({ payment_id: pagamento.id })
       .eq("id", compra.id);
 
-    return NextResponse.json({ success: true, id: data.id });
+    return NextResponse.json({
+      success: true,
+      id: pagamento.id
+    });
   } catch (err) {
-    console.error("❌ ERRO GERAL:", err);
+    console.error("❌ ERRO CARTÃO ROUTE:", err);
     return NextResponse.json(
-      { success: false, error: "Erro interno no servidor." },
+      { success: false, error: "Erro interno." },
       { status: 500 }
     );
   }
+}
+
+export function GET() {
+  return NextResponse.json({ message: "CARTÃO route ativa" });
 }

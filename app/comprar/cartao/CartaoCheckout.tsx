@@ -1,38 +1,53 @@
 "use client";
 
 import { useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { createClient } from "@supabase/supabase-js";
 
 export default function CartaoCheckout() {
   const params = useSearchParams();
+  const router = useRouter();
 
-  const amountBRL = params.get("amountBRL");
-  const cpfCnpj = params.get("cpfCnpj");
-  const email = params.get("email");
-  const tokens = params.get("tokens");
+  const amountBRL = Number(params.get("amount") || "0");
+  const tokens = Number(params.get("tokens") || "0");
 
   const [nome, setNome] = useState("");
   const [numero, setNumero] = useState("");
   const [mes, setMes] = useState("");
   const [ano, setAno] = useState("");
   const [cvv, setCvv] = useState("");
-  const [erro, setErro] = useState("");
+  const [cpfCnpj, setCpfCnpj] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+
   const [loading, setLoading] = useState(false);
+  const [erro, setErro] = useState("");
+
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
 
   async function pagar() {
     setErro("");
+    setLoading(true);
 
-    if (!nome || !numero || !mes || !ano || !cvv) {
-      setErro("Preencha todos os campos do cartão.");
+    const session = (await supabase.auth.getSession()).data.session;
+    const token = session?.access_token;
+
+    if (!token) {
+      setErro("Usuário não autenticado.");
+      setLoading(false);
       return;
     }
 
-    setLoading(true);
-
     try {
-      const res = await fetch("/api/asaas/cartao", {
+      const resp = await fetch("/api/asaas/cartao", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,  // ← AGORA O BACKEND RECEBE O USUÁRIO
+        },
         body: JSON.stringify({
           nome,
           numero,
@@ -43,74 +58,51 @@ export default function CartaoCheckout() {
           tokens,
           cpfCnpj,
           email,
+          phone,
         }),
       });
 
-      const data = await res.json();
+      const data = await resp.json();
 
-      if (!data.success) {
-        setErro("Erro ao gerar pagamento com cartão: " + data.error);
+      if (!resp.ok) {
+        setErro(data.error || "Erro ao processar pagamento.");
         setLoading(false);
         return;
       }
 
-      alert("Pagamento aprovado!");
+      router.push("/comprar/sucesso");
     } catch (err) {
-      setErro("Erro inesperado.");
+      setErro("Erro interno ao tentar pagar.");
     }
 
     setLoading(false);
   }
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Pagamento com Cartão</h1>
+    <div className="container">
 
-      {erro && <p className="bg-red-200 p-2 mb-3">{erro}</p>}
+      <h1>Pagamento com Cartão</h1>
 
-      <input
-        placeholder="Nome no Cartão"
-        className="border p-2 w-full mb-3"
-        value={nome}
-        onChange={(e) => setNome(e.target.value)}
-      />
+      {erro && (
+        <div style={{ background: "#f8d7da", padding: 12, borderRadius: 6 }}>
+          Erro ao gerar pagamento com cartão: {erro}
+        </div>
+      )}
 
-      <input
-        placeholder="Número do Cartão"
-        className="border p-2 w-full mb-3"
-        value={numero}
-        onChange={(e) => setNumero(e.target.value)}
-      />
+      <input placeholder="Nome no Cartão" value={nome} onChange={(e) => setNome(e.target.value)} />
+      <input placeholder="Número do Cartão" value={numero} onChange={(e) => setNumero(e.target.value)} />
 
-      <div className="flex gap-2 mb-3">
-        <input
-          placeholder="MM"
-          className="border p-2 w-1/2"
-          value={mes}
-          onChange={(e) => setMes(e.target.value)}
-        />
-        <input
-          placeholder="AA"
-          className="border p-2 w-1/2"
-          value={ano}
-          onChange={(e) => setAno(e.target.value)}
-        />
+      <div style={{ display: "flex", gap: 10 }}>
+        <input placeholder="Mês" value={mes} onChange={(e) => setMes(e.target.value)} />
+        <input placeholder="Ano" value={ano} onChange={(e) => setAno(e.target.value)} />
       </div>
 
-      <input
-        placeholder="CVV"
-        className="border p-2 w-full mb-3"
-        value={cvv}
-        onChange={(e) => setCvv(e.target.value)}
-      />
+      <input placeholder="CVV" value={cvv} onChange={(e) => setCvv(e.target.value)} />
+      <input placeholder="CPF/CNPJ" value={cpfCnpj} onChange={(e) => setCpfCnpj(e.target.value)} />
+      <input placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
+      <input placeholder="Telefone" value={phone} onChange={(e) => setPhone(e.target.value)} />
 
-      <button
-        onClick={pagar}
-        disabled={loading}
-        className={`p-3 rounded text-white w-full ${
-          loading ? "bg-gray-400" : "bg-blue-600"
-        }`}
-      >
+      <button onClick={pagar} disabled={loading} style={{ marginTop: 20 }}>
         {loading ? "Processando..." : "Pagar"}
       </button>
     </div>

@@ -1,6 +1,27 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
+// 🔐 Criar cliente Admin
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+
+// 🔐 Criar cliente público para recuperar sessão
+function supabaseClient(req: Request) {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      global: {
+        headers: {
+          Authorization: req.headers.get("Authorization") || "",
+        }
+      }
+    }
+  );
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -15,9 +36,10 @@ export async function POST(req: Request) {
       tokens,
       cpfCnpj,
       email,
-      phone,
+      phone
     } = body;
 
+    // validação
     if (!nome || !numero || !mes || !ano || !cvv || !amountBRL) {
       return NextResponse.json(
         { success: false, error: "Dados do cartão incompletos." },
@@ -32,31 +54,39 @@ export async function POST(req: Request) {
       );
     }
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    // 🔥 RECUPERAR USUÁRIO LOGADO
+    const supabase = supabaseClient(req);
+    const { data: sessionData } = await supabase.auth.getSession();
+    const userId = sessionData.session?.user?.id;
 
-    // 👉 cria compra pendente
-const { data: compra, error: compraErro } = await supabase
-  .from("compras_bct")
-  .insert({
-    user_id: null,
-    tokens,
-    valor_pago: amountBRL,
-    status: "pending",
-  })
-  .select()
-  .single();
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, error: "Usuário não autenticado." },
+        { status: 400 }
+      );
+    }
 
-if (compraErro || !compra) {
-  console.error("❌ ERRO AO CRIAR COMPRA NO SUPABASE:", compraErro);
-  return NextResponse.json(
-    { success: false, error: "Erro ao registrar compra." },
-    { status: 500 }
-  );
-}
-    // 👉 chamada Asaas
+    // 🔥 CRIAR COMPRA PENDENTE (AGORA COM user_id!!)
+    const { data: compra, error: compraErr } = await supabaseAdmin
+      .from("compras_bct")
+      .insert({
+        user_id: userId,
+        tokens,
+        valor_pago: amountBRL,
+        status: "pending"
+      })
+      .select()
+      .single();
+
+    if (compraErr) {
+      console.error("❌ ERRO AO CRIAR COMPRA NO SUPABASE:", compraErr);
+      return NextResponse.json(
+        { success: false, error: "Erro ao registrar compra." },
+        { status: 400 }
+      );
+    }
+
+    // 🔥 CHAMAR ASAAS
     const resp = await fetch("https://www.asaas.com/api/v3/payments", {
       method: "POST",
       headers: {
@@ -69,8 +99,6 @@ if (compraErro || !compra) {
         dueDate: new Date().toISOString().split("T")[0],
         value: amountBRL,
         description: `Compra de ${tokens} BCT`,
-        externalReference: compra.id, //  <-- opcional, MAS MUITO BOM TER
-
         creditCard: {
           holderName: nome,
           number: numero,
@@ -78,7 +106,6 @@ if (compraErro || !compra) {
           expiryYear: ano,
           ccv: cvv,
         },
-
         creditCardHolderInfo: {
           name: nome,
           email,
@@ -86,8 +113,8 @@ if (compraErro || !compra) {
           postalCode: "00000000",
           addressNumber: "1000",
           phone: phone || "11999999999",
-        },
-      }),
+        }
+      })
     });
 
     const data = await resp.json();
@@ -103,15 +130,16 @@ if (compraErro || !compra) {
       );
     }
 
-    // 👉 SALVA APENAS payment_id
-    await supabase
+    // 🔥 SALVAR payment_id RETORNADO
+    await supabaseAdmin
       .from("compras_bct")
-      .update({ payment_id: data.id })
+      .update({ status: "paid", payment_id: data.id })
       .eq("id", compra.id);
 
     return NextResponse.json({ success: true, id: data.id });
+
   } catch (err) {
-    console.error("ERRO:", err);
+    console.error("❌ ERRO:", err);
     return NextResponse.json({ success: false, error: "Erro interno." });
   }
 }

@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { supabase } from "../../../src/lib/supabaseClient";
 
 export default function CartaoCheckout() {
   const params = useSearchParams();
@@ -12,8 +11,6 @@ export default function CartaoCheckout() {
   const email = params.get("email");
   const tokens = params.get("tokens");
 
-  const [userId, setUserId] = useState<string | null>(null);
-
   const [nome, setNome] = useState("");
   const [numero, setNumero] = useState("");
   const [mes, setMes] = useState("");
@@ -22,32 +19,15 @@ export default function CartaoCheckout() {
   const [erro, setErro] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // 🔥 PEGAR o user_id REAL do Supabase
-  useEffect(() => {
-    async function loadUser() {
-      const { data } = await supabase.auth.getUser();
-      setUserId(data.user?.id ?? null);
-    }
-    loadUser();
-  }, []);
-
   async function pagar() {
     setErro("");
 
-    if (loading) return; // evita duplo clique
-    setLoading(true);
-
-    if (!userId) {
-      setErro("Erro interno: usuário não identificado.");
-      setLoading(false);
-      return;
-    }
-
     if (!nome || !numero || !mes || !ano || !cvv) {
       setErro("Preencha todos os campos do cartão.");
-      setLoading(false);
       return;
     }
+
+    setLoading(true);
 
     try {
       const res = await fetch("/api/asaas/cartao", {
@@ -63,7 +43,6 @@ export default function CartaoCheckout() {
           tokens,
           cpfCnpj,
           email,
-          user_id: userId, // 🔥 **AGORA VAI!**
         }),
       });
 
@@ -76,7 +55,7 @@ export default function CartaoCheckout() {
       }
 
       alert("Pagamento aprovado!");
-    } catch (e) {
+    } catch (err) {
       setErro("Erro inesperado.");
     }
 

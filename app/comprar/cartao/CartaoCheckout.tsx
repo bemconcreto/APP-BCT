@@ -1,17 +1,24 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 
-export default function CartaoCheckout({ amountBRL, tokens }: any) {
+export default function CartaoCheckout() {
+  const searchParams = useSearchParams();
+  const supabase = createClientComponentClient();
+
+  const tokens = Number(searchParams.get("tokens") || 0);
+  const amountBRL = Number(searchParams.get("amountBRL") || 0);
+  const cpfCnpj = searchParams.get("cpfCnpj") || "";
+  const email = searchParams.get("email") || "";
+  const phone = searchParams.get("phone") || "";
+
   const [nome, setNome] = useState("");
   const [numero, setNumero] = useState("");
   const [mes, setMes] = useState("");
   const [ano, setAno] = useState("");
-  const [cvv, setCvv] = useState("");
-  const [cpfCnpj, setCpfCnpj] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-
+  const [cvv, setCVV] = useState("");
   const [mensagem, setMensagem] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -20,10 +27,9 @@ export default function CartaoCheckout({ amountBRL, tokens }: any) {
     setLoading(true);
 
     try {
-      const token = localStorage.getItem("supabase.auth.token")
-        ? JSON.parse(localStorage.getItem("supabase.auth.token")!).currentSession
-            .access_token
-        : null;
+      // 🔐 Recupera sessão para mandar token no header
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
 
       if (!token) {
         setMensagem("Usuário não autenticado.");
@@ -35,7 +41,7 @@ export default function CartaoCheckout({ amountBRL, tokens }: any) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${token}`, // ← ESSENCIAL
         },
         body: JSON.stringify({
           nome,
@@ -43,26 +49,25 @@ export default function CartaoCheckout({ amountBRL, tokens }: any) {
           mes,
           ano,
           cvv,
+          amountBRL,
+          tokens,
           cpfCnpj,
           email,
           phone,
-          amountBRL,
-          tokens,
         }),
       });
 
-      const data = await resp.json();
+      const dataResp = await resp.json();
 
       if (!resp.ok) {
-        setMensagem(data.error || "Erro ao processar pagamento.");
+        setMensagem(`Erro ao gerar pagamento com cartão: ${dataResp.error}`);
         setLoading(false);
         return;
       }
 
       setMensagem("Pagamento realizado com sucesso!");
-    } catch (err) {
-      console.error(err);
-      setMensagem("Erro interno.");
+    } catch (e) {
+      setMensagem("Erro interno ao processar pagamento.");
     }
 
     setLoading(false);
@@ -76,9 +81,9 @@ export default function CartaoCheckout({ amountBRL, tokens }: any) {
         <div
           style={{
             background: "#fdd",
-            border: "1px solid #f99",
-            padding: 10,
-            marginBottom: 20,
+            padding: 12,
+            marginBottom: 15,
+            borderRadius: 6,
           }}
         >
           {mensagem}
@@ -86,7 +91,7 @@ export default function CartaoCheckout({ amountBRL, tokens }: any) {
       )}
 
       <input
-        placeholder="Nome do titular"
+        placeholder="Nome no cartão"
         value={nome}
         onChange={(e) => setNome(e.target.value)}
         className="input"
@@ -101,13 +106,13 @@ export default function CartaoCheckout({ amountBRL, tokens }: any) {
 
       <div style={{ display: "flex", gap: 10 }}>
         <input
-          placeholder="MM"
+          placeholder="Mês"
           value={mes}
           onChange={(e) => setMes(e.target.value)}
           className="input"
         />
         <input
-          placeholder="AA"
+          placeholder="Ano"
           value={ano}
           onChange={(e) => setAno(e.target.value)}
           className="input"
@@ -117,28 +122,7 @@ export default function CartaoCheckout({ amountBRL, tokens }: any) {
       <input
         placeholder="CVV"
         value={cvv}
-        onChange={(e) => setCvv(e.target.value)}
-        className="input"
-      />
-
-      <input
-        placeholder="CPF/CNPJ"
-        value={cpfCnpj}
-        onChange={(e) => setCpfCnpj(e.target.value)}
-        className="input"
-      />
-
-      <input
-        placeholder="E-mail"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        className="input"
-      />
-
-      <input
-        placeholder="Telefone"
-        value={phone}
-        onChange={(e) => setPhone(e.target.value)}
+        onChange={(e) => setCVV(e.target.value)}
         className="input"
       />
 
@@ -146,13 +130,16 @@ export default function CartaoCheckout({ amountBRL, tokens }: any) {
         onClick={pagar}
         disabled={loading}
         style={{
-          marginTop: 20,
           width: "100%",
-          padding: 12,
-          background: loading ? "#999" : "#0066ff",
-          color: "#fff",
+          marginTop: 20,
+          padding: 14,
+          background: "#0057ff",
+          color: "white",
           borderRadius: 6,
+          border: "none",
           fontSize: 18,
+          fontWeight: "bold",
+          opacity: loading ? 0.7 : 1,
         }}
       >
         {loading ? "Processando..." : "Pagar"}

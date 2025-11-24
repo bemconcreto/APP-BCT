@@ -1,38 +1,53 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
+import { supabase } from "../../../src/lib/supabaseClient";
 
 export default function CartaoCheckout() {
   const params = useSearchParams();
 
-  // dados vindos da página anterior
   const amountBRL = params.get("amountBRL");
   const cpfCnpj = params.get("cpfCnpj");
   const email = params.get("email");
   const tokens = params.get("tokens");
 
-  // campos do cartão
+  const [userId, setUserId] = useState<string | null>(null);
+
   const [nome, setNome] = useState("");
   const [numero, setNumero] = useState("");
   const [mes, setMes] = useState("");
   const [ano, setAno] = useState("");
   const [cvv, setCvv] = useState("");
-
   const [erro, setErro] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // 🔥 PEGAR o user_id REAL do Supabase
+  useEffect(() => {
+    async function loadUser() {
+      const { data } = await supabase.auth.getUser();
+      setUserId(data.user?.id ?? null);
+    }
+    loadUser();
+  }, []);
 
   async function pagar() {
     setErro("");
 
     if (loading) return; // evita duplo clique
+    setLoading(true);
 
-    if (!nome || !numero || !mes || !ano || !cvv) {
-      setErro("Preencha todos os campos do cartão.");
+    if (!userId) {
+      setErro("Erro interno: usuário não identificado.");
+      setLoading(false);
       return;
     }
 
-    setLoading(true);
+    if (!nome || !numero || !mes || !ano || !cvv) {
+      setErro("Preencha todos os campos do cartão.");
+      setLoading(false);
+      return;
+    }
 
     try {
       const res = await fetch("/api/asaas/cartao", {
@@ -48,6 +63,7 @@ export default function CartaoCheckout() {
           tokens,
           cpfCnpj,
           email,
+          user_id: userId, // 🔥 **AGORA VAI!**
         }),
       });
 
@@ -60,8 +76,8 @@ export default function CartaoCheckout() {
       }
 
       alert("Pagamento aprovado!");
-    } catch (err) {
-      setErro("Erro inesperado ao processar pagamento.");
+    } catch (e) {
+      setErro("Erro inesperado.");
     }
 
     setLoading(false);
@@ -71,7 +87,7 @@ export default function CartaoCheckout() {
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-4">Pagamento com Cartão</h1>
 
-      {erro && <p className="bg-red-200 p-2 mb-3 text-red-700">{erro}</p>}
+      {erro && <p className="bg-red-200 p-2 mb-3">{erro}</p>}
 
       <input
         placeholder="Nome no Cartão"
@@ -113,7 +129,7 @@ export default function CartaoCheckout() {
         onClick={pagar}
         disabled={loading}
         className={`p-3 rounded text-white w-full ${
-          loading ? "bg-gray-500" : "bg-blue-600 hover:bg-blue-700"
+          loading ? "bg-gray-400" : "bg-blue-600"
         }`}
       >
         {loading ? "Processando..." : "Pagar"}

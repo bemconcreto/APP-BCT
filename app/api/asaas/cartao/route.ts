@@ -1,11 +1,26 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-// 🔐 Cliente ADMIN do Supabase (para escrever sem RLS)
-const supabase = createClient(
+// 🔐 CLIENTE ADMIN PARA ESCREVER SEM RLS
+const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
+
+// 🔐 CLIENTE PÚBLICO PARA LER SESSÃO DO USUÁRIO
+function supabaseAuth(req: Request) {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      global: {
+        headers: {
+          Authorization: req.headers.get("Authorization") || "",
+        },
+      },
+    }
+  );
+}
 
 export async function POST(req: Request) {
   try {
@@ -24,10 +39,24 @@ export async function POST(req: Request) {
       phone,
     } = body;
 
-    // -------------------------------
-    // 🔍 Validação básica
-    // -------------------------------
-    if (!nome || !numero || !mes || !ano || !cvv || !amountBRL) {
+    // ---------------------------
+    // 🔥 VALIDAR USUÁRIO LOGADO
+    // ---------------------------
+    const supabase = supabaseAuth(req);
+    const { data: sessionData } = await supabase.auth.getSession();
+    const user = sessionData.session?.user;
+
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: "Usuário não autenticado." },
+        { status: 401 }
+      );
+    }
+
+    // ---------------------------
+    // 🔍 VALIDAR CAMPOS
+    // ---------------------------
+    if (!nome || !numero || !mes || !ano || !cvv) {
       return NextResponse.json(
         { success: false, error: "Dados do cartão incompletos." },
         { status: 400 }
@@ -36,18 +65,18 @@ export async function POST(req: Request) {
 
     if (!cpfCnpj || !email) {
       return NextResponse.json(
-        { success: false, error: "CPF/CNPJ e e-mail são obrigatórios." },
+        { success: false, error: "CPF/CNPJ e e-mail obrigatórios." },
         { status: 400 }
       );
     }
 
-    // -------------------------------
-    // 🔥 1. Criar compra pendente SEM user_id
-    // -------------------------------
-    const { data: compra, error: compraErr } = await supabase
+    // ---------------------------
+    // 🔥 1. CRIAR COMPRA PENDENTE
+    // ---------------------------
+    const { data: compra, error: compraErr } = await admin
       .from("compras_bct")
       .insert({
-        user_id: null,          // ← NÃO VAMOS USAR USER ID
+        user_id: user.id,
         tokens,
         valor_pago: amountBRL,
         status: "pending",
@@ -63,9 +92,9 @@ export async function POST(req: Request) {
       );
     }
 
-    // -------------------------------
-    // 🔥 2. Criar pagamento no ASAAS
-    // -------------------------------
+    // ---------------------------
+    // 🔥 2. CHAMAR ASAAS
+    // ---------------------------
     const resp = await fetch("https://www.asaas.com/api/v3/payments", {
       method: "POST",
       headers: {
@@ -78,7 +107,6 @@ export async function POST(req: Request) {
         dueDate: new Date().toISOString().split("T")[0],
         value: amountBRL,
         description: `Compra de ${tokens} BCT`,
-
         creditCard: {
           holderName: nome,
           number: numero,
@@ -86,7 +114,6 @@ export async function POST(req: Request) {
           expiryYear: ano,
           ccv: cvv,
         },
-
         creditCardHolderInfo: {
           name: nome,
           email,
@@ -103,24 +130,20 @@ export async function POST(req: Request) {
     if (!resp.ok) {
       console.log("❌ Erro ASAAS:", data);
       return NextResponse.json(
-        {
-          success: false,
-          error: data?.errors?.[0]?.description ?? "Erro ao processar cartão.",
-        },
+        { success: false, error: data?.errors?.[0]?.description || "Erro no pagamento." },
         { status: 400 }
       );
     }
 
-    // -------------------------------
-    // 🔥 3. Salvar payment_id da ASAAS
-    // -------------------------------
-    await supabase
+    // ---------------------------
+    // 🔥 3. SALVAR payment_id
+    // ---------------------------
+    await admin
       .from("compras_bct")
       .update({ payment_id: data.id })
       .eq("id", compra.id);
 
     return NextResponse.json({ success: true, id: data.id });
-
   } catch (err) {
     console.error("❌ ERRO GERAL:", err);
     return NextResponse.json(

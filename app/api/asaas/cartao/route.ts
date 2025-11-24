@@ -1,23 +1,20 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { cookies } from "next/headers";
 
-// 🔐 Criar cliente Admin
+// Cliente ADMIN
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// 🔐 Criar cliente público para recuperar sessão
-function supabaseClient(req: Request) {
+// Cliente que lê a sessão do cookie
+function supabaseServerClient() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
-      global: {
-        headers: {
-          Authorization: req.headers.get("Authorization") || "",
-        }
-      }
+      global: { headers: { Cookie: cookies().toString() } }
     }
   );
 }
@@ -53,39 +50,39 @@ export async function POST(req: Request) {
       );
     }
 
-    // 🔥 RECUPERAR USUÁRIO LOGADO
-    const supabase = supabaseClient(req);
+    // 🔥 RECUPERA SESSÃO CORRETA
+    const supabase = supabaseServerClient();
     const { data: sessionData } = await supabase.auth.getSession();
-    const userId = sessionData.session?.user?.id;
+    const userId = sessionData?.session?.user?.id;
 
     if (!userId) {
       return NextResponse.json(
         { success: false, error: "Usuário não autenticado." },
-        { status: 400 }
+        { status: 401 }
       );
     }
 
-    // 🔥 CRIAR COMPRA PENDENTE
-    const { data: compra, error: compraErr } = await supabaseAdmin
+    // 🔥 REGISTRAR COMPRA
+    const { data: compra, error: errCompra } = await supabaseAdmin
       .from("compras_bct")
       .insert({
         user_id: userId,
         tokens,
         valor_pago: amountBRL,
-        status: "pending",
+        status: "pending"
       })
       .select()
       .single();
 
-    if (compraErr) {
-      console.error("❌ ERRO AO CRIAR COMPRA NO SUPABASE:", compraErr);
+    if (errCompra) {
+      console.error("Erro ao registrar compra:", errCompra);
       return NextResponse.json(
         { success: false, error: "Erro ao registrar compra." },
         { status: 400 }
       );
     }
 
-    // 🔥 CHAMADA ASAAS
+    // 🔥 CHAMAR ASAAS
     const resp = await fetch("https://www.asaas.com/api/v3/payments", {
       method: "POST",
       headers: {
@@ -98,6 +95,7 @@ export async function POST(req: Request) {
         dueDate: new Date().toISOString().split("T")[0],
         value: amountBRL,
         description: `Compra de ${tokens} BCT`,
+
         creditCard: {
           holderName: nome,
           number: numero,
@@ -105,6 +103,7 @@ export async function POST(req: Request) {
           expiryYear: ano,
           ccv: cvv,
         },
+
         creditCardHolderInfo: {
           name: nome,
           email,
@@ -112,24 +111,21 @@ export async function POST(req: Request) {
           postalCode: "00000000",
           addressNumber: "1000",
           phone: phone || "11999999999",
-        },
-      }),
+        }
+      })
     });
 
     const data = await resp.json();
 
     if (!resp.ok) {
-      console.log("Erro ASAAS:", data);
+      console.error("Erro Asaas:", data);
       return NextResponse.json(
-        {
-          success: false,
-          error: data?.errors?.[0]?.description ?? "Erro no pagamento.",
-        },
+        { success: false, error: "Pagamento recusado." },
         { status: 400 }
       );
     }
 
-    // 🔥 SALVAR payment_id RETORNADO
+    // 🔥 SALVAR payment_id
     await supabaseAdmin
       .from("compras_bct")
       .update({ payment_id: data.id })
@@ -137,8 +133,11 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, id: data.id });
 
-  } catch (err) {
-    console.error("❌ ERRO:", err);
-    return NextResponse.json({ success: false, error: "Erro interno." });
+  } catch (e) {
+    console.error("Erro interno:", e);
+    return NextResponse.json(
+      { success: false, error: "Erro interno." },
+      { status: 500 }
+    );
   }
 }

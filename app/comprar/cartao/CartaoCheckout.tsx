@@ -1,47 +1,34 @@
 "use client";
-
 import { useState } from "react";
-import { useSearchParams } from "next/navigation";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 
-export default function CartaoCheckout() {
-  const searchParams = useSearchParams();
-  const supabase = createClientComponentClient();
-
-  const tokens = Number(searchParams.get("tokens") || 0);
-  const amountBRL = Number(searchParams.get("amountBRL") || 0);
-  const cpfCnpj = searchParams.get("cpfCnpj") || "";
-  const email = searchParams.get("email") || "";
-  const phone = searchParams.get("phone") || "";
-
+export default function CartaoCheckout({ searchParams }: any) {
   const [nome, setNome] = useState("");
   const [numero, setNumero] = useState("");
   const [mes, setMes] = useState("");
   const [ano, setAno] = useState("");
-  const [cvv, setCVV] = useState("");
+  const [cvv, setCvv] = useState("");
+
   const [mensagem, setMensagem] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const amountBRL = Number(searchParams.amountBRL);
+  const tokens = Number(searchParams.tokens);
+  const cpfCnpj = searchParams.cpfCnpj;
+  const email = searchParams.email;
+  const phone = searchParams.phone;
 
   async function pagar() {
     setMensagem("");
     setLoading(true);
 
     try {
-      // 🔐 Recupera sessão para mandar token no header
-      const { data } = await supabase.auth.getSession();
-      const token = data.session?.access_token;
-
-      if (!token) {
-        setMensagem("Usuário não autenticado.");
-        setLoading(false);
-        return;
-      }
+      const token = localStorage.getItem("sb-access-token");
 
       const resp = await fetch("/api/asaas/cartao", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`, // ← ESSENCIAL
+          Authorization: token ? `Bearer ${token}` : "",
         },
         body: JSON.stringify({
           nome,
@@ -57,33 +44,32 @@ export default function CartaoCheckout() {
         }),
       });
 
-      const dataResp = await resp.json();
+      const data = await resp.json();
 
       if (!resp.ok) {
-        setMensagem(`Erro ao gerar pagamento com cartão: ${dataResp.error}`);
-        setLoading(false);
-        return;
+        setMensagem(data.error || "Erro ao gerar pagamento.");
+      } else {
+        setMensagem("Pagamento gerado com sucesso!");
       }
-
-      setMensagem("Pagamento realizado com sucesso!");
     } catch (e) {
-      setMensagem("Erro interno ao processar pagamento.");
+      setMensagem("Erro inesperado.");
     }
 
     setLoading(false);
   }
 
   return (
-    <div style={{ padding: 20 }}>
+    <div style={{ padding: 20, maxWidth: 500, margin: "0 auto" }}>
       <h1>Pagamento com Cartão</h1>
 
       {mensagem && (
         <div
           style={{
-            background: "#fdd",
+            background: "#f8d7da",
             padding: 12,
-            marginBottom: 15,
             borderRadius: 6,
+            marginBottom: 15,
+            color: "#721c24",
           }}
         >
           {mensagem}
@@ -94,14 +80,14 @@ export default function CartaoCheckout() {
         placeholder="Nome no cartão"
         value={nome}
         onChange={(e) => setNome(e.target.value)}
-        className="input"
+        style={inputStyle}
       />
 
       <input
         placeholder="Número do cartão"
         value={numero}
         onChange={(e) => setNumero(e.target.value)}
-        className="input"
+        style={inputStyle}
       />
 
       <div style={{ display: "flex", gap: 10 }}>
@@ -109,21 +95,22 @@ export default function CartaoCheckout() {
           placeholder="Mês"
           value={mes}
           onChange={(e) => setMes(e.target.value)}
-          className="input"
+          style={{ ...inputStyle, flex: 1 }}
         />
+
         <input
           placeholder="Ano"
           value={ano}
           onChange={(e) => setAno(e.target.value)}
-          className="input"
+          style={{ ...inputStyle, flex: 1 }}
         />
       </div>
 
       <input
         placeholder="CVV"
         value={cvv}
-        onChange={(e) => setCVV(e.target.value)}
-        className="input"
+        onChange={(e) => setCvv(e.target.value)}
+        style={inputStyle}
       />
 
       <button
@@ -132,14 +119,12 @@ export default function CartaoCheckout() {
         style={{
           width: "100%",
           marginTop: 20,
-          padding: 14,
-          background: "#0057ff",
+          padding: 15,
+          background: "#0d6efd",
           color: "white",
-          borderRadius: 6,
           border: "none",
+          borderRadius: 6,
           fontSize: 18,
-          fontWeight: "bold",
-          opacity: loading ? 0.7 : 1,
         }}
       >
         {loading ? "Processando..." : "Pagar"}
@@ -147,3 +132,12 @@ export default function CartaoCheckout() {
     </div>
   );
 }
+
+const inputStyle = {
+  width: "100%",
+  marginTop: 10,
+  padding: 12,
+  borderRadius: 6,
+  border: "1px solid #ccc",
+  fontSize: 16,
+};

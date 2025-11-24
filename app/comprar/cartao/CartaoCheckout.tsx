@@ -2,9 +2,7 @@
 
 import { useState } from "react";
 
-export default function CartaoCheckout() {
-  const [loading, setLoading] = useState(false);
-
+export default function CartaoCheckout({ amountBRL, tokens }: any) {
   const [nome, setNome] = useState("");
   const [numero, setNumero] = useState("");
   const [mes, setMes] = useState("");
@@ -13,22 +11,31 @@ export default function CartaoCheckout() {
   const [cpfCnpj, setCpfCnpj] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+
   const [mensagem, setMensagem] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const tokens = 2.104855;
-  const amountBRL = 5;
-
-  const pagar = async () => {
+  async function pagar() {
     setMensagem("");
     setLoading(true);
 
     try {
+      const token = localStorage.getItem("supabase.auth.token")
+        ? JSON.parse(localStorage.getItem("supabase.auth.token")!).currentSession
+            .access_token
+        : null;
+
+      if (!token) {
+        setMensagem("Usuário não autenticado.");
+        setLoading(false);
+        return;
+      }
+
       const resp = await fetch("/api/asaas/cartao", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          // 🔥 NECESSÁRIO PARA AUTENTICAÇÃO
-          Authorization: `Bearer ${localStorage.getItem("sb-access-token")}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           nome,
@@ -36,27 +43,30 @@ export default function CartaoCheckout() {
           mes,
           ano,
           cvv,
-          amountBRL,
-          tokens,
           cpfCnpj,
           email,
           phone,
+          amountBRL,
+          tokens,
         }),
       });
 
       const data = await resp.json();
 
       if (!resp.ok) {
-        setMensagem(`Erro ao gerar pagamento com cartão: ${data.error}`);
-      } else {
-        setMensagem("Pagamento gerado com sucesso! Aguarde a confirmação.");
+        setMensagem(data.error || "Erro ao processar pagamento.");
+        setLoading(false);
+        return;
       }
+
+      setMensagem("Pagamento realizado com sucesso!");
     } catch (err) {
-      setMensagem("Erro interno ao processar o pagamento.");
+      console.error(err);
+      setMensagem("Erro interno.");
     }
 
     setLoading(false);
-  };
+  }
 
   return (
     <div style={{ padding: 20 }}>
@@ -65,10 +75,10 @@ export default function CartaoCheckout() {
       {mensagem && (
         <div
           style={{
-            background: "#f8d7da",
-            padding: 12,
-            borderRadius: 6,
-            marginBottom: 15,
+            background: "#fdd",
+            border: "1px solid #f99",
+            padding: 10,
+            marginBottom: 20,
           }}
         >
           {mensagem}
@@ -76,71 +86,71 @@ export default function CartaoCheckout() {
       )}
 
       <input
-        placeholder="Nome no cartão"
+        placeholder="Nome do titular"
         value={nome}
         onChange={(e) => setNome(e.target.value)}
+        className="input"
       />
-      <br />
 
       <input
         placeholder="Número do cartão"
         value={numero}
         onChange={(e) => setNumero(e.target.value)}
+        className="input"
       />
-      <br />
 
       <div style={{ display: "flex", gap: 10 }}>
         <input
-          placeholder="Mês"
+          placeholder="MM"
           value={mes}
           onChange={(e) => setMes(e.target.value)}
+          className="input"
         />
         <input
-          placeholder="Ano"
+          placeholder="AA"
           value={ano}
           onChange={(e) => setAno(e.target.value)}
+          className="input"
         />
       </div>
-      <br />
 
       <input
         placeholder="CVV"
         value={cvv}
         onChange={(e) => setCvv(e.target.value)}
+        className="input"
       />
-      <br />
 
       <input
         placeholder="CPF/CNPJ"
         value={cpfCnpj}
         onChange={(e) => setCpfCnpj(e.target.value)}
+        className="input"
       />
-      <br />
 
       <input
         placeholder="E-mail"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
+        className="input"
       />
-      <br />
 
       <input
         placeholder="Telefone"
         value={phone}
         onChange={(e) => setPhone(e.target.value)}
+        className="input"
       />
-      <br />
 
       <button
         onClick={pagar}
         disabled={loading}
         style={{
           marginTop: 20,
-          padding: 12,
           width: "100%",
+          padding: 12,
           background: loading ? "#999" : "#0066ff",
           color: "#fff",
-          border: "none",
           borderRadius: 6,
           fontSize: 18,
         }}

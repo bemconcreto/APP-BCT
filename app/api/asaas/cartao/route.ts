@@ -1,152 +1,144 @@
-"use client";
+import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 
-import { useState } from "react";
+// 🔐 Criar cliente Admin
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
-export default function CartaoCheckout() {
-  const [loading, setLoading] = useState(false);
-
-  const [nome, setNome] = useState("");
-  const [numero, setNumero] = useState("");
-  const [mes, setMes] = useState("");
-  const [ano, setAno] = useState("");
-  const [cvv, setCvv] = useState("");
-  const [cpfCnpj, setCpfCnpj] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [mensagem, setMensagem] = useState("");
-
-  const tokens = 2.104855;
-  const amountBRL = 5;
-
-  const pagar = async () => {
-    setMensagem("");
-    setLoading(true);
-
-    try {
-      const resp = await fetch("/api/asaas/cartao", {
-        method: "POST",
+// 🔐 Criar cliente público para recuperar sessão
+function supabaseClient(req: Request) {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      global: {
         headers: {
-          "Content-Type": "application/json",
-          // 🔥 NECESSÁRIO PARA AUTENTICAÇÃO
-          Authorization: `Bearer ${localStorage.getItem("sb-access-token")}`,
-        },
-        body: JSON.stringify({
-          nome,
-          numero,
-          mes,
-          ano,
-          cvv,
-          amountBRL,
-          tokens,
-          cpfCnpj,
-          email,
-          phone,
-        }),
-      });
-
-      const data = await resp.json();
-
-      if (!resp.ok) {
-        setMensagem(`Erro ao gerar pagamento com cartão: ${data.error}`);
-      } else {
-        setMensagem("Pagamento gerado com sucesso! Aguarde a confirmação.");
+          Authorization: req.headers.get("Authorization") || "",
+        }
       }
-    } catch (err) {
-      setMensagem("Erro interno ao processar o pagamento.");
+    }
+  );
+}
+
+export async function POST(req: Request) {
+  try {
+    const body = await req.json();
+
+    const {
+      nome,
+      numero,
+      mes,
+      ano,
+      cvv,
+      amountBRL,
+      tokens,
+      cpfCnpj,
+      email,
+      phone
+    } = body;
+
+    if (!nome || !numero || !mes || !ano || !cvv || !amountBRL) {
+      return NextResponse.json(
+        { success: false, error: "Dados do cartão incompletos." },
+        { status: 400 }
+      );
     }
 
-    setLoading(false);
-  };
+    if (!cpfCnpj || !email) {
+      return NextResponse.json(
+        { success: false, error: "CPF/CNPJ e e-mail são obrigatórios." },
+        { status: 400 }
+      );
+    }
 
-  return (
-    <div style={{ padding: 20 }}>
-      <h1>Pagamento com Cartão</h1>
+    // 🔥 RECUPERAR USUÁRIO LOGADO
+    const supabase = supabaseClient(req);
+    const { data: sessionData } = await supabase.auth.getSession();
+    const userId = sessionData.session?.user?.id;
 
-      {mensagem && (
-        <div
-          style={{
-            background: "#f8d7da",
-            padding: 12,
-            borderRadius: 6,
-            marginBottom: 15,
-          }}
-        >
-          {mensagem}
-        </div>
-      )}
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, error: "Usuário não autenticado." },
+        { status: 400 }
+      );
+    }
 
-      <input
-        placeholder="Nome no cartão"
-        value={nome}
-        onChange={(e) => setNome(e.target.value)}
-      />
-      <br />
+    // 🔥 CRIAR COMPRA PENDENTE
+    const { data: compra, error: compraErr } = await supabaseAdmin
+      .from("compras_bct")
+      .insert({
+        user_id: userId,
+        tokens,
+        valor_pago: amountBRL,
+        status: "pending",
+      })
+      .select()
+      .single();
 
-      <input
-        placeholder="Número do cartão"
-        value={numero}
-        onChange={(e) => setNumero(e.target.value)}
-      />
-      <br />
+    if (compraErr) {
+      console.error("❌ ERRO AO CRIAR COMPRA NO SUPABASE:", compraErr);
+      return NextResponse.json(
+        { success: false, error: "Erro ao registrar compra." },
+        { status: 400 }
+      );
+    }
 
-      <div style={{ display: "flex", gap: 10 }}>
-        <input
-          placeholder="Mês"
-          value={mes}
-          onChange={(e) => setMes(e.target.value)}
-        />
-        <input
-          placeholder="Ano"
-          value={ano}
-          onChange={(e) => setAno(e.target.value)}
-        />
-      </div>
-      <br />
+    // 🔥 CHAMADA ASAAS
+    const resp = await fetch("https://www.asaas.com/api/v3/payments", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        access_token: process.env.ASAAS_API_KEY!,
+      },
+      body: JSON.stringify({
+        customer: process.env.ASAAS_CUSTOMER_ID!,
+        billingType: "CREDIT_CARD",
+        dueDate: new Date().toISOString().split("T")[0],
+        value: amountBRL,
+        description: `Compra de ${tokens} BCT`,
+        creditCard: {
+          holderName: nome,
+          number: numero,
+          expiryMonth: mes,
+          expiryYear: ano,
+          ccv: cvv,
+        },
+        creditCardHolderInfo: {
+          name: nome,
+          email,
+          cpfCnpj,
+          postalCode: "00000000",
+          addressNumber: "1000",
+          phone: phone || "11999999999",
+        },
+      }),
+    });
 
-      <input
-        placeholder="CVV"
-        value={cvv}
-        onChange={(e) => setCvv(e.target.value)}
-      />
-      <br />
+    const data = await resp.json();
 
-      <input
-        placeholder="CPF/CNPJ"
-        value={cpfCnpj}
-        onChange={(e) => setCpfCnpj(e.target.value)}
-      />
-      <br />
+    if (!resp.ok) {
+      console.log("Erro ASAAS:", data);
+      return NextResponse.json(
+        {
+          success: false,
+          error: data?.errors?.[0]?.description ?? "Erro no pagamento.",
+        },
+        { status: 400 }
+      );
+    }
 
-      <input
-        placeholder="E-mail"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-      />
-      <br />
+    // 🔥 SALVAR payment_id RETORNADO
+    await supabaseAdmin
+      .from("compras_bct")
+      .update({ payment_id: data.id })
+      .eq("id", compra.id);
 
-      <input
-        placeholder="Telefone"
-        value={phone}
-        onChange={(e) => setPhone(e.target.value)}
-      />
-      <br />
+    return NextResponse.json({ success: true, id: data.id });
 
-      <button
-        onClick={pagar}
-        disabled={loading}
-        style={{
-          marginTop: 20,
-          padding: 12,
-          width: "100%",
-          background: loading ? "#999" : "#0066ff",
-          color: "#fff",
-          border: "none",
-          borderRadius: 6,
-          fontSize: 18,
-        }}
-      >
-        {loading ? "Processando..." : "Pagar"}
-      </button>
-    </div>
-  );
+  } catch (err) {
+    console.error("❌ ERRO:", err);
+    return NextResponse.json({ success: false, error: "Erro interno." });
+  }
 }

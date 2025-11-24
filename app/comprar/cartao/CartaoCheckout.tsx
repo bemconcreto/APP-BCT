@@ -2,7 +2,13 @@
 
 import { useState } from "react";
 
-export default function CartaoCheckout({ amountBRL, tokens, cpfCnpj, email, phone }: any) {
+export default function CartaoCheckout({
+  amountBRL,
+  tokens,
+  cpfCnpj,
+  email,
+  phone,
+}: any) {
   const [nome, setNome] = useState("");
   const [numero, setNumero] = useState("");
   const [mes, setMes] = useState("");
@@ -22,7 +28,10 @@ export default function CartaoCheckout({ amountBRL, tokens, cpfCnpj, email, phon
         headers: {
           "Content-Type": "application/json",
         },
-        credentials: "include", // 🔥 garante que o cookie da sessão vai junto!!
+
+        // 🔥 FUNDAMENTAL: envia cookie com a sessão supabase
+        credentials: "include",
+
         body: JSON.stringify({
           nome,
           numero,
@@ -41,9 +50,11 @@ export default function CartaoCheckout({ amountBRL, tokens, cpfCnpj, email, phon
 
       if (!data.success) {
         setErro(data.error || "Erro no pagamento.");
-      } else {
-        alert("Pagamento realizado com sucesso!");
+        setLoading(false);
+        return;
       }
+
+      alert("Pagamento realizado com sucesso!");
     } catch (e) {
       setErro("Erro interno ao processar.");
     }
@@ -102,6 +113,7 @@ export default function CartaoCheckout({ amountBRL, tokens, cpfCnpj, email, phon
             padding: 12,
             borderRadius: 6,
             marginTop: 10,
+            opacity: loading ? 0.6 : 1,
           }}
         >
           {loading ? "Processando..." : "Pagar"}

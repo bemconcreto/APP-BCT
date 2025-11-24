@@ -1,14 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 export default function CartaoCheckout() {
   const params = useSearchParams();
 
   // dados vindos da página anterior
-  const amountBRL = params.get("valor");   // vindo do botão da página Comprar
-  const cpfCnpj = params.get("cpf");       // vindo do botão da página Comprar
+  const amountBRL = params.get("amountBRL");
+  const cpfCnpj = params.get("cpfCnpj");
+  const email = params.get("email");
+  const tokens = params.get("tokens");
 
   // campos do cartão
   const [nome, setNome] = useState("");
@@ -16,19 +18,17 @@ export default function CartaoCheckout() {
   const [mes, setMes] = useState("");
   const [ano, setAno] = useState("");
   const [cvv, setCvv] = useState("");
+
   const [erro, setErro] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function pagar() {
     setErro("");
 
+    if (loading) return; // evita duplo clique
+
     if (!nome || !numero || !mes || !ano || !cvv) {
       setErro("Preencha todos os campos do cartão.");
-      return;
-    }
-
-    if (!amountBRL || !cpfCnpj) {
-      setErro("Dados do pedido ausentes. Volte e tente novamente.");
       return;
     }
 
@@ -45,9 +45,9 @@ export default function CartaoCheckout() {
           ano,
           cvv,
           amountBRL,
-          tokens: 0, // backend calcula sozinho
+          tokens,
           cpfCnpj,
-          email: "no-email@temp.com", // backend não usa email daqui
+          email,
         }),
       });
 
@@ -60,20 +60,18 @@ export default function CartaoCheckout() {
       }
 
       alert("Pagamento aprovado!");
-    } catch (e) {
-      setErro("Erro inesperado.");
+    } catch (err) {
+      setErro("Erro inesperado ao processar pagamento.");
     }
 
     setLoading(false);
   }
 
   return (
-    <div className="p-6 pb-20">
+    <div className="p-6">
       <h1 className="text-2xl font-bold mb-4">Pagamento com Cartão</h1>
 
-      {erro && (
-        <p className="bg-red-200 text-red-900 p-2 mb-3 rounded">{erro}</p>
-      )}
+      {erro && <p className="bg-red-200 p-2 mb-3 text-red-700">{erro}</p>}
 
       <input
         placeholder="Nome no Cartão"
@@ -112,10 +110,10 @@ export default function CartaoCheckout() {
       />
 
       <button
-        onClick={loading ? undefined : pagar}
+        onClick={pagar}
         disabled={loading}
         className={`p-3 rounded text-white w-full ${
-          loading ? "bg-gray-400" : "bg-blue-600"
+          loading ? "bg-gray-500" : "bg-blue-600 hover:bg-blue-700"
         }`}
       >
         {loading ? "Processando..." : "Pagar"}

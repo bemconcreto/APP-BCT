@@ -53,7 +53,7 @@ export default function CartaoCheckout({ amountBRL, tokens, cpfCnpj, email, phon
       if (!result.success) {
         setErro(result.error || "Erro no pagamento.");
       } else {
-        alert("Pagamento aprovado!");
+        window.location.href = "/tela-sucesso";
       }
     } catch (e) {
       console.error("Erro:", e);

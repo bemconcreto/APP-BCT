@@ -34,7 +34,7 @@ export default function PixContent() {
         // 👇 SE PAGOU → REDIRECIONA AUTOMATICAMENTE
         if (data.status === "CONFIRMED") {
           clearInterval(interval);
-          window.location.href = "/inicio";
+          window.location.href = "/tela-sucesso";
         }
       } catch (e) {
         clearInterval(interval);

@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { supabase } from "../../../src/lib/supabaseClient";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 export default function PixContent() {
   const searchParams = useSearchParams();
@@ -32,10 +33,9 @@ export default function PixContent() {
         if (data.copiaCola) setCopiaCola(data.copiaCola);
 
         // 👇 SE PAGOU → REDIRECIONA AUTOMATICAMENTE
-        if (data.status === "CONFIRMED") {
-          clearInterval(interval);
-          window.location.href = "/tela-sucesso";
-        }
+        if (status === "paid") {
+   window.location.href = "/tela-sucesso";
+}
       } catch (e) {
         clearInterval(interval);
         setErro("Erro ao carregar o PIX.");

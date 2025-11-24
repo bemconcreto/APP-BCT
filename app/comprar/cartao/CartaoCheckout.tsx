@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import { supabase } from "../../../src/lib/supabaseClient";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 export default function CartaoCheckout({ amountBRL, tokens, cpfCnpj, email, phone }: any) {
   const [nome, setNome] = useState("");
@@ -51,10 +52,11 @@ export default function CartaoCheckout({ amountBRL, tokens, cpfCnpj, email, phon
       const result = await resp.json();
 
       if (!result.success) {
-        setErro(result.error || "Erro no pagamento.");
-      } else {
-        window.location.href = "/tela-sucesso";
-      }
+  setErro(result.error || "Erro no pagamento.");
+} else {
+  // 🔥 Redireciona para tela de sucesso
+  window.location.href = "/tela-sucesso";
+}
     } catch (e) {
       console.error("Erro:", e);
       setErro("Erro interno ao processar pagamento.");

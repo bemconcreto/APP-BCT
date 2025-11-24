@@ -1,7 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { supabase } from "../../../src/lib/supabaseClient";
+import { useState } from "react";
+import { createBrowserClient } from "@supabase/auth-helpers-nextjs";
+
+const supabase = createBrowserClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 export default function CartaoCheckout({ amountBRL, tokens, cpfCnpj, email, phone }: any) {
   const [nome, setNome] = useState("");
@@ -17,7 +22,7 @@ export default function CartaoCheckout({ amountBRL, tokens, cpfCnpj, email, phon
     setErro("");
     setLoading(true);
 
-    // 🔥 PEGAR TOKEN DO SUPABASE (igual o PIX faz!)
+    // 🔥 Pegando token da sessão (AGORA FUNCIONA!!)
     const { data } = await supabase.auth.getSession();
     const token = data.session?.access_token;
 
@@ -32,7 +37,7 @@ export default function CartaoCheckout({ amountBRL, tokens, cpfCnpj, email, phon
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`, // 🔥 AGORA ENVIA O TOKEN!
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           nome,
@@ -48,10 +53,10 @@ export default function CartaoCheckout({ amountBRL, tokens, cpfCnpj, email, phon
         }),
       });
 
-      const data = await resp.json();
+      const json = await resp.json();
 
-      if (!data.success) {
-        setErro(data.error || "Erro no pagamento.");
+      if (!json.success) {
+        setErro(json.error || "Erro no pagamento.");
       } else {
         alert("Pagamento realizado com sucesso!");
       }

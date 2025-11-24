@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-// 🔥 Cliente ADMIN (igual ao PIX)
+// 🔐 Cliente ADMIN do Supabase (para escrever sem RLS)
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -21,10 +21,12 @@ export async function POST(req: Request) {
       tokens,
       cpfCnpj,
       email,
-      phone
+      phone,
     } = body;
 
-    // validações simples
+    // -------------------------------
+    // 🔍 Validação básica
+    // -------------------------------
     if (!nome || !numero || !mes || !ano || !cvv || !amountBRL) {
       return NextResponse.json(
         { success: false, error: "Dados do cartão incompletos." },
@@ -32,14 +34,23 @@ export async function POST(req: Request) {
       );
     }
 
-    // 🔥 GRAVAR COMPRA COMO PENDENTE NO SUPABASE (SEM user_id)
+    if (!cpfCnpj || !email) {
+      return NextResponse.json(
+        { success: false, error: "CPF/CNPJ e e-mail são obrigatórios." },
+        { status: 400 }
+      );
+    }
+
+    // -------------------------------
+    // 🔥 1. Criar compra pendente SEM user_id
+    // -------------------------------
     const { data: compra, error: compraErr } = await supabase
       .from("compras_bct")
       .insert({
-        user_id: null, // ⚠ igual ao pix!
+        user_id: null,          // ← NÃO VAMOS USAR USER ID
         tokens,
         valor_pago: amountBRL,
-        status: "pending"
+        status: "pending",
       })
       .select()
       .single();
@@ -52,7 +63,9 @@ export async function POST(req: Request) {
       );
     }
 
-    // 🔥 CHAMADA AO ASAAS
+    // -------------------------------
+    // 🔥 2. Criar pagamento no ASAAS
+    // -------------------------------
     const resp = await fetch("https://www.asaas.com/api/v3/payments", {
       method: "POST",
       headers: {
@@ -62,9 +75,8 @@ export async function POST(req: Request) {
       body: JSON.stringify({
         customer: process.env.ASAAS_CUSTOMER_ID!,
         billingType: "CREDIT_CARD",
-        value: amountBRL,
         dueDate: new Date().toISOString().split("T")[0],
-
+        value: amountBRL,
         description: `Compra de ${tokens} BCT`,
 
         creditCard: {
@@ -83,23 +95,25 @@ export async function POST(req: Request) {
           addressNumber: "1000",
           phone: phone || "11999999999",
         },
-      })
+      }),
     });
 
     const data = await resp.json();
 
     if (!resp.ok) {
-      console.log("❌ ERRO ASAAS:", data);
+      console.log("❌ Erro ASAAS:", data);
       return NextResponse.json(
         {
           success: false,
-          error: data?.errors?.[0]?.description ?? "Erro ao criar pagamento.",
+          error: data?.errors?.[0]?.description ?? "Erro ao processar cartão.",
         },
         { status: 400 }
       );
     }
 
-    // 🔥 SALVAR payment_id no SUPABASE
+    // -------------------------------
+    // 🔥 3. Salvar payment_id da ASAAS
+    // -------------------------------
     await supabase
       .from("compras_bct")
       .update({ payment_id: data.id })
@@ -108,9 +122,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true, id: data.id });
 
   } catch (err) {
-    console.error("❌ ERRO NO CARTÃO:", err);
+    console.error("❌ ERRO GERAL:", err);
     return NextResponse.json(
-      { success: false, error: "Erro interno." },
+      { success: false, error: "Erro interno no servidor." },
       { status: 500 }
     );
   }

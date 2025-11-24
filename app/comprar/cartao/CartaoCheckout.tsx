@@ -1,14 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "../../../src/lib/supabaseClient";
 
-export default function CartaoCheckout({
-  amountBRL,
-  tokens,
-  cpfCnpj,
-  email,
-  phone,
-}: any) {
+export default function CartaoCheckout({ amountBRL, tokens, cpfCnpj, email, phone }: any) {
   const [nome, setNome] = useState("");
   const [numero, setNumero] = useState("");
   const [mes, setMes] = useState("");
@@ -22,16 +17,23 @@ export default function CartaoCheckout({
     setErro("");
     setLoading(true);
 
+    // 🔥 PEGAR TOKEN DO SUPABASE (igual o PIX faz!)
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+
+    if (!token) {
+      setErro("Usuário não autenticado.");
+      setLoading(false);
+      return;
+    }
+
     try {
       const resp = await fetch("/api/asaas/cartao", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`, // 🔥 AGORA ENVIA O TOKEN!
         },
-
-        // 🔥 FUNDAMENTAL: envia cookie com a sessão supabase
-        credentials: "include",
-
         body: JSON.stringify({
           nome,
           numero,
@@ -50,11 +52,9 @@ export default function CartaoCheckout({
 
       if (!data.success) {
         setErro(data.error || "Erro no pagamento.");
-        setLoading(false);
-        return;
+      } else {
+        alert("Pagamento realizado com sucesso!");
       }
-
-      alert("Pagamento realizado com sucesso!");
     } catch (e) {
       setErro("Erro interno ao processar.");
     }
@@ -68,41 +68,20 @@ export default function CartaoCheckout({
 
       {erro && (
         <div style={{ background: "#ffdddd", padding: 12, marginBottom: 20 }}>
-          Erro ao gerar pagamento com cartão: {erro}
+          {erro}
         </div>
       )}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        <input
-          placeholder="Nome impresso no cartão"
-          value={nome}
-          onChange={(e) => setNome(e.target.value)}
-        />
-
-        <input
-          placeholder="Número do cartão"
-          value={numero}
-          onChange={(e) => setNumero(e.target.value)}
-        />
+        <input placeholder="Nome" value={nome} onChange={(e) => setNome(e.target.value)} />
+        <input placeholder="Número" value={numero} onChange={(e) => setNumero(e.target.value)} />
 
         <div style={{ display: "flex", gap: 10 }}>
-          <input
-            placeholder="Mês"
-            value={mes}
-            onChange={(e) => setMes(e.target.value)}
-          />
-          <input
-            placeholder="Ano"
-            value={ano}
-            onChange={(e) => setAno(e.target.value)}
-          />
+          <input placeholder="Mês" value={mes} onChange={(e) => setMes(e.target.value)} />
+          <input placeholder="Ano" value={ano} onChange={(e) => setAno(e.target.value)} />
         </div>
 
-        <input
-          placeholder="CVV"
-          value={cvv}
-          onChange={(e) => setCvv(e.target.value)}
-        />
+        <input placeholder="CVV" value={cvv} onChange={(e) => setCvv(e.target.value)} />
 
         <button
           onClick={pagar}
@@ -113,7 +92,6 @@ export default function CartaoCheckout({
             padding: 12,
             borderRadius: 6,
             marginTop: 10,
-            opacity: loading ? 0.6 : 1,
           }}
         >
           {loading ? "Processando..." : "Pagar"}

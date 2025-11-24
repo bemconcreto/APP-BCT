@@ -1,10 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import { supabase } from "../../../src/lib/supabaseClient";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
 
 export default function CartaoCheckout({ amountBRL, tokens, cpfCnpj, email, phone }: any) {
+  const router = useRouter();
+
   const [nome, setNome] = useState("");
   const [numero, setNumero] = useState("");
   const [mes, setMes] = useState("");
@@ -18,7 +20,7 @@ export default function CartaoCheckout({ amountBRL, tokens, cpfCnpj, email, phon
     setErro("");
     setLoading(true);
 
-    // 🔥 PEGAR TOKEN DO SUPABASE — IGUAL O PIX!
+    // 🔥 PEGAR TOKEN DO SUPABASE
     const { data: sessionData } = await supabase.auth.getSession();
     const token = sessionData.session?.access_token;
 
@@ -33,7 +35,7 @@ export default function CartaoCheckout({ amountBRL, tokens, cpfCnpj, email, phon
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`, // ENVIA O TOKEN DE AUTH
+          Authorization: `Bearer ${token}`, // Token do usuário
         },
         body: JSON.stringify({
           nome,
@@ -52,11 +54,11 @@ export default function CartaoCheckout({ amountBRL, tokens, cpfCnpj, email, phon
       const result = await resp.json();
 
       if (!result.success) {
-  setErro(result.error || "Erro no pagamento.");
-} else {
-  // 🔥 Redireciona para tela de sucesso
-  window.location.href = "/tela-sucesso";
-}
+        setErro(result.error || "Erro no pagamento.");
+      } else {
+        // 🚀 REDIRECIONA PARA TELA DE SUCESSO
+        router.push("/tela-sucesso");
+      }
     } catch (e) {
       console.error("Erro:", e);
       setErro("Erro interno ao processar pagamento.");

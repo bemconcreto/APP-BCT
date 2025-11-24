@@ -1,12 +1,13 @@
 "use client";
 
-import { supabase } from "../../../src/lib/supabaseClient";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
 
 export default function PixContent() {
   const searchParams = useSearchParams();
   const pedidoId = searchParams.get("pedido");
+  const router = useRouter();
 
   const [erro, setErro] = useState("");
   const [copiaCola, setCopiaCola] = useState("");
@@ -29,21 +30,26 @@ export default function PixContent() {
           return;
         }
 
-        // Atualiza o copia e cola
+        // Atualiza copia e cola se disponível
         if (data.copiaCola) setCopiaCola(data.copiaCola);
 
-        // 👇 SE PAGOU → REDIRECIONA AUTOMATICAMENTE
-        if (status === "paid") {
-   window.location.href = "/tela-sucesso";
-}
+        // 🔥 SE O PAGAMENTO FOR CONFIRMADO → REDIRECIONA
+        if (
+          data.status === "CONFIRMED" ||
+          data.status === "RECEIVED" ||
+          data.status === "PAID"
+        ) {
+          clearInterval(interval);
+          router.push("/tela-sucesso");
+        }
       } catch (e) {
         clearInterval(interval);
-        setErro("Erro ao carregar o PIX.");
+        setErro("Erro ao atualizar o status do PIX.");
       }
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [pedidoId]);
+  }, [pedidoId, router]);
 
   function copiarCodigo() {
     if (copiaCola) {

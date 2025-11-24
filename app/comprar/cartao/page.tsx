@@ -1,13 +1,22 @@
-export const dynamic = "force-dynamic";
 "use client";
 
-import { Suspense } from "react";
 import CartaoCheckout from "./CartaoCheckout";
 
-export default function Page() {
+export default function Page({ searchParams }: any) {
+  // tudo vem da URL
+  const amountBRL = Number(searchParams.amountBRL || 0);
+  const tokens = Number(searchParams.tokens || 0);
+  const cpfCnpj = searchParams.cpfCnpj || "";
+  const email = searchParams.email || "";
+  const phone = searchParams.phone || "";
+
   return (
-    <Suspense fallback={<div className="p-6">Carregando...</div>}>
-      <CartaoCheckout />
-    </Suspense>
+    <CartaoCheckout
+      amountBRL={amountBRL}
+      tokens={tokens}
+      cpfCnpj={cpfCnpj}
+      email={email}
+      phone={phone}
+    />
   );
 }

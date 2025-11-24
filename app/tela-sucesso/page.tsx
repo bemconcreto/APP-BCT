@@ -1,27 +1,38 @@
+"use client";
+
 export default function TelaSucesso() {
   return (
-    <div style={{ padding: 30, textAlign: "center" }}>
+    <div
+      style={{
+        padding: 30,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        textAlign: "center",
+      }}
+    >
       <h1 style={{ fontSize: 28, marginBottom: 20 }}>
-        🎉 Parabéns!
+        🎉 Compra realizada com sucesso!
       </h1>
 
-      <p style={{ fontSize: 20, marginBottom: 30 }}>
-        Você acabou de comprar mais alguns pedacinhos de imóveis!  
-        Seu investimento está sendo processado.
+      <p style={{ fontSize: 18, maxWidth: 380, marginBottom: 30 }}>
+        Seus novos tokens foram adicionados à sua conta.  
+        Continue construindo seu patrimônio imobiliário com a Bem Concreto Token!
       </p>
 
-      <button
-        onClick={() => (window.location.href = "/inicio")}
+      <a
+        href="/inicio"
         style={{
+          padding: "12px 20px",
           background: "#0066ff",
-          padding: 14,
-          borderRadius: 8,
-          color: "#fff",
-          fontSize: 18,
+          color: "white",
+          borderRadius: 6,
+          textDecoration: "none",
+          fontSize: 16,
         }}
       >
-        Ir para início
-      </button>
+        Voltar ao início
+      </a>
     </div>
   );
 }

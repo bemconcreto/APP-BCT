@@ -1,11 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { supabase } from "../../../src/lib/supabaseClient";
 
 export default function CartaoCheckout({ amountBRL, tokens, cpfCnpj, email, phone }: any) {
-  const supabase = createClientComponentClient();
-
   const [nome, setNome] = useState("");
   const [numero, setNumero] = useState("");
   const [mes, setMes] = useState("");
@@ -19,9 +17,9 @@ export default function CartaoCheckout({ amountBRL, tokens, cpfCnpj, email, phon
     setErro("");
     setLoading(true);
 
-    // 🔥 RECUPERAR TOKEN DO USUÁRIO LOGADO
-    const { data } = await supabase.auth.getSession();
-    const token = data.session?.access_token;
+    // 🔥 PEGAR TOKEN DO SUPABASE EXATAMENTE IGUAL O PIX
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
 
     if (!token) {
       setErro("Usuário não autenticado.");
@@ -34,7 +32,7 @@ export default function CartaoCheckout({ amountBRL, tokens, cpfCnpj, email, phon
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`, // ✔️ ENVIA TOKEN PARA API
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           nome,
@@ -50,12 +48,12 @@ export default function CartaoCheckout({ amountBRL, tokens, cpfCnpj, email, phon
         }),
       });
 
-      const result = await resp.json();
+      const data = await resp.json();
 
-      if (!result.success) {
-        setErro(result.error || "Erro no pagamento.");
+      if (!data.success) {
+        setErro(data.error || "Erro no pagamento.");
       } else {
-        alert("Pagamento realizado com sucesso!");
+        alert("Pagamento aprovado!");
       }
     } catch (e) {
       setErro("Erro interno ao processar.");
@@ -76,8 +74,7 @@ export default function CartaoCheckout({ amountBRL, tokens, cpfCnpj, email, phon
 
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         <input placeholder="Nome" value={nome} onChange={(e) => setNome(e.target.value)} />
-
-        <input placeholder="Número do cartão" value={numero} onChange={(e) => setNumero(e.target.value)} />
+        <input placeholder="Número" value={numero} onChange={(e) => setNumero(e.target.value)} />
 
         <div style={{ display: "flex", gap: 10 }}>
           <input placeholder="Mês" value={mes} onChange={(e) => setMes(e.target.value)} />

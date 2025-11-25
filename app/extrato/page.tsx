@@ -46,6 +46,12 @@ export default function Extrato() {
     );
   }
 
+  function traduzirStatus(status: string) {
+    if (status === "paid") return "PAGO";
+    if (status === "pending") return "PROCESSANDO";
+    return status.toUpperCase();
+  }
+
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-4">Extrato de Compras</h1>
@@ -63,6 +69,7 @@ export default function Extrato() {
             <p><b>Data:</b> {new Date(item.created_at).toLocaleString()}</p>
             <p><b>Tokens:</b> {item.tokens}</p>
             <p><b>Valor pago:</b> R$ {item.valor_pago}</p>
+
             <p>
               <b>Status:</b>{" "}
               <span
@@ -74,7 +81,7 @@ export default function Extrato() {
                     : "text-red-600"
                 }
               >
-                {item.status.toUpperCase()}
+                {traduzirStatus(item.status)}
               </span>
             </p>
           </div>

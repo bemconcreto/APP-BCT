@@ -1,31 +1,85 @@
 "use client";
 
-export default function ExtratoPage() {
-  const transacoes = [
-    { tipo: "Compra BCT", valor: "+500", data: "09/11/2025", status: "✅ Confirmado" },
-    { tipo: "Venda PIX", valor: "-250", data: "07/11/2025", status: "✅ Enviado" },
-    { tipo: "Recompra", valor: "+100", data: "05/11/2025", status: "⏳ Pendente" },
-  ];
+import { useEffect, useState } from "react";
+import { supabase } from "../../src/lib/supabaseClient";
+
+export default function Extrato() {
+  const [compras, setCompras] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [erro, setErro] = useState("");
+
+  useEffect(() => {
+    async function carregar() {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+
+      if (!token) {
+        setErro("Usuário não autenticado.");
+        setLoading(false);
+        return;
+      }
+
+      const res = await fetch(`/api/extrato?token=${token}`);
+      const json = await res.json();
+
+      if (!json.success) {
+        setErro(json.error);
+      } else {
+        setCompras(json.compras);
+      }
+
+      setLoading(false);
+    }
+
+    carregar();
+  }, []);
+
+  if (loading) {
+    return <div className="p-6">Carregando extrato...</div>;
+  }
+
+  if (erro) {
+    return (
+      <div className="p-6 text-red-600">
+        Erro no extrato: {erro}
+      </div>
+    );
+  }
 
   return (
-    <main className="p-6 bg-gray-50 min-h-screen">
-      <h1 className="text-2xl font-bold text-green-700 mb-6">Extrato</h1>
-      <div className="bg-white rounded-lg shadow divide-y">
-        {transacoes.map((t, i) => (
-          <div key={i} className="flex justify-between items-center p-4">
-            <div>
-              <p className="font-medium text-gray-700">{t.tipo}</p>
-              <p className="text-xs text-gray-500">{t.data}</p>
-            </div>
-            <div className="text-right">
-              <p className={`font-semibold ${t.valor.startsWith("+") ? "text-green-600" : "text-red-500"}`}>
-                {t.valor} BCT
-              </p>
-              <p className="text-xs text-gray-500">{t.status}</p>
-            </div>
+    <div className="p-6">
+      <h1 className="text-2xl font-bold mb-4">Extrato de Compras</h1>
+
+      {compras.length === 0 && (
+        <p className="text-gray-600">Nenhuma transação encontrada.</p>
+      )}
+
+      <div className="flex flex-col gap-4">
+        {compras.map((item) => (
+          <div
+            key={item.id}
+            className="border rounded p-4 shadow-sm bg-white"
+          >
+            <p><b>Data:</b> {new Date(item.created_at).toLocaleString()}</p>
+            <p><b>Tokens:</b> {item.tokens}</p>
+            <p><b>Valor pago:</b> R$ {item.valor_pago}</p>
+            <p>
+              <b>Status:</b>{" "}
+              <span
+                className={
+                  item.status === "paid"
+                    ? "text-green-600"
+                    : item.status === "pending"
+                    ? "text-yellow-600"
+                    : "text-red-600"
+                }
+              >
+                {item.status.toUpperCase()}
+              </span>
+            </p>
           </div>
         ))}
       </div>
-    </main>
+    </div>
   );
 }

@@ -12,31 +12,35 @@ export default function InicioPage() {
 
   const [saldoBCT, setSaldoBCT] = useState<number | null>(null);
 
-  // 🔥 BUSCA O SALDO REAL DA TABELA wallet_saldos
-  const loadSaldo = async () => {
-    try {
-      const { data: session } = await supabase.auth.getSession();
-      const user = session.session?.user;
+// 🔥 BUSCA O SALDO CORRETO NA TABELA wallet_saldos
+const loadSaldo = async () => {
+  try {
+    const { data: session } = await supabase.auth.getSession();
+    const user = session.session?.user;
 
-      if (!user) return;
+    if (!user) return;
 
-      const { data, error } = await supabase
-        .from("wallet_saldos")
-        .select("saldo_bct")
-        .eq("user_id", user.id)
-        .single();
+    const { data, error } = await supabase
+      .from("wallet_saldos")
+      .select("saldo_bct")
+      .eq("user_id", user.id)
+      .single();
 
-      if (!error && data) {
-        setSaldoBCT(Number(data.saldo_bct));
-      } else {
-        setSaldoBCT(0);
-      }
-    } catch (err) {
-      console.error("❌ Erro ao carregar saldo:", err);
+    if (!error && data) {
+      setSaldoBCT(Number(data.saldo_bct));
+    } else {
+      setSaldoBCT(0);
     }
-  };
+  } catch (err) {
+    console.error("Erro ao carregar saldo:", err);
+  }
+};
 
-  // 🔥 BUSCA PREÇO DO BCT (com dólar real aplicado no backend)
+  useEffect(() => {
+    loadData();
+    loadSaldo();
+  }, []);
+
   const loadData = async () => {
     setLoading(true);
     try {
@@ -47,16 +51,11 @@ export default function InicioPage() {
       setPriceBRL(data.brl);
       setVariation(Number(data.variation24h));
     } catch (e) {
-      console.error("❌ Erro ao carregar preço:", e);
+      console.error("Erro ao carregar preço:", e);
     } finally {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    loadSaldo();
-    loadData();
-  }, []);
 
   return (
     <div className="min-h-screen bg-gray-100 p-8">
@@ -75,7 +74,7 @@ export default function InicioPage() {
           </p>
         </div>
 
-        {/* 🔥 BLOCO DO PREÇO DO BCT */}
+        {/* BLOCO DO PREÇO */}
         <div className="bg-white shadow-md p-6 rounded-xl text-center border mb-10">
           <h2 className="text-xl font-bold text-[#0C3D2E]">Preço do BCT</h2>
 
@@ -144,7 +143,6 @@ export default function InicioPage() {
             </div>
           </Link>
         </div>
-
       </div>
     </div>
   );

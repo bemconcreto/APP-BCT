@@ -42,20 +42,21 @@ const loadSaldo = async () => {
   }, []);
 
   const loadData = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch("/api/preco-bct", { cache: "no-store" });
-      const data = await response.json();
+  setLoading(true);
+  try {
+    // Busca preço atualizado
+    const response = await fetch("/api/preco-bct", { cache: "no-store" });
+    const data = await response.json();
 
-      setPriceUSD(data.usd);
-      setPriceBRL(data.brl);
-      setVariation(Number(data.variation24h));
-    } catch (e) {
-      console.error("Erro ao carregar preço:", e);
-    } finally {
-      setLoading(false);
-    }
-  };
+    setPriceUSD(data.usd);
+    setPriceBRL(data.brl);
+    setVariation(Number(data.variation24h));
+  } catch (e) {
+    console.error("Erro ao carregar preço:", e);
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen bg-gray-100 p-8">
@@ -75,39 +76,37 @@ const loadSaldo = async () => {
         </div>
 
         {/* BLOCO DO PREÇO */}
-        <div className="bg-white shadow-md p-6 rounded-xl text-center border mb-10">
-          <h2 className="text-xl font-bold text-[#0C3D2E]">Preço do BCT</h2>
+<div className="bg-white shadow-md p-6 rounded-xl text-center border mb-10">
+  <h2 className="text-xl font-bold text-[#0C3D2E]">Preço do BCT</h2>
 
-          <p className="text-gray-700 text-lg mt-3">
-            USD:{" "}
-            {priceUSD !== null ? `$${priceUSD.toFixed(4)}` : "Carregando..."}
-          </p>
+  <p className="text-gray-700 text-lg mt-3">
+    USD: {priceUSD !== null ? `$${priceUSD.toFixed(4)}` : "Carregando..."}
+  </p>
 
-          <p className="text-gray-700 text-lg">
-            BRL:{" "}
-            {priceBRL !== null ? `R$ ${priceBRL.toFixed(4)}` : "Carregando..."}
-          </p>
+  <p className="text-gray-700 text-lg">
+    BRL: {priceBRL !== null ? `R$ ${priceBRL.toFixed(4)}` : "Carregando..."}
+  </p>
 
-          {variation !== null && (
-            <p
-              className={`mt-2 text-sm font-semibold ${
-                variation >= 0 ? "text-green-600" : "text-red-600"
-              }`}
-            >
-              {variation >= 0 ? "▲" : "▼"} {variation.toFixed(2)}%
-            </p>
-          )}
+  {variation !== null && (
+    <p
+      className={`mt-2 text-sm font-semibold ${
+        variation >= 0 ? "text-green-600" : "text-red-600"
+      }`}
+    >
+      {variation >= 0 ? "▲" : "▼"} {variation.toFixed(2)}%
+    </p>
+  )}
 
-          <button
-            onClick={() => {
-              loadData();
-              loadSaldo();
-            }}
-            className="mt-4 bg-[#0C3D2E] text-white px-4 py-2 rounded-lg hover:bg-[#125c45]"
-          >
-            Atualizar Dados
-          </button>
-        </div>
+  <button
+    onClick={() => {
+      loadData();
+      loadSaldo();
+    }}
+    className="mt-4 bg-[#0C3D2E] text-white px-4 py-2 rounded-lg hover:bg-[#125c45]"
+  >
+    Atualizar Dados
+  </button>
+</div>
 
         {/* MENU */}
         <p className="text-center text-gray-600 mb-8">

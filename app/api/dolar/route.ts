@@ -1,39 +1,26 @@
 import { NextResponse } from "next/server";
 
-// API de dólar gratuita (AwesomeAPI)
-const API_URL = "https://economia.awesomeapi.com.br/json/last/USD-BRL";
-
 export async function GET() {
   try {
-    const resp = await fetch(API_URL, {
-      cache: "no-store", // força sempre o valor mais atual
-    });
+    const resp = await fetch("https://api.exchangerate.host/latest?base=USD&symbols=BRL");
 
     if (!resp.ok) {
       return NextResponse.json(
-        { success: false, error: "Erro ao consultar API do dólar." },
+        { success: false, error: "Falha ao consultar API de câmbio." },
         { status: 500 }
       );
     }
 
     const data = await resp.json();
-
-    const valor = Number(data?.USDBRL?.ask);
-
-    if (!valor) {
-      return NextResponse.json(
-        { success: false, error: "Falha ao ler resposta da API." },
-        { status: 500 }
-      );
-    }
+    const dolarBRL = data.rates?.BRL || null;
 
     return NextResponse.json({
       success: true,
-      dolar: valor,
+      dolar: dolarBRL,
     });
-  } catch (e) {
+  } catch (err) {
     return NextResponse.json(
-      { success: false, error: "Erro interno ao obter dólar." },
+      { success: false, error: "Erro interno ao consultar dólar." },
       { status: 500 }
     );
   }

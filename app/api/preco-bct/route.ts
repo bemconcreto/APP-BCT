@@ -2,25 +2,38 @@ import { NextResponse } from "next/server";
 
 export async function GET() {
   try {
-    // Preço fixo definido por você
-    const priceUSD = 0.4482;
+    // 🔥 1. Buscar dólar em tempo real
+    const dolarResp = await fetch(`${process.env.NEXT_PUBLIC_URL}/api/dolar`, {
+      cache: "no-store",
+    });
+    const dolarData = await dolarResp.json();
 
-    // Conversão fixa com USD = R$5.30
-    const usdToBrl = 5.30;
+    if (!dolarData.success) {
+      return NextResponse.json(
+        { success: false, error: "Falha ao carregar dólar." },
+        { status: 500 }
+      );
+    }
 
-    const priceBRL = priceUSD * usdToBrl;
+    const dolar = Number(dolarData.dolar);
 
-    // Variação pode ser fixa ou simulada — deixei fixa em +0.00%
-    const variation24h = 0;
+    // 🔥 2. Preço fixo original do token
+    const precoUSD = 0.4482;
+
+    // 🔥 3. Calcula em BRL usando dólar real
+    const precoBRL = precoUSD * dolar;
 
     return NextResponse.json({
-      usd: priceUSD,
-      brl: priceBRL,
-      variation24h,
+      success: true,
+      usd: precoUSD,
+      brl: precoBRL,
+      variation24h: 0,
     });
-  } catch (error) {
+
+  } catch (err) {
+    console.error("❌ Erro no /api/preco-bct:", err);
     return NextResponse.json(
-      { error: "Erro ao calcular preço" },
+      { success: false, error: "Erro interno." },
       { status: 500 }
     );
   }

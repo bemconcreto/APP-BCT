@@ -11,51 +11,70 @@ export default function InicioPage() {
   const [loading, setLoading] = useState(true);
 
   const [saldoBCT, setSaldoBCT] = useState<number | null>(null);
+  const [dolar, setDolar] = useState<number | null>(null); // 🔥 NOVO ESTADO DO DÓLAR
 
-// 🔥 BUSCA O SALDO CORRETO NA TABELA wallet_saldos
-const loadSaldo = async () => {
-  try {
-    const { data: session } = await supabase.auth.getSession();
-    const user = session.session?.user;
+  // ==========================================================
+  // 🔥 BUSCAR SALDO DO USUÁRIO
+  // ==========================================================
+  const loadSaldo = async () => {
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      const user = session.session?.user;
 
-    if (!user) return;
+      if (!user) return;
 
-    const { data, error } = await supabase
-      .from("wallet_saldos")
-      .select("saldo_bct")
-      .eq("user_id", user.id)
-      .single();
+      const { data, error } = await supabase
+        .from("wallet_saldos")
+        .select("saldo_bct")
+        .eq("user_id", user.id)
+        .single();
 
-    if (!error && data) {
-      setSaldoBCT(Number(data.saldo_bct));
-    } else {
-      setSaldoBCT(0);
+      if (!error && data) {
+        setSaldoBCT(Number(data.saldo_bct));
+      } else {
+        setSaldoBCT(0);
+      }
+    } catch (err) {
+      console.error("Erro ao carregar saldo:", err);
     }
-  } catch (err) {
-    console.error("Erro ao carregar saldo:", err);
-  }
-};
+  };
 
-  useEffect(() => {
-    loadData();
-    loadSaldo();
-  }, []);
-
+  // ==========================================================
+  // 🔥 BUSCAR PREÇOS DO BCT + DÓLAR EM TEMPO REAL
+  // ==========================================================
   const loadData = async () => {
     setLoading(true);
     try {
+      // 🔹 Busca preço do BCT
       const response = await fetch("/api/preco-bct", { cache: "no-store" });
       const data = await response.json();
 
       setPriceUSD(data.usd);
       setPriceBRL(data.brl);
       setVariation(Number(data.variation24h));
+
+      // 🔹 Busca dólar em tempo real (NOVA ROTA)
+      const dolarRes = await fetch("/api/dolar", { cache: "no-store" });
+      const dolarJson = await dolarRes.json();
+
+      if (dolarJson?.usdbrl?.bid) {
+        setDolar(Number(dolarJson.usdbrl.bid));
+      }
+
     } catch (e) {
-      console.error("Erro ao carregar preço:", e);
+      console.error("Erro ao carregar dados:", e);
     } finally {
       setLoading(false);
     }
   };
+
+  // ==========================================================
+  // 🔥 CARREGAR TUDO AO ABRIR A PÁGINA
+  // ==========================================================
+  useEffect(() => {
+    loadData();
+    loadSaldo();
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-100 p-8">
@@ -74,18 +93,25 @@ const loadSaldo = async () => {
           </p>
         </div>
 
-        {/* BLOCO DO PREÇO */}
+        {/* 🔥 BLOCO DO DÓLAR */}
+        <div className="bg-blue-50 shadow-md p-6 rounded-xl text-center border mb-10">
+          <h2 className="text-xl font-bold text-blue-900">Dólar Comercial (Tempo Real)</h2>
+
+          <p className="mt-3 text-lg font-semibold text-blue-800">
+            {dolar ? `R$ ${dolar.toFixed(4)}` : "Carregando..."}
+          </p>
+        </div>
+
+        {/* 🔥 PREÇO DO BCT */}
         <div className="bg-white shadow-md p-6 rounded-xl text-center border mb-10">
           <h2 className="text-xl font-bold text-[#0C3D2E]">Preço do BCT</h2>
 
           <p className="text-gray-700 text-lg mt-3">
-            USD:{" "}
-            {priceUSD !== null ? `$${priceUSD.toFixed(4)}` : "Carregando..."}
+            USD: {priceUSD !== null ? `$${priceUSD.toFixed(4)}` : "Carregando..."}
           </p>
 
           <p className="text-gray-700 text-lg">
-            BRL:{" "}
-            {priceBRL !== null ? `R$ ${priceBRL.toFixed(4)}` : "Carregando..."}
+            BRL: {priceBRL !== null ? `R$ ${priceBRL.toFixed(4)}` : "Carregando..."}
           </p>
 
           {variation !== null && (
@@ -143,6 +169,7 @@ const loadSaldo = async () => {
             </div>
           </Link>
         </div>
+
       </div>
     </div>
   );

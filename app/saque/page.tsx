@@ -1,33 +1,60 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
+import { useState, useEffect } from "react";
 import { supabase } from "../../src/lib/supabaseClient";
+import Link from "next/link";
 
 export default function SaquePage() {
+  const [saldo, setSaldo] = useState<number | null>(null);
   const [valor, setValor] = useState("");
-  const [chave, setChave] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [chavePix, setChavePix] = useState("");
   const [msg, setMsg] = useState("");
 
-  async function solicitarSaque() {
-    setMsg("");
-    const v = Number(valor);
+  useEffect(() => {
+    loadSaldo();
+  }, []);
 
-    if (!v || v <= 0) return setMsg("Digite um valor válido.");
-    if (!chave) return setMsg("Digite sua chave PIX.");
-
-    setLoading(true);
-
+  async function loadSaldo() {
     try {
       const { data: session } = await supabase.auth.getSession();
       const token = session.session?.access_token;
 
-      if (!token) {
-        setMsg("Usuário não autenticado.");
-        setLoading(false);
-        return;
-      }
+      if (!token) return;
+
+      const res = await fetch("/api/carteira", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const json = await res.json();
+      if (json.success) setSaldo(json.saldo_brl);
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  async function solicitarSaque() {
+    setMsg("");
+
+    const valorNumero = Number(valor);
+
+    if (!valorNumero || valorNumero <= 0) {
+      setMsg("Informe um valor válido.");
+      return;
+    }
+
+    if (saldo === null || valorNumero > saldo) {
+      setMsg("Saldo insuficiente na carteira.");
+      return;
+    }
+
+    if (!chavePix || chavePix.length < 5) {
+      setMsg("Informe uma chave PIX válida.");
+      return;
+    }
+
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      const token = session.session?.access_token;
 
       const res = await fetch("/api/saque", {
         method: "POST",
@@ -35,58 +62,60 @@ export default function SaquePage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ valor: v, chave_pix: chave }),
+        body: JSON.stringify({
+          valor: valorNumero,
+          chave_pix: chavePix,
+        }),
       });
 
       const json = await res.json();
 
       if (!json.success) {
         setMsg(json.error || "Erro ao solicitar saque.");
-      } else {
-        setMsg(`Saque solicitado! Valor: R$ ${v.toFixed(2)}.`);
-        setValor("");
-        setChave("");
+        return;
       }
+
+      setMsg("Saque solicitado com sucesso!");
+      setValor("");
+      setChavePix("");
+      setSaldo(json.novo_saldo);
+
     } catch (e) {
       console.error(e);
-      setMsg("Erro interno.");
+      setMsg("Erro ao enviar solicitação.");
     }
-
-    setLoading(false);
   }
 
   return (
     <div className="min-h-screen bg-gray-100 p-8">
       <div className="max-w-lg mx-auto bg-white rounded-xl shadow-md p-8">
-
         <h1 className="text-2xl font-bold mb-6 text-center">Solicitar Saque</h1>
 
-        {msg && <p className="text-center text-red-600 mb-4">{msg}</p>}
+        {msg && (
+          <p className="text-center mb-4 text-red-600 font-semibold">{msg}</p>
+        )}
 
-        <label className="font-semibold">Valor (R$)</label>
+        <label className="block font-semibold">Valor (R$)</label>
         <input
           type="number"
           value={valor}
           onChange={(e) => setValor(e.target.value)}
-          className="w-full px-4 py-2 border rounded mb-4"
-          placeholder="Ex: 50.00"
+          className="w-full border px-4 py-2 rounded mb-4"
         />
 
-        <label className="font-semibold">Chave PIX</label>
+        <label className="block font-semibold">Chave PIX</label>
         <input
           type="text"
-          value={chave}
-          onChange={(e) => setChave(e.target.value)}
-          className="w-full px-4 py-2 border rounded mb-6"
-          placeholder="Digite sua chave pix"
+          value={chavePix}
+          onChange={(e) => setChavePix(e.target.value)}
+          className="w-full border px-4 py-2 rounded mb-6"
         />
 
         <button
           onClick={solicitarSaque}
-          disabled={loading}
-          className="w-full bg-yellow-500 text-white py-3 rounded-lg mb-6"
+          className="w-full bg-yellow-500 text-white py-3 rounded-lg mb-4"
         >
-          {loading ? "Enviando..." : "Confirmar Saque"}
+          Confirmar Saque
         </button>
 
         <Link href="/carteira">
@@ -94,7 +123,6 @@ export default function SaquePage() {
             Voltar à carteira
           </span>
         </Link>
-
       </div>
     </div>
   );

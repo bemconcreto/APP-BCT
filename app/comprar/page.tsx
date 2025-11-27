@@ -36,36 +36,31 @@ export default function ComprarPage() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
+  const tokenPriceUSD = 0.4482;
+
 // -----------------------------
-// PEGAR DÓLAR EM TEMPO REAL
+// BUSCA O DÓLAR EM TEMPO REAL
 // -----------------------------
 const [usdToBRL, setUsdToBRL] = useState<number | null>(null);
 
-async function loadDollar() {
-  try {
-    const res = await fetch("/api/dolar", { cache: "no-store" });
-    const data = await res.json();
-
-    if (data?.success && data?.dolar) {
-      setUsdToBRL(Number(data.dolar));
-    } else {
-      setUsdToBRL(5.30); // fallback
-    }
-  } catch (e) {
-    setUsdToBRL(5.30); // fallback
-  }
-}
-
 useEffect(() => {
+  async function loadDollar() {
+    try {
+      const res = await fetch("/api/dolar", { cache: "no-store" });
+      const json = await res.json();
+      if (json.success) setUsdToBRL(json.dolar);
+    } catch (e) {
+      console.log("Erro ao buscar dólar:", e);
+    }
+  }
   loadDollar();
 }, []);
 
-const tokenPriceUSD = 0.4482;
-
-// Se o dólar ainda não carregou, tokens ficam 0
-const valorUSD = usdToBRL ? Number(amountBRL) / usdToBRL : 0;
+// -----------------------------
+// CÁLCULO DE TOKENS (DINÂMICO)
+// -----------------------------
+const valorUSD = amountBRL && usdToBRL ? Number(amountBRL) / usdToBRL : 0;
 const tokens = valorUSD ? valorUSD / tokenPriceUSD : 0;
-
   // -----------------------------
   // CARREGA USUÁRIO AO ABRIR
   // -----------------------------

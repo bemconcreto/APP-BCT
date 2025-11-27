@@ -1,106 +1,100 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { supabase } from "../../src/lib/supabaseClient";
+import { useState } from "react";
 import Link from "next/link";
+import { supabase } from "../../src/lib/supabaseClient";
 
 export default function SaquePage() {
-  const [saldo, setSaldo] = useState<number | null>(null);
-  const [amount, setAmount] = useState("");
-  const [pixKey, setPixKey] = useState("");
-  const [msg, setMsg] = useState("");
+  const [valor, setValor] = useState("");
+  const [chave, setChave] = useState("");
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    loadSaldo();
-  }, []);
-
-  async function loadSaldo() {
-    const { data: session } = await supabase.auth.getSession();
-    const user = session.session?.user;
-    if (!user) return;
-
-    const { data } = await supabase
-      .from("wallet_cash")
-      .select("saldo_cash")
-      .eq("user_id", user.id)
-      .single();
-
-    setSaldo(Number(data?.saldo_cash ?? 0));
-  }
+  const [msg, setMsg] = useState("");
 
   async function solicitarSaque() {
     setMsg("");
+    const v = Number(valor);
 
-    const valor = Number(amount);
-    if (!valor || valor <= 0) return setMsg("Informe um valor válido.");
-    if (saldo !== null && valor > saldo) return setMsg("Saldo insuficiente.");
-    if (!pixKey) return setMsg("Informe a chave PIX.");
+    if (!v || v <= 0) return setMsg("Digite um valor válido.");
+    if (!chave) return setMsg("Digite sua chave PIX.");
 
     setLoading(true);
-    const { data: session } = await supabase.auth.getSession();
-    const token = session.session?.access_token;
 
-    const res = await fetch("/api/saque", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ amount: valor, pix_key: pixKey }),
-    });
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      const token = session.session?.access_token;
 
-    const j = await res.json();
+      if (!token) {
+        setMsg("Usuário não autenticado.");
+        setLoading(false);
+        return;
+      }
 
-    if (!j.success) {
-      setMsg(j.error || "Erro ao solicitar saque.");
-    } else {
-      setMsg("Saque solicitado com sucesso! Aguardando aprovação.");
-      loadSaldo();
-      setAmount("");
-      setPixKey("");
+      const res = await fetch("/api/saque", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ valor: v, chave_pix: chave }),
+      });
+
+      const json = await res.json();
+
+      if (!json.success) {
+        setMsg(json.error || "Erro ao solicitar saque.");
+      } else {
+        setMsg(`Saque solicitado! Valor: R$ ${v.toFixed(2)}.`);
+        setValor("");
+        setChave("");
+      }
+    } catch (e) {
+      console.error(e);
+      setMsg("Erro interno.");
     }
+
     setLoading(false);
   }
 
   return (
-    <div className="min-h-screen p-8 bg-gray-100">
-      <div className="max-w-lg mx-auto bg-white shadow p-6 rounded-lg">
-        <h1 className="text-2xl font-bold mb-4">Solicitar Saque</h1>
+    <div className="min-h-screen bg-gray-100 p-8">
+      <div className="max-w-lg mx-auto bg-white rounded-xl shadow-md p-8">
 
-        <p className="mb-4">
-          Saldo disponível: R$ {saldo !== null ? saldo.toFixed(2) : "Carregando..."}
-        </p>
+        <h1 className="text-2xl font-bold mb-6 text-center">Solicitar Saque</h1>
 
-        <label className="block mb-2">Valor do saque (R$)</label>
+        {msg && <p className="text-center text-red-600 mb-4">{msg}</p>}
+
+        <label className="font-semibold">Valor (R$)</label>
         <input
           type="number"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          className="w-full border p-2 rounded mb-4"
+          value={valor}
+          onChange={(e) => setValor(e.target.value)}
+          className="w-full px-4 py-2 border rounded mb-4"
+          placeholder="Ex: 50.00"
         />
 
-        <label className="block mb-2">Chave PIX</label>
+        <label className="font-semibold">Chave PIX</label>
         <input
           type="text"
-          value={pixKey}
-          onChange={(e) => setPixKey(e.target.value)}
-          className="w-full border p-2 rounded mb-4"
+          value={chave}
+          onChange={(e) => setChave(e.target.value)}
+          className="w-full px-4 py-2 border rounded mb-6"
+          placeholder="Digite sua chave pix"
         />
-
-        {msg && <p className="mb-4 text-red-600">{msg}</p>}
 
         <button
           onClick={solicitarSaque}
           disabled={loading}
-          className="w-full bg-green-600 text-white p-3 rounded"
+          className="w-full bg-yellow-500 text-white py-3 rounded-lg mb-6"
         >
-          {loading ? "Processando..." : "Solicitar Saque"}
+          {loading ? "Enviando..." : "Confirmar Saque"}
         </button>
 
         <Link href="/carteira">
-          <p className="text-center mt-4 underline cursor-pointer">Voltar</p>
+          <span className="block text-center text-gray-600 underline cursor-pointer">
+            Voltar à carteira
+          </span>
         </Link>
+
       </div>
     </div>
   );

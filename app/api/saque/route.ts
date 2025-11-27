@@ -10,74 +10,91 @@ const supabaseAdmin = createClient(
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { amount, pix_key } = body;
+    const { valor, chave_pix } = body;
 
-    if (!amount || amount <= 0) {
-      return NextResponse.json({ success: false, error: "Valor inválido." });
+    if (!valor || Number(valor) <= 0) {
+      return NextResponse.json(
+        { success: false, error: "Valor inválido." },
+        { status: 400 }
+      );
     }
-    if (!pix_key) {
-      return NextResponse.json({ success: false, error: "Informe a chave PIX." });
+
+    if (!chave_pix || chave_pix.length < 5) {
+      return NextResponse.json(
+        { success: false, error: "Chave PIX inválida." },
+        { status: 400 }
+      );
     }
 
     // Autenticação
-    const auth = req.headers.get("authorization") || "";
+    const authHeader = req.headers.get("authorization") || "";
     let userId: string | null = null;
 
-    if (auth.startsWith("Bearer ")) {
-      const token = auth.split(" ")[1];
+    if (authHeader.startsWith("Bearer ")) {
+      const token = authHeader.split(" ")[1];
       const sup = createClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
       );
       const { data } = await sup.auth.getUser(token);
-      userId = data?.user?.id || null;
+      userId = data?.user?.id ?? null;
     }
 
     if (!userId) {
-      return NextResponse.json({ success: false, error: "Usuário não autenticado." });
+      return NextResponse.json(
+        { success: false, error: "Usuário não autenticado." },
+        { status: 401 }
+      );
     }
 
-    // Buscar saldo
-    const { data: wallet } = await supabaseAdmin
+    // Buscar saldo atual em wallet_cash
+    const { data: walletRow } = await supabaseAdmin
       .from("wallet_cash")
       .select("saldo_cash")
       .eq("user_id", userId)
       .single();
 
-    const saldoAtual = Number(wallet?.saldo_cash ?? 0);
+    const saldoAtual = Number(walletRow?.saldo_cash ?? 0);
 
-    if (amount > saldoAtual) {
-      return NextResponse.json({ success: false, error: "Saldo insuficiente." });
+    if (valor > saldoAtual) {
+      return NextResponse.json(
+        { success: false, error: "Saldo insuficiente na carteira." },
+        { status: 400 }
+      );
     }
 
-    const novoSaldo = saldoAtual - amount;
+    // Debitar saldo
+    const novoSaldo = saldoAtual - valor;
 
-    // Atualiza saldo
     await supabaseAdmin
       .from("wallet_cash")
       .update({ saldo_cash: novoSaldo })
       .eq("user_id", userId);
 
-    // Registra o saque
+    // Registrar solicitação de saque
     const { data: saque, error: saqueErr } = await supabaseAdmin
       .from("saques")
       .insert({
         user_id: userId,
-        valor: amount,
-        pix_key,
-        status: "pending",
+        valor,
+        chave_pix,
+        status: "pending"
       })
       .select()
       .single();
 
     if (saqueErr) {
-      return NextResponse.json({ success: false, error: "Erro ao registrar saque." });
+      console.error("ERRO AO REGISTRAR SAQUE:", saqueErr);
+      return NextResponse.json(
+        { success: false, error: "Erro ao registrar saque." },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({
       success: true,
-      saque_id: saque.id,
       novo_saldo: novoSaldo,
+      saque_id: saque.id,
     });
 
   } catch (err) {

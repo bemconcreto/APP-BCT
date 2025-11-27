@@ -96,15 +96,11 @@ export default function VenderPage() {
       const j = await res.json();
 
       if (!j.success) {
-        setMsg(j.error || "Erro ao processar venda.");
-      } else {
-        setMsg(
-          `Venda confirmada! Receberá R$ ${Number(
-            j.valor_liquido.toFixed (2)}
-          ).toFixed(2)}. Novo saldo: ${Number(j.novo_saldo_bct).toFixed(
-            6
-          )} BCT`
-        );
+setMsg(
+  `Venda confirmada! Receberá R$ ${Number(j.valor_brl).toFixed(
+    2
+  )}. Novo saldo: ${Number(j.novo_saldo_bct).toFixed(6)} BCT`
+);
         setSaldoBCT(Number(j.novo_saldo_bct));
         setTokens("");
       }

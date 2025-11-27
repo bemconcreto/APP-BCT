@@ -12,9 +12,7 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { valor, chave_pix } = body;
 
-    const valorNumero = Number(valor);
-
-    if (!valorNumero || valorNumero <= 0) {
+    if (!valor || Number(valor) <= 0) {
       return NextResponse.json(
         { success: false, error: "Valor inválido." },
         { status: 400 }
@@ -49,43 +47,43 @@ export async function POST(req: Request) {
       );
     }
 
-// Buscar saldo atual em wallet_cash
-const { data: walletRow } = await supabaseAdmin
-  .from("wallet_cash")
-  .select("saldo_cash")
-  .eq("user_id", userId)
-  .single();
+    // Buscar saldo atual em wallet_cash
+    const { data: walletRow } = await supabaseAdmin
+      .from("wallet_cash")
+      .select("saldo_cash")
+      .eq("user_id", userId)
+      .single();
 
-const saldoAtual = Number(walletRow?.saldo_cash ?? 0);
-const valorNumero = Number(valor);
+    const saldoAtual = Number(walletRow?.saldo_cash ?? 0);
+    const valorNumero = Number(valor);
 
-// VERIFICAÇÃO CORRETA
-if (valorNumero > saldoAtual) {
-  return NextResponse.json(
-    { success: false, error: "Saldo insuficiente na carteira." },
-    { status: 400 }
-  );
-}
+    // VERIFICAÇÃO CORRETA
+    if (valorNumero > saldoAtual) {
+      return NextResponse.json(
+        { success: false, error: "Saldo insuficiente na carteira." },
+        { status: 400 }
+      );
+    }
 
-// Debitar saldo corretamente
-const novoSaldo = saldoAtual - valorNumero;
+    // Debitar saldo
+    const novoSaldo = saldoAtual - valorNumero;
 
-await supabaseAdmin
-  .from("wallet_cash")
-  .update({ saldo_cash: novoSaldo })
-  .eq("user_id", userId);
+    await supabaseAdmin
+      .from("wallet_cash")
+      .update({ saldo_cash: novoSaldo })
+      .eq("user_id", userId);
 
-// Registrar solicitação de saque
-const { data: saque, error: saqueErr } = await supabaseAdmin
-  .from("saques")
-  .insert({
-    user_id: userId,
-    valor: valorNumero,
-    chave_pix,
-    status: "pending"
-  })
-  .select()
-  .single();
+    // Registrar solicitação de saque
+    const { data: saque, error: saqueErr } = await supabaseAdmin
+      .from("saques")
+      .insert({
+        user_id: userId,
+        valor: valorNumero,
+        chave_pix,
+        status: "pending",
+      })
+      .select()
+      .single();
 
     if (saqueErr) {
       console.error("ERRO AO REGISTRAR SAQUE:", saqueErr);

@@ -10,9 +10,9 @@ const supabaseAdmin = createClient(
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    let { valor, chave_pix } = body;
+    const { valor, chave_pix } = body;
 
-    // Converter valor para número de forma segura
+    // Converter valor corretamente
     const valorNumero = Number(valor);
 
     if (!valorNumero || valorNumero <= 0) {
@@ -50,7 +50,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // Buscar saldo atual
+    // Buscar saldo atual em wallet_cash
     const { data: walletRow } = await supabaseAdmin
       .from("wallet_cash")
       .select("saldo_cash")
@@ -59,7 +59,7 @@ export async function POST(req: Request) {
 
     const saldoAtual = Number(walletRow?.saldo_cash ?? 0);
 
-    // Comparação correta
+    // Comparação CORRETA
     if (valorNumero > saldoAtual) {
       return NextResponse.json(
         { success: false, error: "Saldo insuficiente na carteira." },
@@ -67,22 +67,22 @@ export async function POST(req: Request) {
       );
     }
 
+    // Debitar saldo
     const novoSaldo = Number((saldoAtual - valorNumero).toFixed(2));
 
-    // Debitar saldo
     await supabaseAdmin
       .from("wallet_cash")
       .update({ saldo_cash: novoSaldo })
       .eq("user_id", userId);
 
-    // Registrar solicitação
+    // Registrar solicitação de saque
     const { data: saque, error: saqueErr } = await supabaseAdmin
       .from("saques")
       .insert({
         user_id: userId,
         valor: valorNumero,
         chave_pix,
-        status: "pending",
+        status: "pending"
       })
       .select()
       .single();

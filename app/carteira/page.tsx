@@ -69,6 +69,13 @@ export default function CarteiraPage() {
           Atualizar
         </button>
 
+        {/* 🔥 BOTÃO NOVO — SOLICITAR SAQUE */}
+        <Link href="/saque">
+          <span className="w-full block bg-yellow-500 hover:bg-yellow-600 text-white py-3 rounded-lg mb-4 text-center cursor-pointer text-lg font-semibold">
+            Solicitar Saque
+          </span>
+        </Link>
+
         <Link href="/">
           <span className="block text-center text-gray-600 underline cursor-pointer">
             Voltar ao painel

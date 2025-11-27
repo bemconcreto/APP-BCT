@@ -19,6 +19,9 @@ export async function POST(req: Request) {
       );
     }
 
+    // -------------------------------------------------------
+    // AUTENTICAÇÃO
+    // -------------------------------------------------------
     const authHeader = req.headers.get("authorization") || "";
     let userId: string | null = null;
 
@@ -39,7 +42,9 @@ export async function POST(req: Request) {
       );
     }
 
+    // -------------------------------------------------------
     // 1️⃣ BUSCAR SALDO DE TOKENS
+    // -------------------------------------------------------
     const { data: saldoRow } = await supabaseAdmin
       .from("wallet_saldos")
       .select("saldo_bct")
@@ -56,28 +61,38 @@ export async function POST(req: Request) {
       );
     }
 
-    // 2️⃣ PREÇOS
+    // -------------------------------------------------------
+    // 2️⃣ BUSCAR PREÇOS
+    // -------------------------------------------------------
     let tokenUSD = 0.4482;
     let usdToBrl = 5.30;
 
+    // preço token
     try {
-      const preco = await fetch(`${process.env.NEXT_PUBLIC_SITE_ORIGIN}/api/preco-bct`);
-      const j = await preco.json();
-      if (j?.usd) tokenUSD = Number(j.usd);
+      const preco = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/api/preco-bct`);
+      if (preco.ok) {
+        const j = await preco.json();
+        if (j?.usd) tokenUSD = Number(j.usd);
+      }
     } catch {}
 
+    // dólar
     try {
       const res = await fetch("https://economia.awesomeapi.com.br/json/last/USD-BRL");
       const j = await res.json();
       if (j?.USDBRL?.bid) usdToBrl = Number(j.USDBRL.bid);
     } catch {}
 
-    // 3️⃣ CÁLCULO FINANCEIRO CORRETO
+    // -------------------------------------------------------
+    // 3️⃣ CÁLCULO FINANCEIRO
+    // -------------------------------------------------------
     const valorBRL = tokensToSell * tokenUSD * usdToBrl;
     const taxa = valorBRL * 0.1;
     const valorLiquido = valorBRL - taxa;
 
+    // -------------------------------------------------------
     // 4️⃣ REGISTRAR VENDA
+    // -------------------------------------------------------
     const { data: venda, error: vendaErr } = await supabaseAdmin
       .from("vendas_bct")
       .insert({
@@ -98,35 +113,42 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: "Erro ao registrar venda." });
     }
 
+    // -------------------------------------------------------
     // 5️⃣ DEBITAR TOKENS
+    // -------------------------------------------------------
     await supabaseAdmin
       .from("wallet_saldos")
       .update({ saldo_bct: saldoBCT - tokensToSell })
       .eq("user_id", userId);
 
-    // 6️⃣ CREDITAR REAIS NA WALLET CASH
+    // -------------------------------------------------------
+    // 6️⃣ CREDITAR REAIS NA WALLET_CASH (campo correto: saldo_brl)
+    // -------------------------------------------------------
     const { data: cashRow } = await supabaseAdmin
       .from("wallet_cash")
-      .select("saldo_cash")
+      .select("saldo_brl")
       .eq("user_id", userId)
       .single();
 
-    const saldoCashAtual = Number(cashRow?.saldo_cash ?? 0);
-    const novoSaldoCash = saldoCashAtual + valorLiquido;
+    const saldoAtual = Number(cashRow?.saldo_brl ?? 0);
+    const novoSaldo = saldoAtual + valorLiquido;
 
     await supabaseAdmin
       .from("wallet_cash")
       .upsert({
         user_id: userId,
-        saldo_cash: Number(novoSaldoCash.toFixed(2))
+        saldo_brl: Number(novoSaldo.toFixed(2)),
       });
 
+    // -------------------------------------------------------
+    // 7️⃣ RETORNO AO FRONT
+    // -------------------------------------------------------
     return NextResponse.json({
       success: true,
       venda_id: venda.id,
       valor_brl: Number(valorLiquido.toFixed(2)),
       novo_saldo_bct: Number((saldoBCT - tokensToSell).toFixed(6)),
-      novo_saldo_cash: Number(novoSaldoCash.toFixed(2)),
+      novo_saldo_cash: Number(novoSaldo.toFixed(2)),
     });
 
   } catch (err) {

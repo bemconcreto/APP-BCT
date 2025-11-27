@@ -37,46 +37,44 @@ export default function ComprarPage() {
   const [loading, setLoading] = useState(false);
 
   const tokenPriceUSD = 0.4482;
-  // -----------------------------
-// VALOR DO DÓLAR (AGORA DINÂMICO)
-// -----------------------------
-const [usdToBRL, setUsdToBRL] = useState<number>(5.3);
+  const [usdToBRL, setUsdToBRL] = useState<number | null>(null);
 
-// 🔥 BUSCAR DÓLAR EM TEMPO REAL
-useEffect(() => {
-  async function loadDollar() {
+  // -----------------------------
+  // BUSCAR DÓLAR EM TEMPO REAL
+  // -----------------------------
+  async function loadDolar() {
     try {
       const res = await fetch("/api/dolar", { cache: "no-store" });
       const data = await res.json();
-
-      const valor = Number(data?.usdbrl?.bid);
-
-      if (!isNaN(valor)) {
-        setUsdToBRL(valor);
+      if (data.usd) {
+        setUsdToBRL(Number(data.usd));
       }
-    } catch {
-      console.warn("Não foi possível carregar dólar em tempo real");
+    } catch (e) {
+      console.error("Erro ao carregar dólar:", e);
     }
   }
 
-  loadDollar();
-}, []);
-
   // -----------------------------
-  // CARREGA USUÁRIO AO ABRIR
+  // CARREGA USUÁRIO + DÓLAR
   // -----------------------------
   useEffect(() => {
-    async function loadUser() {
+    async function loadAll() {
       setUser(await getUserSession());
+      await loadDolar();
     }
-    loadUser();
+    loadAll();
   }, []);
 
   // -----------------------------
-  // CÁLCULO DE TOKENS
+  // CÁLCULO DE TOKENS (DINÂMICO)
   // -----------------------------
-  const valorUSD = amountBRL ? Number(amountBRL) / usdToBRL : 0;
-  const tokens = valorUSD ? valorUSD / tokenPriceUSD : 0;
+  const valorUSD = amountBRL && usdToBRL 
+    ? Number(amountBRL) / usdToBRL 
+    : 0;
+
+  const tokens = valorUSD 
+    ? valorUSD / tokenPriceUSD 
+    : 0;
 
   // -----------------------------
   // PAGAR VIA PIX
@@ -113,7 +111,6 @@ useEffect(() => {
         return;
       }
 
-      // REDIRECIONA IMEDIATAMENTE PARA O CHECKOUT DO PIX
       window.location.href = `/comprar/pix?pedido=${data.id}`;
     } catch (e) {
       alert("Erro inesperado no PIX.");
@@ -126,51 +123,45 @@ useEffect(() => {
   // PAGAR VIA CARTÃO
   // -----------------------------
   async function pagarCartao() {
-  const token = await getSupabaseToken();
+    const token = await getSupabaseToken();
 
-  if (!token) return alert("Você precisa estar logado.");
-  if (!cpfCnpj) return alert("Digite seu CPF/CNPJ.");
-  if (!amountBRL || Number(amountBRL) <= 0) return alert("Digite um valor válido.");
+    if (!token) return alert("Você precisa estar logado.");
+    if (!cpfCnpj) return alert("Digite seu CPF/CNPJ.");
+    if (!amountBRL || Number(amountBRL) <= 0) return alert("Digite um valor válido.");
 
-  setLoading(true);
+    setLoading(true);
 
-  try {
-    // cria apenas o pedido, sem cartão!
-    const res = await fetch("/api/asaas/cartao/criar-pedido", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        amountBRL: Number(amountBRL),
-        tokens: Number(tokens.toFixed(6)),
-        cpfCnpj,
-        email: user?.email ?? "",
-        nome: user?.user_metadata?.full_name ?? "Usuário",
-      }),
-    });
+    try {
+      const res = await fetch("/api/asaas/cartao/criar-pedido", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          },
+        body: JSON.stringify({
+          amountBRL: Number(amountBRL),
+          tokens: Number(tokens.toFixed(6)),
+          cpfCnpj,
+          email: user?.email ?? "",
+          nome: user?.user_metadata?.full_name ?? "Usuário",
+        }),
+      });
 
-    const data = await res.json();
+      const data = await res.json();
 
-    if (!data.success) {
-      alert("Erro ao iniciar compra com cartão: " + JSON.stringify(data.error));
-      return;
+      if (!data.success) {
+        alert("Erro ao iniciar compra com cartão: " + JSON.stringify(data.error));
+        return;
+      }
+
+      window.location.href = `/comprar/cartao?pedido=${data.id}`;
+    } catch (e) {
+      alert("Erro inesperado ao iniciar pagamento com cartão.");
     }
 
-    // AGORA SIM, redirecionamos para o formulário do cartão
-    window.location.href = `/comprar/cartao?pedido=${data.id}`;
-
-  } catch (e) {
-    alert("Erro inesperado ao iniciar pagamento com cartão.");
+    setLoading(false);
   }
 
-  setLoading(false);
-}
-
-  // -----------------------------
-  // UI
-  // -----------------------------
   return (
     <div className="min-h-screen bg-gray-100 p-8">
       <div className="max-w-3xl mx-auto bg-white rounded-xl shadow-md p-8">
@@ -205,7 +196,10 @@ useEffect(() => {
         {/* Simulação */}
         <div className="bg-gray-50 border rounded-lg p-4 mb-8">
           <p>Preço do BCT: US$ {tokenPriceUSD.toFixed(4)}</p>
-          <p>Dólar: R$ {usdToBRL.toFixed(2)}</p>
+          <p>
+            Dólar:{" "}
+            {usdToBRL ? `R$ ${usdToBRL.toFixed(4)}` : "Carregando..."}
+          </p>
           <p className="text-lg font-semibold mt-2">
             Você receberá:{" "}
             <span className="text-green-700">{tokens.toFixed(6)} BCT</span>
@@ -215,18 +209,18 @@ useEffect(() => {
         {/* Botões */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           <button
-  onClick={() => {
-    window.location.href =
-      `/comprar/cartao?amountBRL=${amountBRL}` +
-      `&cpfCnpj=${cpfCnpj}` +
-      `&email=${user?.email}` +
-      `&tokens=${tokens.toFixed(6)}`;
-  }}
-  disabled={loading}
-  className="bg-blue-600 text-white rounded-lg p-6 hover:bg-blue-700"
->
-  <h2 className="text-xl font-semibold">Cartão</h2>
-</button>
+            onClick={() => {
+              window.location.href =
+                `/comprar/cartao?amountBRL=${amountBRL}` +
+                `&cpfCnpj=${cpfCnpj}` +
+                `&email=${user?.email}` +
+                `&tokens=${tokens.toFixed(6)}`;
+            }}
+            disabled={loading}
+            className="bg-blue-600 text-white rounded-lg p-6 hover:bg-blue-700"
+          >
+            <h2 className="text-xl font-semibold">Cartão</h2>
+          </button>
 
           <button
             onClick={pagarPix}

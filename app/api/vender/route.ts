@@ -19,7 +19,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // autenticação do usuário
     const authHeader = req.headers.get("authorization") || "";
     let userId: string | null = null;
 
@@ -29,9 +28,8 @@ export async function POST(req: Request) {
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.SUPABASE_SERVICE_ROLE_KEY!
       );
-
-      const { data: userData } = await sup.auth.getUser(token);
-      userId = userData?.user?.id ?? null;
+      const { data } = await sup.auth.getUser(token);
+      userId = data?.user?.id ?? null;
     }
 
     if (!userId) {
@@ -41,7 +39,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // pegar saldo atual
+    // 1️⃣ BUSCAR SALDO DE TOKENS
     const { data: saldoRow } = await supabaseAdmin
       .from("wallet_saldos")
       .select("saldo_bct")
@@ -58,87 +56,81 @@ export async function POST(req: Request) {
       );
     }
 
-    // TAXA SOBRE O VALOR EM BRL
-    const FEE_PERCENT = 0.10;
+    // 2️⃣ PREÇOS
+    let tokenUSD = 0.4482;
+    let usdToBrl = 5.30;
 
-    // buscar preço do token em USD
-    let tokenPriceUSD = 0.4482;
     try {
-      const precoRes = await fetch(`https://app-bct.vercel.app/api/preco-bct`);
-      if (precoRes.ok) {
-        const precoJson = await precoRes.json();
-        if (precoJson?.usd) tokenPriceUSD = Number(precoJson.usd);
-      }
+      const preco = await fetch(`${process.env.NEXT_PUBLIC_SITE_ORIGIN}/api/preco-bct`);
+      const j = await preco.json();
+      if (j?.usd) tokenUSD = Number(j.usd);
     } catch {}
 
-    // buscar dólar comercial
-    let usdToBrl = 5.3;
     try {
-      const resp = await fetch(
-        "https://economia.awesomeapi.com.br/json/last/USD-BRL"
-      );
-      const j = await resp.json();
-      const pair = j["USDBRL"];
-      if (pair?.bid) usdToBrl = Number(pair.bid);
+      const res = await fetch("https://economia.awesomeapi.com.br/json/last/USD-BRL");
+      const j = await res.json();
+      if (j?.USDBRL?.bid) usdToBrl = Number(j.USDBRL.bid);
     } catch {}
 
-    // valor total da venda
-    const valorBRL = tokensToSell * tokenPriceUSD * usdToBrl;
+    // 3️⃣ CÁLCULO FINANCEIRO CORRETO
+    const valorBRL = tokensToSell * tokenUSD * usdToBrl;
+    const taxa = valorBRL * 0.1;
+    const valorLiquido = valorBRL - taxa;
 
-    // desconta taxa sobre o valor
-    const valorLiquido = valorBRL * (1 - FEE_PERCENT);
-
-    // registra venda
+    // 4️⃣ REGISTRAR VENDA
     const { data: venda, error: vendaErr } = await supabaseAdmin
       .from("vendas_bct")
       .insert({
         user_id: userId,
-        tokens_vendidos: tokensToSell,
-        valor_brl: Number(valorLiquido.toFixed(2)),
+        tokens_solicitados: tokensToSell,
+        valor_brl: Number(valorBRL.toFixed(2)),
+        taxa_brl: Number(taxa.toFixed(2)),
+        valor_liquido_brl: Number(valorLiquido.toFixed(2)),
+        token_usd: tokenUSD,
         usd_to_brl: usdToBrl,
-        token_usd: tokenPriceUSD,
-        taxa_percent: FEE_PERCENT * 100,
         status: "completed",
       })
       .select()
       .single();
 
     if (vendaErr) {
-      console.error("ERRO VENDA:", vendaErr);
-      return NextResponse.json(
-        { success: false, error: "Erro ao registrar venda." },
-        { status: 500 }
-      );
+      console.error("ERRO AO INSERIR VENDA:", vendaErr);
+      return NextResponse.json({ success: false, error: "Erro ao registrar venda." });
     }
 
-    // debitar tokens do saldo do cliente
-    const newSaldo = Number((saldoBCT - tokensToSell).toFixed(6));
-
-    const { error: updErr } = await supabaseAdmin
+    // 5️⃣ DEBITAR TOKENS
+    await supabaseAdmin
       .from("wallet_saldos")
-      .update({ saldo_bct: newSaldo })
+      .update({ saldo_bct: saldoBCT - tokensToSell })
       .eq("user_id", userId);
 
-    if (updErr) {
-      console.error("ERRO SALDO:", updErr);
-      return NextResponse.json(
-        { success: false, error: "Erro ao atualizar saldo." },
-        { status: 500 }
-      );
-    }
+    // 6️⃣ CREDITAR REAIS NA WALLET CASH
+    const { data: cashRow } = await supabaseAdmin
+      .from("wallet_cash")
+      .select("saldo_cash")
+      .eq("user_id", userId)
+      .single();
+
+    const saldoCashAtual = Number(cashRow?.saldo_cash ?? 0);
+    const novoSaldoCash = saldoCashAtual + valorLiquido;
+
+    await supabaseAdmin
+      .from("wallet_cash")
+      .upsert({
+        user_id: userId,
+        saldo_cash: Number(novoSaldoCash.toFixed(2))
+      });
 
     return NextResponse.json({
       success: true,
       venda_id: venda.id,
-      tokens_vendidos: tokensToSell,
       valor_brl: Number(valorLiquido.toFixed(2)),
-      novo_saldo_bct: newSaldo,
+      novo_saldo_bct: Number((saldoBCT - tokensToSell).toFixed(6)),
+      novo_saldo_cash: Number(novoSaldoCash.toFixed(2)),
     });
+
   } catch (err) {
-    console.error("ERRO GERAL:", err);
-    return NextResponse.json(
-      { success: false, error: "Erro interno." },
-      { status: 500 }
-    );
+    console.error("ERRO ROUTE VENDER:", err);
+    return NextResponse.json({ success: false, error: "Erro interno." });
   }
 }

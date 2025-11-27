@@ -120,7 +120,7 @@ export default function InicioPage() {
           </button>
         </div>
 
-        {/* MENU — ORDEM NOVA: COMPRAR → VENDER → IMÓVEIS → EXTRATO */}
+        {/* MENU — ORDEM NOVA: COMPRAR → VENDER → CARTEIRA → IMÓVEIS → EXTRATO */}
         <p className="text-center text-gray-600 mb-8">
           Selecione uma das opções abaixo para gerenciar seus investimentos.
         </p>
@@ -140,6 +140,14 @@ export default function InicioPage() {
             <div className="bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg p-6 cursor-pointer text-center">
               <h2 className="text-xl font-semibold">Vender</h2>
               <p className="mt-2 text-sm text-yellow-100">Negociar seus tokens</p>
+            </div>
+          </Link>
+
+          {/* CARTEIRA */}
+          <Link href="/carteira">
+            <div className="bg-orange-500 hover:bg-orange-600 text-white rounded-lg p-6 cursor-pointer text-center">
+              <h2 className="text-xl font-semibold">Carteira</h2>
+              <p className="mt-2 text-sm text-orange-100">Saldo em Reais</p>
             </div>
           </Link>
 

@@ -10,9 +10,12 @@ const supabaseAdmin = createClient(
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { valor, chave_pix } = body;
+    let { valor, chave_pix } = body;
 
-    if (!valor || Number(valor) <= 0) {
+    // Converter valor para número de forma segura
+    const valorNumero = Number(valor);
+
+    if (!valorNumero || valorNumero <= 0) {
       return NextResponse.json(
         { success: false, error: "Valor inválido." },
         { status: 400 }
@@ -47,7 +50,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // Buscar saldo atual em wallet_cash
+    // Buscar saldo atual
     const { data: walletRow } = await supabaseAdmin
       .from("wallet_cash")
       .select("saldo_cash")
@@ -55,9 +58,8 @@ export async function POST(req: Request) {
       .single();
 
     const saldoAtual = Number(walletRow?.saldo_cash ?? 0);
-    const valorNumero = Number(valor);
 
-    // VERIFICAÇÃO CORRETA
+    // Comparação correta
     if (valorNumero > saldoAtual) {
       return NextResponse.json(
         { success: false, error: "Saldo insuficiente na carteira." },
@@ -65,15 +67,15 @@ export async function POST(req: Request) {
       );
     }
 
-    // Debitar saldo
-    const novoSaldo = saldoAtual - valorNumero;
+    const novoSaldo = Number((saldoAtual - valorNumero).toFixed(2));
 
+    // Debitar saldo
     await supabaseAdmin
       .from("wallet_cash")
       .update({ saldo_cash: novoSaldo })
       .eq("user_id", userId);
 
-    // Registrar solicitação de saque
+    // Registrar solicitação
     const { data: saque, error: saqueErr } = await supabaseAdmin
       .from("saques")
       .insert({

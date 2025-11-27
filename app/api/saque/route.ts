@@ -12,7 +12,9 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { valor, chave_pix } = body;
 
-    if (!valor || Number(valor) <= 0) {
+    const valorNumero = Number(valor);
+
+    if (!valorNumero || valorNumero <= 0) {
       return NextResponse.json(
         { success: false, error: "Valor inválido." },
         { status: 400 }
@@ -26,7 +28,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // Autenticação
+    // ▶ AUTENTICAÇÃO
     const authHeader = req.headers.get("authorization") || "";
     let userId: string | null = null;
 
@@ -36,6 +38,7 @@ export async function POST(req: Request) {
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.SUPABASE_SERVICE_ROLE_KEY!
       );
+
       const { data } = await sup.auth.getUser(token);
       userId = data?.user?.id ?? null;
     }
@@ -47,7 +50,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // Buscar saldo
+    // ▶ BUSCAR SALDO ATUAL
     const { data: walletRow } = await supabaseAdmin
       .from("wallet_cash")
       .select("saldo_cash")
@@ -55,9 +58,8 @@ export async function POST(req: Request) {
       .single();
 
     const saldoAtual = Number(walletRow?.saldo_cash ?? 0);
-    const valorNumero = Number(valor);
 
-    // Comparação correta
+    // ▶ VERIFICAÇÃO CORRETA
     if (valorNumero > saldoAtual) {
       return NextResponse.json(
         { success: false, error: "Saldo insuficiente na carteira." },
@@ -65,15 +67,15 @@ export async function POST(req: Request) {
       );
     }
 
-    // Debitar saldo
-    const novoSaldo = saldoAtual - valorNumero;
+    // ▶ DEBITAR SALDO
+    const novoSaldo = Number((saldoAtual - valorNumero).toFixed(2));
 
     await supabaseAdmin
       .from("wallet_cash")
       .update({ saldo_cash: novoSaldo })
       .eq("user_id", userId);
 
-    // Registrar saque
+    // ▶ REGISTRAR SAQUE
     const { data: saque, error: saqueErr } = await supabaseAdmin
       .from("saques")
       .insert({
@@ -95,8 +97,8 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       success: true,
-      novo_saldo: novoSaldo,
       saque_id: saque.id,
+      novo_saldo: novoSaldo,
     });
 
   } catch (err) {

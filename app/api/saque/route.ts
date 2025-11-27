@@ -12,7 +12,9 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { valor, chave_pix } = body;
 
-    if (!valor || Number(valor) <= 0) {
+    const valorNumero = Number(valor);
+
+    if (!valorNumero || valorNumero <= 0) {
       return NextResponse.json(
         { success: false, error: "Valor inválido." },
         { status: 400 }
@@ -56,7 +58,7 @@ export async function POST(req: Request) {
 
     const saldoAtual = Number(walletRow?.saldo_cash ?? 0);
 
-    if (valor > saldoAtual) {
+    if (valorNumero > saldoAtual) {
       return NextResponse.json(
         { success: false, error: "Saldo insuficiente na carteira." },
         { status: 400 }
@@ -64,7 +66,7 @@ export async function POST(req: Request) {
     }
 
     // Debitar saldo
-    const novoSaldo = saldoAtual - valor;
+    const novoSaldo = saldoAtual - valorNumero;
 
     await supabaseAdmin
       .from("wallet_cash")
@@ -76,7 +78,7 @@ export async function POST(req: Request) {
       .from("saques")
       .insert({
         user_id: userId,
-        valor,
+        valor: valorNumero,
         chave_pix,
         status: "pending"
       })

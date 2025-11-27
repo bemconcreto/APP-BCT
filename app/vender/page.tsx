@@ -100,7 +100,7 @@ export default function VenderPage() {
       } else {
         setMsg(
           `Venda confirmada! Receberá R$ ${Number(
-            j.valor_brl
+            j.valor_liquido.toFixed (2)}
           ).toFixed(2)}. Novo saldo: ${Number(j.novo_saldo_bct).toFixed(
             6
           )} BCT`

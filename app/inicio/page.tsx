@@ -74,6 +74,43 @@ export default function InicioPage() {
     <div className="min-h-screen bg-gray-100 p-8">
       <div className="max-w-5xl mx-auto bg-white rounded-xl shadow-md p-8">
 
+        {/* -------------------------
+            NAV SUPERIOR (novo)
+            ordem: Início | Comprar | Vender | Carteira | Imóveis | Extrato
+           ------------------------- */}
+        <nav className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-4">
+            <Link href="/" className="text-lg font-bold text-[#0C3D2E]">
+              Início
+            </Link>
+
+            <Link href="/comprar" className="text-sm text-gray-600 hover:underline">
+              Comprar
+            </Link>
+
+            <Link href="/vender" className="text-sm text-gray-600 hover:underline">
+              Vender
+            </Link>
+
+            <Link href="/carteira" className="text-sm text-gray-600 hover:underline">
+              {/* usei emoji de carteira — substitua por ícone se preferir */}
+              👜 Carteira
+            </Link>
+
+            <Link href="/imoveis" className="text-sm text-gray-600 hover:underline">
+              Imóveis
+            </Link>
+
+            <Link href="/extrato" className="text-sm text-gray-600 hover:underline">
+              Extrato
+            </Link>
+          </div>
+
+          <div className="text-sm text-gray-500">
+            Saldo: {saldoBCT !== null ? saldoBCT.toFixed(6) : "—"} BCT
+          </div>
+        </nav>
+
         <h1 className="text-3xl font-bold text-center mb-6 text-gray-800">
           Painel Bem Concreto Token
         </h1>
@@ -120,13 +157,12 @@ export default function InicioPage() {
           </button>
         </div>
 
-        {/* MENU — ORDEM NOVA: COMPRAR → VENDER → CARTEIRA → IMÓVEIS → EXTRATO */}
+        {/* MENU — ORDEM NA TELA: Comprar → Vender → Carteira → Imóveis → Extrato */}
         <p className="text-center text-gray-600 mb-8">
           Selecione uma das opções abaixo para gerenciar seus investimentos.
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-
           {/* COMPRAR */}
           <Link href="/comprar">
             <div className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg p-6 cursor-pointer text-center">
@@ -143,11 +179,11 @@ export default function InicioPage() {
             </div>
           </Link>
 
-          {/* CARTEIRA */}
+          {/* CARTEIRA (novo) */}
           <Link href="/carteira">
-            <div className="bg-orange-500 hover:bg-orange-600 text-white rounded-lg p-6 cursor-pointer text-center">
+            <div className="bg-gray-800 hover:bg-gray-900 text-white rounded-lg p-6 cursor-pointer text-center">
               <h2 className="text-xl font-semibold">Carteira</h2>
-              <p className="mt-2 text-sm text-orange-100">Saldo em Reais</p>
+              <p className="mt-2 text-sm text-gray-200">Ver saldo e movimentações</p>
             </div>
           </Link>
 
@@ -166,7 +202,6 @@ export default function InicioPage() {
               <p className="mt-2 text-sm text-indigo-100">Acompanhar histórico</p>
             </div>
           </Link>
-
         </div>
       </div>
     </div>

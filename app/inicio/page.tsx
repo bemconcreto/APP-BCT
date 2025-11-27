@@ -76,12 +76,12 @@ export default function InicioPage() {
 
         {/* -------------------------
             NAV SUPERIOR (novo)
-            ordem: Início | Comprar | Vender | Carteira | Imóveis | Extrato
+            ordem: Inicio | Comprar | Vender | Carteira | Imóveis | Extrato
            ------------------------- */}
         <nav className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
             <Link href="/" className="text-lg font-bold text-[#0C3D2E]">
-              Início
+              Inicio
             </Link>
 
             <Link href="/comprar" className="text-sm text-gray-600 hover:underline">

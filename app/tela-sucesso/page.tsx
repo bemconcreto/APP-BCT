@@ -31,7 +31,7 @@ export default function TelaSucesso() {
           fontSize: 16,
         }}
       >
-        Voltar ao início
+        Voltar ao inicio
       </a>
     </div>
   );

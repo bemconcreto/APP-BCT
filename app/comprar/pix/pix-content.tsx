@@ -79,7 +79,7 @@ export default function PixContent() {
       </button>
 
       <p className="text-gray-700 text-center break-all max-w-xl">
-        {copiaCola || "Código PIX não disponível."}
+        {copiaCola || "Seu código PIX está sendo gerado..."}
       </p>
 
       <a

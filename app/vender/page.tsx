@@ -7,11 +7,11 @@ import Link from "next/link";
 
 export default function VenderPage() {
   const [saldoBCT, setSaldoBCT] = useState<number | null>(null);
-  const [tokens, setTokens] = useState<string>(""); // tokens a vender (string input)
+  const [tokens, setTokens] = useState<string>(""); 
   const [loading, setLoading] = useState(false);
   const [usdToBrl, setUsdToBrl] = useState<number | null>(null);
   const [tokenUsd, setTokenUsd] = useState<number>(0.4482);
-  const FEE = 0.10;
+  const FEE = 0.10; // taxa 10%
   const [msg, setMsg] = useState<string>("");
 
   useEffect(() => {
@@ -39,12 +39,10 @@ export default function VenderPage() {
 
   async function loadMarket() {
     try {
-      // pega USD->BRL
       const r = await fetch("/api/dolar", { cache: "no-store" });
       const j = await r.json();
       if (j?.dolar) setUsdToBrl(Number(j.dolar));
 
-      // pega preço token
       const p = await fetch("/api/preco-bct", { cache: "no-store" });
       const pj = await p.json();
       if (pj?.usd) setTokenUsd(Number(pj.usd));
@@ -54,19 +52,32 @@ export default function VenderPage() {
   }
 
   const numericTokens = Number(tokens || 0);
-  const tokensAfterFee = numericTokens * (1 - FEE);
-  const estimatedBRL =
-    usdToBrl && tokenUsd ? tokensAfterFee * tokenUsd * usdToBrl : 0;
+
+  // 🔥 cálculo correto:
+  // valorBRL = tokensVendidos * preçoUSD * dolar
+  // taxa = valorBRL * 10%
+  // estimativa = valorBRL - taxa
+  const valorBRL =
+    usdToBrl && tokenUsd ? numericTokens * tokenUsd * usdToBrl : 0;
+
+  const taxaBRL = valorBRL * FEE;
+
+  const estimatedBRL = valorBRL - taxaBRL;
 
   async function submitSell() {
     setMsg("");
-    if (!numericTokens || numericTokens <= 0) return setMsg("Informe uma quantidade válida.");
-    if (saldoBCT === null || numericTokens > saldoBCT) return setMsg("Saldo insuficiente.");
+
+    if (!numericTokens || numericTokens <= 0)
+      return setMsg("Informe uma quantidade válida.");
+
+    if (saldoBCT === null || numericTokens > saldoBCT)
+      return setMsg("Saldo insuficiente.");
 
     setLoading(true);
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token;
+
       if (!token) {
         setMsg("Usuário não autenticado.");
         setLoading(false);
@@ -83,11 +94,17 @@ export default function VenderPage() {
       });
 
       const j = await res.json();
+
       if (!j.success) {
         setMsg(j.error || "Erro ao processar venda.");
       } else {
-        setMsg(`Venda confirmada! Receberá R$ ${Number(j.valor_brl).toFixed(2)}. Novo saldo: ${Number(j.novo_saldo_bct).toFixed(6)} BCT`);
-        // atualizar saldo local
+        setMsg(
+          `Venda confirmada! Receberá R$ ${Number(
+            j.valor_brl
+          ).toFixed(2)}. Novo saldo: ${Number(j.novo_saldo_bct).toFixed(
+            6
+          )} BCT`
+        );
         setSaldoBCT(Number(j.novo_saldo_bct));
         setTokens("");
       }
@@ -104,9 +121,14 @@ export default function VenderPage() {
       <div className="max-w-3xl mx-auto bg-white rounded-xl shadow-md p-8">
         <h1 className="text-2xl font-bold mb-4">Vender BCT</h1>
 
-        <p className="mb-4">Saldo disponível: {saldoBCT !== null ? saldoBCT.toFixed(6) : "Carregando..." } BCT</p>
+        <p className="mb-4">
+          Saldo disponível:{" "}
+          {saldoBCT !== null ? saldoBCT.toFixed(6) : "Carregando..."} BCT
+        </p>
 
-        <label className="block mb-2 font-semibold">Quantidade de BCT a vender</label>
+        <label className="block mb-2 font-semibold">
+          Quantidade de BCT a vender
+        </label>
         <input
           type="number"
           value={tokens}
@@ -117,10 +139,13 @@ export default function VenderPage() {
 
         <div className="bg-gray-50 border rounded p-4 mb-4">
           <p>Taxa: {Math.round(FEE * 100)}%</p>
-          <p>Tokens líquidos: {tokens ? tokensAfterFee.toFixed(6) : "0.000000"}</p>
+          <p>Tokens vendidos: {tokens ? numericTokens.toFixed(6) : "0.000000"}</p>
           <p>Preço token (USD): ${tokenUsd.toFixed(4)}</p>
           <p>Dólar: {usdToBrl ? `R$ ${usdToBrl.toFixed(4)}` : "Carregando..."}</p>
-          <p className="font-semibold mt-2">Estimativa a receber: R$ {estimatedBRL ? estimatedBRL.toFixed(2) : "0.00"}</p>
+
+          <p className="font-semibold mt-2">
+            Estimativa a receber: R$ {estimatedBRL.toFixed(2)}
+          </p>
         </div>
 
         {msg && <div className="mb-4 text-sm text-red-600">{msg}</div>}
@@ -135,7 +160,9 @@ export default function VenderPage() {
           </button>
 
           <Link href="/">
-            <span className="inline-block bg-gray-200 px-4 py-2 rounded cursor-pointer">Voltar</span>
+            <span className="inline-block bg-gray-200 px-4 py-2 rounded cursor-pointer">
+              Voltar
+            </span>
           </Link>
         </div>
       </div>

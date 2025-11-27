@@ -6,7 +6,7 @@ const PRECO_BCT_USD = 0.4482;
 export async function GET() {
   try {
     // 1️⃣ Buscar dólar em tempo real via nossa própria API
-    const dolarReq = await fetch(`${process.env.NEXT_PUBLIC_URL}/api/dolar`, {
+    const dolarReq = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/dolar`, {
       cache: "no-store",
     });
     const dolarData = await dolarReq.json();

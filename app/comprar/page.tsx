@@ -38,29 +38,24 @@ export default function ComprarPage() {
 
   const tokenPriceUSD = 0.4482;
 
-// -----------------------------
-// BUSCA O DÓLAR EM TEMPO REAL
-// -----------------------------
-const [usdToBRL, setUsdToBRL] = useState<number | null>(null);
+  // -----------------------------
+  // BUSCA O DÓLAR EM TEMPO REAL
+  // -----------------------------
+  const [usdToBRL, setUsdToBRL] = useState<number | null>(null);
 
-useEffect(() => {
-  async function loadDollar() {
-    try {
-      const res = await fetch("/api/dolar", { cache: "no-store" });
-      const json = await res.json();
-      if (json.success) setUsdToBRL(json.dolar);
-    } catch (e) {
-      console.log("Erro ao buscar dólar:", e);
+  useEffect(() => {
+    async function loadDollar() {
+      try {
+        const res = await fetch("/api/dolar", { cache: "no-store" });
+        const json = await res.json();
+        if (json.success) setUsdToBRL(json.dolar);
+      } catch (e) {
+        console.log("Erro ao buscar dólar:", e);
+      }
     }
-  }
-  loadDollar();
-}, []);
+    loadDollar();
+  }, []);
 
-// -----------------------------
-// CÁLCULO DE TOKENS (DINÂMICO)
-// -----------------------------
-const valorUSD = amountBRL && usdToBRL ? Number(amountBRL) / usdToBRL : 0;
-const tokens = valorUSD ? valorUSD / tokenPriceUSD : 0;
   // -----------------------------
   // CARREGA USUÁRIO AO ABRIR
   // -----------------------------
@@ -72,9 +67,11 @@ const tokens = valorUSD ? valorUSD / tokenPriceUSD : 0;
   }, []);
 
   // -----------------------------
-  // CÁLCULO DE TOKENS
+  // CÁLCULO DE TOKENS (CORRIGIDO)
   // -----------------------------
-  const valorUSD = amountBRL ? Number(amountBRL) / usdToBRL : 0;
+  const valorUSD =
+    amountBRL && usdToBRL ? Number(amountBRL) / usdToBRL : 0;
+
   const tokens = valorUSD ? valorUSD / tokenPriceUSD : 0;
 
   // -----------------------------
@@ -85,7 +82,8 @@ const tokens = valorUSD ? valorUSD / tokenPriceUSD : 0;
 
     if (!token) return alert("Você precisa estar logado.");
     if (!cpfCnpj) return alert("Digite seu CPF/CNPJ.");
-    if (!amountBRL || Number(amountBRL) <= 0) return alert("Digite um valor válido.");
+    if (!amountBRL || Number(amountBRL) <= 0)
+      return alert("Digite um valor válido.");
 
     setLoading(true);
 
@@ -112,7 +110,6 @@ const tokens = valorUSD ? valorUSD / tokenPriceUSD : 0;
         return;
       }
 
-      // REDIRECIONA IMEDIATAMENTE PARA O CHECKOUT DO PIX
       window.location.href = `/comprar/pix?pedido=${data.id}`;
     } catch (e) {
       alert("Erro inesperado no PIX.");
@@ -125,47 +122,48 @@ const tokens = valorUSD ? valorUSD / tokenPriceUSD : 0;
   // PAGAR VIA CARTÃO
   // -----------------------------
   async function pagarCartao() {
-  const token = await getSupabaseToken();
+    const token = await getSupabaseToken();
 
-  if (!token) return alert("Você precisa estar logado.");
-  if (!cpfCnpj) return alert("Digite seu CPF/CNPJ.");
-  if (!amountBRL || Number(amountBRL) <= 0) return alert("Digite um valor válido.");
+    if (!token) return alert("Você precisa estar logado.");
+    if (!cpfCnpj) return alert("Digite seu CPF/CNPJ.");
+    if (!amountBRL || Number(amountBRL) <= 0)
+      return alert("Digite um valor válido.");
 
-  setLoading(true);
+    setLoading(true);
 
-  try {
-    // cria apenas o pedido, sem cartão!
-    const res = await fetch("/api/asaas/cartao/criar-pedido", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        amountBRL: Number(amountBRL),
-        tokens: Number(tokens.toFixed(6)),
-        cpfCnpj,
-        email: user?.email ?? "",
-        nome: user?.user_metadata?.full_name ?? "Usuário",
-      }),
-    });
+    try {
+      const res = await fetch("/api/asaas/cartao/criar-pedido", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          amountBRL: Number(amountBRL),
+          tokens: Number(tokens.toFixed(6)),
+          cpfCnpj,
+          email: user?.email ?? "",
+          nome: user?.user_metadata?.full_name ?? "Usuário",
+        }),
+      });
 
-    const data = await res.json();
+      const data = await res.json();
 
-    if (!data.success) {
-      alert("Erro ao iniciar compra com cartão: " + JSON.stringify(data.error));
-      return;
+      if (!data.success) {
+        alert(
+          "Erro ao iniciar compra com cartão: " +
+            JSON.stringify(data.error)
+        );
+        return;
+      }
+
+      window.location.href = `/comprar/cartao?pedido=${data.id}`;
+    } catch (e) {
+      alert("Erro inesperado ao iniciar pagamento com cartão.");
     }
 
-    // AGORA SIM, redirecionamos para o formulário do cartão
-    window.location.href = `/comprar/cartao?pedido=${data.id}`;
-
-  } catch (e) {
-    alert("Erro inesperado ao iniciar pagamento com cartão.");
+    setLoading(false);
   }
-
-  setLoading(false);
-}
 
   // -----------------------------
   // UI
@@ -204,28 +202,35 @@ const tokens = valorUSD ? valorUSD / tokenPriceUSD : 0;
         {/* Simulação */}
         <div className="bg-gray-50 border rounded-lg p-4 mb-8">
           <p>Preço do BCT: US$ {tokenPriceUSD.toFixed(4)}</p>
-          <p>Dólar: R$ {usdToBRL.toFixed(2)}</p>
+
+          <p>
+            Dólar:{" "}
+            {usdToBRL ? `R$ ${usdToBRL.toFixed(4)}` : "Carregando..."}
+          </p>
+
           <p className="text-lg font-semibold mt-2">
             Você receberá:{" "}
-            <span className="text-green-700">{tokens.toFixed(6)} BCT</span>
+            <span className="text-green-700">
+              {tokens.toFixed(6)} BCT
+            </span>
           </p>
         </div>
 
         {/* Botões */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           <button
-  onClick={() => {
-    window.location.href =
-      `/comprar/cartao?amountBRL=${amountBRL}` +
-      `&cpfCnpj=${cpfCnpj}` +
-      `&email=${user?.email}` +
-      `&tokens=${tokens.toFixed(6)}`;
-  }}
-  disabled={loading}
-  className="bg-blue-600 text-white rounded-lg p-6 hover:bg-blue-700"
->
-  <h2 className="text-xl font-semibold">Cartão</h2>
-</button>
+            onClick={() => {
+              window.location.href =
+                `/comprar/cartao?amountBRL=${amountBRL}` +
+                `&cpfCnpj=${cpfCnpj}` +
+                `&email=${user?.email}` +
+                `&tokens=${tokens.toFixed(6)}`;
+            }}
+            disabled={loading}
+            className="bg-blue-600 text-white rounded-lg p-6 hover:bg-blue-700"
+          >
+            <h2 className="text-xl font-semibold">Cartão</h2>
+          </button>
 
           <button
             onClick={pagarPix}

@@ -37,7 +37,30 @@ export default function ComprarPage() {
   const [loading, setLoading] = useState(false);
 
   const tokenPriceUSD = 0.4482;
-  const usdToBRL = 5.3;
+  // -----------------------------
+// VALOR DO DÓLAR (AGORA DINÂMICO)
+// -----------------------------
+const [usdToBRL, setUsdToBRL] = useState<number>(5.3);
+
+// 🔥 BUSCAR DÓLAR EM TEMPO REAL
+useEffect(() => {
+  async function loadDollar() {
+    try {
+      const res = await fetch("/api/dolar", { cache: "no-store" });
+      const data = await res.json();
+
+      const valor = Number(data?.usdbrl?.bid);
+
+      if (!isNaN(valor)) {
+        setUsdToBRL(valor);
+      }
+    } catch {
+      console.warn("Não foi possível carregar dólar em tempo real");
+    }
+  }
+
+  loadDollar();
+}, []);
 
   // -----------------------------
   // CARREGA USUÁRIO AO ABRIR

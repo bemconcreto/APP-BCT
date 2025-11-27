@@ -47,24 +47,22 @@ export default function InicioPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      // 🔥 1) BUSCA O DÓLAR EM TEMPO REAL
+      // 🔥 BUSCA O DÓLAR REAL
       const dolarRes = await fetch("/api/dolar", { cache: "no-store" });
       const dolarJson = await dolarRes.json();
       const dolar = dolarJson.dolar;
       setUsdToBRL(dolar);
 
-      // 🔥 2) BUSCA O PREÇO DO TOKEN
+      // 🔥 BUSCA PREÇO DO BCT
       const response = await fetch("/api/preco-bct", { cache: "no-store" });
       const data = await response.json();
 
-      // priceUSD já vem da API normalmente
       setPriceUSD(data.usd);
 
-      // 🔥 3) REFAZ O CÁLCULO DO PREÇO EM BRL USANDO O DÓLAR REAL
+      // 🔥 CÁLCULO DO PREÇO DO BCT EM BRL
       setPriceBRL(data.usd * dolar);
 
       setVariation(Number(data.variation24h));
-
     } catch (e) {
       console.error("Erro ao carregar preço:", e);
     } finally {
@@ -122,19 +120,14 @@ export default function InicioPage() {
           </button>
         </div>
 
-        {/* MENU */}
+        {/* MENU — ORDEM NOVA: COMPRAR → VENDER → IMÓVEIS → EXTRATO */}
         <p className="text-center text-gray-600 mb-8">
           Selecione uma das opções abaixo para gerenciar seus investimentos.
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Link href="/imoveis">
-            <div className="bg-green-600 hover:bg-green-700 text-white rounded-lg p-6 cursor-pointer text-center">
-              <h2 className="text-xl font-semibold">Imóveis</h2>
-              <p className="mt-2 text-sm text-green-100">Ver imóveis tokenizados</p>
-            </div>
-          </Link>
 
+          {/* COMPRAR */}
           <Link href="/comprar">
             <div className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg p-6 cursor-pointer text-center">
               <h2 className="text-xl font-semibold">Comprar</h2>
@@ -142,6 +135,7 @@ export default function InicioPage() {
             </div>
           </Link>
 
+          {/* VENDER */}
           <Link href="/vender">
             <div className="bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg p-6 cursor-pointer text-center">
               <h2 className="text-xl font-semibold">Vender</h2>
@@ -149,12 +143,22 @@ export default function InicioPage() {
             </div>
           </Link>
 
+          {/* IMÓVEIS */}
+          <Link href="/imoveis">
+            <div className="bg-green-600 hover:bg-green-700 text-white rounded-lg p-6 cursor-pointer text-center">
+              <h2 className="text-xl font-semibold">Imóveis</h2>
+              <p className="mt-2 text-sm text-green-100">Ver imóveis tokenizados</p>
+            </div>
+          </Link>
+
+          {/* EXTRATO */}
           <Link href="/extrato">
             <div className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg p-6 cursor-pointer text-center">
               <h2 className="text-xl font-semibold">Extrato</h2>
               <p className="mt-2 text-sm text-indigo-100">Acompanhar histórico</p>
             </div>
           </Link>
+
         </div>
       </div>
     </div>

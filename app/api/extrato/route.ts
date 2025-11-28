@@ -31,17 +31,17 @@ export async function GET(req: Request) {
       );
     }
 
-    // 1️⃣ BUSCAR COMPRAS
+    // 1️⃣ BUSCAR COMPRAS (corrigido)
     const { data: compras } = await supabaseAdmin
       .from("compras_bct")
-      .select("id, tokens, valor_total, status, created_at")
+      .select("id, tokens, valor_pago, status, created_at")
       .eq("user_id", userId)
       .order("created_at", { ascending: false });
 
     const comprasFormatadas =
       compras?.map((c) => ({
         tipo: "Compra de BCT",
-        valor: Number(c.valor_total ?? 0),
+        valor: Number(c.valor_pago ?? 0),
         info: `Token: ${c.tokens} BCT`,
         status: c.status,
         data: c.created_at,
@@ -79,7 +79,7 @@ export async function GET(req: Request) {
         data: s.created_at,
       })) ?? [];
 
-    // 4️⃣ UNIR TUDO E ORDENAR
+    // 4️⃣ UNIR E ORDENAR
     const extrato = [
       ...comprasFormatadas,
       ...vendasFormatadas,

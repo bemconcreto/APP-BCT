@@ -1,4 +1,3 @@
-// app/api/extrato/route.ts
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
@@ -32,68 +31,52 @@ export async function GET(req: Request) {
       );
     }
 
-    /** BUSCA DAS 3 TABELAS **/
-
-    // COMPRAS
-    const { data: compras } = await supabaseAdmin
-      .from("compras_bct")
-      .select("id, tokens, valor_brl, status, created_at")
-      .eq("user_id", userId);
-
-    // VENDAS
+    // 1️⃣ BUSCAR VENDAS
     const { data: vendas } = await supabaseAdmin
       .from("vendas_bct")
-      .select("id, tokens_solicitados, valor_liquido_brl, status, created_at")
-      .eq("user_id", userId);
+      .select("id, valor_recebidc, valor_liquido, taxa, tokens, status, created_at")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
 
-    // SAQUES
-    const { data: saques } = await supabaseAdmin
-      .from("saques")
-      .select("id, valor, status, created_at")
-      .eq("user_id", userId);
-
-    /** NORMALIZAÇÃO DOS ITENS **/
-
-    const lista: any[] = [];
-
-    compras?.forEach((c) =>
-      lista.push({
-        tipo: "compra",
-        valor: Number(c.valor_brl),
-        tokens: Number(c.tokens),
-        status: c.status,
-        data: c.created_at,
-      })
-    );
-
-    vendas?.forEach((v) =>
-      lista.push({
-        tipo: "venda",
-        valor: Number(v.valor_liquido_brl),
-        tokens: Number(v.tokens_solicitados),
+    const vendasFormatadas =
+      vendas?.map((v) => ({
+        tipo: "Venda de BCT",
+        valor: Number(v.valor_recebidc ?? v.valor_liquido ?? 0),
+        info: `Token: ${v.tokens} BCT`,
         status: v.status,
         data: v.created_at,
-      })
-    );
+      })) ?? [];
 
-    saques?.forEach((s) =>
-      lista.push({
-        tipo: "saque",
-        valor: Number(s.valor),
-        tokens: null,
+    // 2️⃣ BUSCAR SAQUES
+    const { data: saques } = await supabaseAdmin
+      .from("saques")
+      .select("id, valor, chave_pix, status, created_at")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
+
+    const saquesFormatados =
+      saques?.map((s) => ({
+        tipo: "Saque",
+        valor: -Number(s.valor),
+        info: `Token: 0 BCT`,
         status: s.status,
         data: s.created_at,
-      })
+      })) ?? [];
+
+    // 3️⃣ UNIR E ORDENAR
+    const extrato = [...vendasFormatadas, ...saquesFormatados].sort(
+      (a: any, b: any) => new Date(b.data).getTime() - new Date(a.data).getTime()
     );
 
-    /** ORDENAR MAIS RECENTE PRIMEIRO **/
-    lista.sort(
-      (a, b) => new Date(b.data).getTime() - new Date(a.data).getTime()
-    );
-
-    return NextResponse.json({ success: true, extrato: lista });
+    return NextResponse.json({
+      success: true,
+      extrato,
+    });
   } catch (err) {
     console.error("ERRO API EXTRATO:", err);
-    return NextResponse.json({ success: false, error: "Erro interno." });
+    return NextResponse.json(
+      { success: false, error: "Erro interno." },
+      { status: 500 }
+    );
   }
 }

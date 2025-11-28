@@ -138,7 +138,7 @@ export default function ExtratoPage() {
 
               {/* Data */}
               <p className="text-gray-500 text-sm">
-                {new Date(item.data).toLocaleString("pt-BR")}
+                {formatarData(item.data)}
               </p>
 
             </div>

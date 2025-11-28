@@ -45,6 +45,7 @@ export default function ExtratoPage() {
     setLoading(false);
   }
 
+  // 🔵 Tradução dos status
   function translateStatus(status: string) {
     if (!status) return "";
 
@@ -58,10 +59,46 @@ export default function ExtratoPage() {
       case "processing":
         return "Processando";
       case "failed":
-        return "Falhou";
+      case "canceled":
+        return "Cancelado";
       default:
         return status;
     }
+  }
+
+  // 🔵 Cor dos status
+  function statusColor(status: string) {
+    if (!status) return "text-gray-700";
+
+    const s = status.toLowerCase();
+
+    if (s === "completed" || s === "paid") return "text-green-700";
+    if (s === "pending" || s === "processing") return "text-yellow-600";
+    if (s === "failed" || s === "canceled") return "text-red-600";
+
+    return "text-gray-700";
+  }
+
+  // 🔵 Cor por tipo
+  function tipoColor(tipo: string) {
+    const t = tipo.toLowerCase();
+
+    if (t.includes("compra")) return "text-green-700";
+    if (t.includes("venda")) return "text-red-700";
+    if (t.includes("saque")) return "text-blue-700";
+
+    return "";
+  }
+
+  // 🔵 Simplificar título
+  function tipoLabel(tipo: string) {
+    const t = tipo.toLowerCase();
+
+    if (t.includes("compra")) return "Compra";
+    if (t.includes("venda")) return "Venda";
+    if (t.includes("saque")) return "Saque";
+
+    return tipo;
   }
 
   return (
@@ -80,21 +117,30 @@ export default function ExtratoPage() {
         <div className="flex flex-col gap-4">
           {items.map((item, index) => (
             <div key={index} className="border p-4 rounded-lg bg-gray-50">
-              <p className="font-bold text-lg">{item.tipo}</p>
 
+              {/* Tipo da operação com cor */}
+              <p className={`font-bold text-lg ${tipoColor(item.tipo)}`}>
+                {tipoLabel(item.tipo)}
+              </p>
+
+              {/* Valor */}
               <p className={`text-lg ${item.valor < 0 ? "text-red-600" : "text-green-700"}`}>
                 Valor: R$ {item.valor.toFixed(2)}
               </p>
 
+              {/* Token */}
               <p className="text-gray-700">{item.info}</p>
 
-              <p>
-                Status: <b>{translateStatus(item.status)}</b>
+              {/* Status com cor */}
+              <p className={`${statusColor(item.status)} font-semibold`}>
+                Status: {translateStatus(item.status)}
               </p>
 
+              {/* Data */}
               <p className="text-gray-500 text-sm">
                 {new Date(item.data).toLocaleString("pt-BR")}
               </p>
+
             </div>
           ))}
         </div>

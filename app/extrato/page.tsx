@@ -1,13 +1,26 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "../../src/lib/supabaseClient";
 import Link from "next/link";
 
+// 🔵 Converte o status do banco para o texto final
+function formatStatus(status: string) {
+  switch (status) {
+    case "completed":
+      return { label: "CONFIRMADO", color: "text-green-600" };
+    case "pending":
+      return { label: "PROCESSANDO", color: "text-yellow-600" };
+    case "cancelled":
+      return { label: "CANCELADO", color: "text-red-600" };
+    default:
+      return { label: status, color: "text-gray-600" };
+  }
+}
+
 export default function ExtratoPage() {
-  const [loading, setLoading] = useState(false);
   const [items, setItems] = useState<any[]>([]);
-  const [msg, setMsg] = useState("");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadExtrato();
@@ -15,141 +28,85 @@ export default function ExtratoPage() {
 
   async function loadExtrato() {
     setLoading(true);
-    setMsg("");
 
-    try {
-      const { data: session } = await supabase.auth.getSession();
-      const token = session.session?.access_token;
+    const { data: session } = await supabase.auth.getSession();
+    const token = session.session?.access_token;
 
-      if (!token) {
-        setMsg("Usuário não autenticado.");
-        setLoading(false);
-        return;
-      }
+    if (!token) {
+      setItems([]);
+      setLoading(false);
+      return;
+    }
 
-      const res = await fetch("/api/extrato", {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+    // Buscar extratos: compras + vendas
+    const res = await fetch("/api/extrato", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
 
-      const j = await res.json();
-
-      if (!j.success) {
-        setMsg("Erro ao carregar extrato.");
-        setLoading(false);
-        return;
-      }
-
-      const lista: any[] = [];
-
-      // 🔥 Formatar vendas
-      j.vendas.forEach((v: any) => {
-        lista.push({
-          tipo: "Venda",
-          tokens: v.tokens_solicitados,
-          valor: v.valor_liquido_brl ?? v.valor_brl ?? 0,
-          status: v.status,
-          data: v.created_at
-        });
-      });
-
-      // 🔥 Formatar compras
-      j.compras.forEach((c: any) => {
-        lista.push({
-          tipo: "Compra",
-          tokens: c.tokens,
-          valor: c.valor_total_brl,
-          status: c.status,
-          data: c.created_at
-        });
-      });
-
-      // 🔥 Formatar saques
-      j.saques.forEach((s: any) => {
-        lista.push({
-          tipo: "Saque",
-          tokens: null,
-          valor: s.valor,
-          status: s.status,
-          data: s.created_at
-        });
-      });
-
-      // 🔥 Ordenar tudo por data
-      lista.sort(
-        (a, b) => new Date(b.data).getTime() - new Date(a.data).getTime()
-      );
-
-      setItems(lista);
-
-    } catch (err) {
-      setMsg("Erro ao conectar com o servidor.");
+    const json = await res.json();
+    if (json.success) {
+      setItems(json.data);
     }
 
     setLoading(false);
   }
 
-  function formatDate(d: string) {
-    const dt = new Date(d);
-    return dt.toLocaleDateString("pt-BR") + " — " + dt.toLocaleTimeString("pt-BR");
-  }
-
-  function statusColor(status: string) {
-    if (status === "Confirmado" || status === "confirmado") return "text-green-600";
-    if (status === "Processando" || status === "processando") return "text-yellow-600";
-    return "text-red-600";
-  }
-
-  function tipoColor(tipo: string) {
-    if (tipo === "Compra") return "text-green-700";
-    if (tipo === "Venda" || tipo === "Saque") return "text-red-700";
-    return "text-gray-800";
-  }
-
   return (
     <div className="min-h-screen bg-gray-100 p-8">
-      <div className="max-w-2xl mx-auto bg-white p-6 rounded-xl shadow-md">
-        <h1 className="text-2xl font-bold mb-6 text-center">Extrato</h1>
+      <div className="max-w-3xl mx-auto bg-white rounded-xl shadow-md p-8">
 
-        {msg && <p className="text-red-600 mb-4 text-center">{msg}</p>}
+        <h1 className="text-3xl font-bold mb-6 text-center">Extrato</h1>
 
-        {loading ? (
-          <p className="text-center text-gray-500">Carregando...</p>
-        ) : (
-          <div className="space-y-4">
-            {items.map((i, idx) => (
-              <div key={idx} className="border p-4 rounded-lg bg-gray-50">
-                <p className={`text-lg font-bold ${tipoColor(i.tipo)}`}>
-                  {i.tipo}
-                </p>
+        {loading && <p className="text-center">Carregando...</p>}
 
-                {i.tokens && (
-                  <p className="text-gray-700">Tokens: {i.tokens}</p>
-                )}
-
-                <p className="text-gray-700">
-                  Valor: <b>R$ {Number(i.valor).toFixed(2)}</b>
-                </p>
-
-                <p className={`font-semibold ${statusColor(i.status)}`}>
-                  Status: {i.status}
-                </p>
-
-                <p className="text-gray-600 text-sm mt-1">
-                  {formatDate(i.data)}
-                </p>
-              </div>
-            ))}
-
-            {items.length === 0 && (
-              <p className="text-center text-gray-500">Nenhuma operação encontrada.</p>
-            )}
-          </div>
+        {!loading && items.length === 0 && (
+          <p className="text-center text-gray-500">Nenhuma movimentação encontrada.</p>
         )}
 
-        <Link href="/">
-          <p className="mt-6 text-center text-gray-700 underline cursor-pointer">
-            Voltar ao painel
-          </p>
+        {!loading &&
+          items.map((item, i) => {
+            const fmt = formatStatus(item.status);
+
+            return (
+              <div
+                key={i}
+                className="border rounded-xl p-5 mb-4 bg-gray-50 shadow-sm"
+              >
+                <h2 className="text-xl font-bold mb-2">
+                  {item.tipo === "venda" ? (
+                    <span className="text-red-600">Venda</span>
+                  ) : (
+                    <span className="text-green-600">Compra</span>
+                  )}
+                </h2>
+
+                {/* Tokens */}
+                {item.tokens && (
+                  <p className="text-gray-800">
+                    Tokens: <strong>{item.tokens}</strong>
+                  </p>
+                )}
+
+                {/* Valor */}
+                <p className="text-gray-800">
+                  Valor: <strong>R$ {Number(item.valor).toFixed(2)}</strong>
+                </p>
+
+                {/* STATUS */}
+                <p className={`mt-1 font-semibold ${fmt.color}`}>
+                  Status: {fmt.label}
+                </p>
+
+                {/* DATA */}
+                <p className="text-sm text-gray-600 mt-1">
+                  {item.data_formatada}
+                </p>
+              </div>
+            );
+          })}
+
+        <Link href="/" className="block text-center mt-6 underline text-gray-600">
+          Voltar ao painel
         </Link>
       </div>
     </div>

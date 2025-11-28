@@ -7,12 +7,16 @@ import Link from "next/link";
 
 export default function VenderPage() {
   const [saldoBCT, setSaldoBCT] = useState<number | null>(null);
-  const [tokens, setTokens] = useState<string>(""); 
+  const [tokens, setTokens] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [usdToBrl, setUsdToBrl] = useState<number | null>(null);
   const [tokenUsd, setTokenUsd] = useState<number>(0.4482);
-  const FEE = 0.10; // taxa 10%
+  const FEE = 0.10;
   const [msg, setMsg] = useState<string>("");
+
+  // 🔥 Popup de sucesso
+  const [showPopup, setShowPopup] = useState(false);
+  const [popupMessage, setPopupMessage] = useState("");
 
   useEffect(() => {
     loadSaldo();
@@ -52,16 +56,8 @@ export default function VenderPage() {
   }
 
   const numericTokens = Number(tokens || 0);
-
-  // 🔥 cálculo correto:
-  // valorBRL = tokensVendidos * preçoUSD * dolar
-  // taxa = valorBRL * 10%
-  // estimativa = valorBRL - taxa
-  const valorBRL =
-    usdToBrl && tokenUsd ? numericTokens * tokenUsd * usdToBrl : 0;
-
+  const valorBRL = usdToBrl && tokenUsd ? numericTokens * tokenUsd * usdToBrl : 0;
   const taxaBRL = valorBRL * FEE;
-
   const estimatedBRL = valorBRL - taxaBRL;
 
   async function submitSell() {
@@ -96,11 +92,16 @@ export default function VenderPage() {
       const j = await res.json();
 
       if (!j.success) {
-setMsg(
-  `Venda confirmada! Receberá R$ ${Number(j.valor_brl).toFixed(
-    2
-  )}. Novo saldo: ${Number(j.novo_saldo_bct).toFixed(6)} BCT`
-);
+        setMsg(j.error || "Erro ao processar a venda.");
+      } else {
+        // 🔥 Popup de Sucesso
+        setPopupMessage(
+          `Sua venda foi realizada com sucesso! Você receberá R$ ${Number(
+            j.valor_brl
+          ).toFixed(2)} na sua carteira.`
+        );
+        setShowPopup(true);
+
         setSaldoBCT(Number(j.novo_saldo_bct));
         setTokens("");
       }
@@ -162,6 +163,26 @@ setMsg(
           </Link>
         </div>
       </div>
+
+      {/* 🔥 POPUP DE SUCESSO */}
+      {showPopup && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-xl shadow-xl max-w-sm text-center">
+            <h2 className="text-xl font-bold mb-4 text-green-600">
+              Venda realizada!
+            </h2>
+
+            <p className="mb-6">{popupMessage}</p>
+
+            <button
+              onClick={() => setShowPopup(false)}
+              className="bg-green-600 hover:bg-green-700 text-white py-2 px-6 rounded-lg"
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

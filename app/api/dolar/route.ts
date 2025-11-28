@@ -1,41 +1,18 @@
-import { NextResponse } from "next/server";
-
-export const dynamic = "force-dynamic";
+// app/api/dolar/route.ts
 
 export async function GET() {
   try {
-    const url =
-      "https://economia.awesomeapi.com.br/json/last/USD-BRL";
-
-    const response = await fetch(url, { cache: "no-store" });
-
-    if (!response.ok) {
-      return NextResponse.json(
-        { success: false, error: "Erro ao buscar dólar" },
-        { status: 500 }
-      );
-    }
-
-    const data = await response.json();
-
-    const valor = Number(data?.USDBRL?.bid);
-
-    if (!valor || isNaN(valor)) {
-      return NextResponse.json(
-        { success: false, error: "Valor inválido retornado pela API" },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({
-      success: true,
-      dolar: valor,
+    const res = await fetch("https://economia.awesomeapi.com.br/json/last/USD-BRL", {
+      cache: "no-store"
     });
-  } catch (e) {
-    console.error("ERRO DÓLAR API:", e);
-    return NextResponse.json(
-      { success: false, error: "Falha interna" },
-      { status: 500 }
-    );
+
+    const json = await res.json();
+    const price = Number(json?.USDBRL?.bid ?? 5.30);
+
+    return Response.json({ success: true, dolar: price });
+
+  } catch (err) {
+    console.error("ERRO API DÓLAR:", err);
+    return Response.json({ success: false, dolar: 5.30 });
   }
 }

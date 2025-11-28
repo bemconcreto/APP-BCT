@@ -40,7 +40,7 @@ export async function GET(req: Request) {
 
     const comprasFormatadas =
       compras?.map((c) => ({
-        tipo: "Compra de BCT",
+        tipo: "Compra",
         valor: Number(c.valor_pago ?? 0),
         info: `Token: ${c.tokens} BCT`,
         status: c.status,
@@ -56,7 +56,7 @@ export async function GET(req: Request) {
 
     const vendasFormatadas =
       vendas?.map((v) => ({
-        tipo: "Venda de BCT",
+        tipo: "Venda",
         valor: Number(v.valor_recebido ?? v.valor_liquido ?? 0),
         info: `Token: ${v.tokens} BCT`,
         status: v.status,
@@ -74,7 +74,6 @@ export async function GET(req: Request) {
       saques?.map((s) => ({
         tipo: "Saque",
         valor: -Number(s.valor),
-        info: `Token: 0 BCT`,
         status: s.status,
         data: s.created_at,
       })) ?? [];

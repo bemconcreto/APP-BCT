@@ -45,7 +45,7 @@ export async function GET(req: Request) {
 
     return NextResponse.json({
       success: true,
-      saldo_brl: Number(total.toFixed(2)),
+      saldo_cash: Number(total.toFixed(2)),
     });
 
   } catch (err) {

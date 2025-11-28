@@ -38,7 +38,7 @@ export default function CarteiraPage() {
       if (!json.success) {
         setMsg("Erro ao carregar saldo.");
       } else {
-        setSaldo(json.saldo_brl);
+        setSaldo(json.saldo_cash);
       }
     } catch {
       setMsg("Erro ao conectar com o servidor.");

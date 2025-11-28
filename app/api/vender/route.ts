@@ -100,16 +100,16 @@ export async function POST(req: Request) {
     // ---- CREDITAR CARTEIRA ----
     const { data: cashRow } = await supabaseAdmin
       .from("wallet_cash")
-      .select("saldo_brl")
+      .select("saldo_cash")
       .eq("user_id", userId)
       .single();
 
-    const saldoAtual = Number(cashRow?.saldo_brl ?? 0);
+    const saldoAtual = Number(cashRow?.saldo_cash ?? 0);
     const novoSaldoCash = Number((saldoAtual + valorLiquido).toFixed(2));
 
     await supabaseAdmin
       .from("wallet_cash")
-      .upsert({ user_id: userId, saldo_brl: novoSaldoCash });
+      .upsert({ user_id: userId, saldo_cash: novoSaldoCash });
 
     return NextResponse.json({
       success: true,

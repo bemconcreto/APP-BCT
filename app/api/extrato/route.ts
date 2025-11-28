@@ -1,51 +1,92 @@
+// app/api/extrato/route.ts
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+
 export async function GET(req: Request) {
   try {
-    const url = new URL(req.url);
-    const token = url.searchParams.get("token");
+    const authHeader = req.headers.get("authorization") || "";
+    let userId: string | null = null;
 
-    if (!token) {
-      return NextResponse.json(
-        { success: false, error: "Token ausente." },
-        { status: 401 }
+    if (authHeader.startsWith("Bearer ")) {
+      const token = authHeader.split(" ")[1];
+      const sup = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
       );
+      const { data } = await sup.auth.getUser(token);
+      userId = data?.user?.id ?? null;
     }
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
-
-    // ✔️ Validar usuário
-    const { data: userData } = await supabase.auth.getUser(token);
-
-    if (!userData?.user?.id) {
+    if (!userId) {
       return NextResponse.json(
         { success: false, error: "Usuário não autenticado." },
         { status: 401 }
       );
     }
 
-    const userId = userData.user.id;
-
-    // ✔️ Buscar extrato do usuário
-    const { data: compras } = await supabase
+    // 📌 Buscar compras
+    const { data: compras } = await supabaseAdmin
       .from("compras_bct")
       .select("*")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false });
+      .eq("user_id", userId);
 
-    return NextResponse.json({
-      success: true,
-      compras,
-    });
-  } catch (err) {
-    console.error("❌ ERRO EXTRATO:", err);
-    return NextResponse.json(
-      { success: false, error: "Erro interno." },
-      { status: 500 }
+    // 📌 Buscar vendas
+    const { data: vendas } = await supabaseAdmin
+      .from("vendas_bct")
+      .select("*")
+      .eq("user_id", userId);
+
+    // 📌 Buscar saques
+    const { data: saques } = await supabaseAdmin
+      .from("saques")
+      .select("*")
+      .eq("user_id", userId);
+
+    // 🔥 NORMALIZAR OS DADOS PARA FICAREM IGUAIS
+    const lista = [];
+
+    compras?.forEach((c) =>
+      lista.push({
+        tipo: "COMPRA",
+        valor: Number(c.valor_brl ?? 0),
+        tokens: Number(c.tokens ?? 0),
+        status: c.status,
+        data: c.created_at,
+      })
     );
+
+    vendas?.forEach((v) =>
+      lista.push({
+        tipo: "VENDA",
+        valor: Number(v.valor_liquido_brl ?? 0),
+        tokens: Number(v.tokens_solicitados ?? 0),
+        status: v.status,
+        data: v.created_at,
+      })
+    );
+
+    saques?.forEach((s) =>
+      lista.push({
+        tipo: "SAQUE",
+        valor: Number(s.valor ?? 0),
+        tokens: null,
+        status: s.status,
+        data: s.created_at,
+      })
+    );
+
+    // 🔥 Ordenar do mais recente para o mais antigo
+    lista.sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
+
+    return NextResponse.json({ success: true, extrato: lista });
+
+  } catch (err) {
+    console.error("ERRO API EXTRATO:", err);
+    return NextResponse.json({ success: false, error: "Erro interno." });
   }
 }

@@ -4,23 +4,10 @@ import { useEffect, useState } from "react";
 import { supabase } from "../../src/lib/supabaseClient";
 import Link from "next/link";
 
-// 🔵 Converte o status do banco para o texto final
-function formatStatus(status: string) {
-  switch (status) {
-    case "completed":
-      return { label: "CONFIRMADO", color: "text-green-600" };
-    case "pending":
-      return { label: "PROCESSANDO", color: "text-yellow-600" };
-    case "cancelled":
-      return { label: "CANCELADO", color: "text-red-600" };
-    default:
-      return { label: status, color: "text-gray-600" };
-  }
-}
-
 export default function ExtratoPage() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [msg, setMsg] = useState("");
 
   useEffect(() => {
     loadExtrato();
@@ -28,24 +15,31 @@ export default function ExtratoPage() {
 
   async function loadExtrato() {
     setLoading(true);
+    setMsg("");
 
-    const { data: session } = await supabase.auth.getSession();
-    const token = session.session?.access_token;
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      const token = session.session?.access_token;
 
-    if (!token) {
-      setItems([]);
-      setLoading(false);
-      return;
-    }
+      if (!token) {
+        setMsg("Usuário não autenticado.");
+        setLoading(false);
+        return;
+      }
 
-    // Buscar extratos: compras + vendas
-    const res = await fetch("/api/extrato", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+      const res = await fetch("/api/extrato", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
-    const json = await res.json();
-    if (json.success) {
-      setItems(json.data);
+      const json = await res.json();
+
+      if (!json.success) {
+        setMsg("Erro ao carregar extrato.");
+      } else {
+        setItems(json.extrato);
+      }
+    } catch {
+      setMsg("Erro ao conectar ao servidor.");
     }
 
     setLoading(false);
@@ -57,57 +51,34 @@ export default function ExtratoPage() {
 
         <h1 className="text-3xl font-bold mb-6 text-center">Extrato</h1>
 
-        {loading && <p className="text-center">Carregando...</p>}
+        {msg && <p className="text-red-600 mb-4">{msg}</p>}
+
+        {loading && <p>Carregando...</p>}
 
         {!loading && items.length === 0 && (
-          <p className="text-center text-gray-500">Nenhuma movimentação encontrada.</p>
+          <p className="text-gray-600 text-center">Nenhum lançamento encontrado.</p>
         )}
 
-        {!loading &&
-          items.map((item, i) => {
-            const fmt = formatStatus(item.status);
+        <div className="flex flex-col gap-4">
+          {items.map((item, index) => (
+            <div key={index} className="border p-4 rounded-lg bg-gray-50">
+              <p className="font-bold text-lg">{item.tipo}</p>
+              <p className="text-gray-700">Valor: R$ {item.valor.toFixed(2)}</p>
+              <p className="text-gray-700">Info: {item.info}</p>
+              <p>Status: <b>{item.status}</b></p>
+              <p className="text-gray-500 text-sm">
+                {new Date(item.data).toLocaleString("pt-BR")}
+              </p>
+            </div>
+          ))}
+        </div>
 
-            return (
-              <div
-                key={i}
-                className="border rounded-xl p-5 mb-4 bg-gray-50 shadow-sm"
-              >
-                <h2 className="text-xl font-bold mb-2">
-                  {item.tipo === "venda" ? (
-                    <span className="text-red-600">Venda</span>
-                  ) : (
-                    <span className="text-green-600">Compra</span>
-                  )}
-                </h2>
-
-                {/* Tokens */}
-                {item.tokens && (
-                  <p className="text-gray-800">
-                    Tokens: <strong>{item.tokens}</strong>
-                  </p>
-                )}
-
-                {/* Valor */}
-                <p className="text-gray-800">
-                  Valor: <strong>R$ {Number(item.valor).toFixed(2)}</strong>
-                </p>
-
-                {/* STATUS */}
-                <p className={`mt-1 font-semibold ${fmt.color}`}>
-                  Status: {fmt.label}
-                </p>
-
-                {/* DATA */}
-                <p className="text-sm text-gray-600 mt-1">
-                  {item.data_formatada}
-                </p>
-              </div>
-            );
-          })}
-
-        <Link href="/" className="block text-center mt-6 underline text-gray-600">
-          Voltar ao painel
+        <Link href="/">
+          <span className="block text-center mt-6 text-gray-600 underline cursor-pointer">
+            Voltar ao painel
+          </span>
         </Link>
+
       </div>
     </div>
   );

@@ -61,18 +61,40 @@ export default function ExtratoPage() {
         <div className="flex flex-col gap-4">
           {items.map((item, index) => (
             <div key={index} className="border p-4 rounded-lg bg-gray-50">
-              <p className="font-bold text-lg">{item.tipo}</p>
 
-              <p className={`text-lg ${item.valor < 0 ? "text-red-600" : "text-green-700"}`}>
-                Valor: R$ {item.valor.toFixed(2)}
+              {/* Tipo */}
+              <p className="font-bold text-lg">
+                {item.tipo === "compra" && "Compra de BCT"}
+                {item.tipo === "venda" && "Venda de BCT"}
+                {item.tipo === "saque" && "Solicitação de Saque"}
               </p>
 
-              <p className="text-gray-700">Info: {item.info}</p>
-              <p>Status: <b>{item.status}</b></p>
+              {/* Valor */}
+              <p
+                className={`text-lg ${
+                  item.valor < 0 ? "text-red-600" : "text-green-700"
+                }`}
+              >
+                Valor: R$ {Number(item.valor).toFixed(2)}
+              </p>
 
+              {/* Informação complementar */}
+              {item.info && (
+                <p className="text-gray-700">
+                  {item.info}
+                </p>
+              )}
+
+              {/* Status */}
+              <p>
+                Status: <b>{item.status}</b>
+              </p>
+
+              {/* Data */}
               <p className="text-gray-500 text-sm">
                 {new Date(item.data).toLocaleString("pt-BR")}
               </p>
+
             </div>
           ))}
         </div>

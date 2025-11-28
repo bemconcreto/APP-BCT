@@ -76,7 +76,7 @@ export async function GET(req: Request) {
     const extrato = [
       ...comprasFormatadas,
       ...vendasFormatadas,
-      ...saquesFormatadas,
+      ...saquesFormatados,
     ].sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
 
     return NextResponse.json({ success: true, extrato });

@@ -48,7 +48,8 @@ export async function GET(req: Request) {
       .eq("user_id", userId);
 
     // 🔥 NORMALIZAR OS DADOS PARA FICAREM IGUAIS
-    const lista = [];
+    // Tipagem explícita
+const lista: any[] = [];
 
     compras?.forEach((c) =>
       lista.push({

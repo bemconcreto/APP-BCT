@@ -68,17 +68,16 @@ export async function POST(req: Request) {
         0
       ) ?? 0;
 
-    // Total de VENDAS confirmadas
+    // Total de VENDAS confirmadas (USANDO SOMENTE valor_liquido)
     const { data: vendas } = await supabaseAdmin
       .from("vendas_bct")
-      .select("valor_recebidc, valor_liquido, status")
+      .select("valor_liquido, status")
       .eq("user_id", userId)
       .eq("status", "completed");
 
     const totalVendas =
       vendas?.reduce(
-        (acc, item) =>
-          acc + Number(item.valor_recebidc ?? item.valor_liquido ?? 0),
+        (acc, item) => acc + Number(item.valor_liquido ?? 0),
         0
       ) ?? 0;
 

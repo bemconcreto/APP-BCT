@@ -1,112 +1,89 @@
-// app/extrato/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
-
-type ExtratoItem = {
-  id: string;
-  kind: string;
-  title: string;
-  amount: number;
-  status?: string;
-  created_at: string;
-  meta?: any;
-};
+import { supabase } from "../../src/lib/supabaseClient";
+import Link from "next/link";
 
 export default function ExtratoPage() {
-  const [items, setItems] = useState<ExtratoItem[]>([]);
+  const [itens, setItens] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
 
   useEffect(() => {
-    loadExtrato();
+    carregarExtrato();
   }, []);
 
-  async function loadExtrato() {
+  async function carregarExtrato() {
     setLoading(true);
     setMsg("");
+
     try {
-      const res = await fetch("/api/extrato", { cache: "no-store" });
-      const j = await res.json();
-      if (!j.success) {
+      const { data: session } = await supabase.auth.getSession();
+      const token = session.session?.access_token;
+
+      if (!token) {
+        setMsg("Usuário não autenticado.");
+        setLoading(false);
+        return;
+      }
+
+      const res = await fetch("/api/extrato", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const json = await res.json();
+
+      if (!json.success) {
         setMsg("Erro ao carregar extrato.");
-        setItems([]);
+        setItens([]);
       } else {
-        setItems(j.items ?? []);
+        setItens(json.extrato || []);
       }
     } catch (e) {
       console.error(e);
-      setMsg("Erro ao conectar com servidor.");
-      setItems([]);
-    } finally {
-      setLoading(false);
+      setMsg("Erro ao conectar ao servidor.");
     }
-  }
 
-  function fmtMoney(v?: number) {
-    if (v === null || v === undefined) return "-";
-    return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-  }
-
-  function fmtDate(s?: string) {
-    if (!s) return "-";
-    try {
-      return new Date(s).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
-    } catch {
-      return s;
-    }
+    setLoading(false);
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
-      <div className="max-w-4xl mx-auto bg-white rounded-xl shadow p-6">
-        <h1 className="text-2xl font-bold mb-4">Extrato</h1>
-
-        <div className="mb-4">
-          <button
-            onClick={loadExtrato}
-            className="bg-[#0C3D2E] text-white px-4 py-2 rounded mr-3"
-            disabled={loading}
-          >
-            {loading ? "Carregando..." : "Atualizar"}
-          </button>
-        </div>
+    <div className="min-h-screen bg-gray-100 p-8">
+      <div className="max-w-2xl mx-auto bg-white rounded-xl shadow-md p-8">
+        <h1 className="text-2xl font-bold mb-6 text-center">Extrato</h1>
 
         {msg && <p className="text-red-600 mb-4">{msg}</p>}
 
-        {items.length === 0 && !loading ? (
-          <p className="text-gray-600">Sem registros por enquanto.</p>
-        ) : (
-          <div className="space-y-3">
-            {items.map((it) => (
-              <div key={it.id} className="p-4 border rounded flex justify-between items-start">
-                <div>
-                  <div className="font-semibold">{it.title}</div>
-                  <div className="text-sm text-gray-600">
-                    {fmtDate(it.created_at)} •{" "}
-                    <span className={`font-medium ${it.status === "pending" ? "text-yellow-600" : it.status === "completed" ? "text-green-600" : "text-gray-600"}`}>
-                      {it.status ?? "—"}
-                    </span>
-                  </div>
-                  {/* detalhes rápidos */}
-                  {it.kind === "venda" && (
-                    <div className="text-sm text-gray-700 mt-2">
-                      Tokens liquidos: {it.meta?.raw?.tokens_liquidos ?? it.meta?.raw?.tokens_net ?? "-"} • Fee: {it.meta?.raw?.taxa_brl ?? "-"}
-                    </div>
-                  )}
-                  {it.kind === "saque" && (
-                    <div className="text-sm text-gray-700 mt-2">Chave PIX: {it.meta?.raw?.chave_pix ?? it.meta?.raw?.pix_key ?? "-"}</div>
-                  )}
-                </div>
+        <button
+          onClick={carregarExtrato}
+          className="w-full bg-[#0C3D2E] text-white py-3 rounded-lg mb-6"
+        >
+          Atualizar
+        </button>
 
-                <div className="text-right">
-                  <div className="font-semibold">{fmtMoney(it.amount)}</div>
-                  <div className="text-sm text-gray-600">{it.kind.toUpperCase()}</div>
-                </div>
-              </div>
-            ))}
-          </div>
+        {loading && <p className="text-center">Carregando...</p>}
+
+        {!loading && itens.length === 0 && (
+          <p className="text-center text-gray-600">Sem registros por enquanto.</p>
         )}
+
+        <div className="space-y-4">
+          {itens.map((item, index) => (
+            <div key={index} className="border p-4 rounded-lg bg-gray-50">
+              <p><b>Tipo:</b> {item.tipo}</p>
+              <p><b>Valor:</b> R$ {Number(item.valor).toFixed(2)}</p>
+              <p><b>Data:</b> {new Date(item.created_at).toLocaleString()}</p>
+            </div>
+          ))}
+        </div>
+
+        <Link href="/">
+          <span className="block text-center text-gray-600 underline mt-6 cursor-pointer">
+            Voltar ao painel
+          </span>
+        </Link>
       </div>
     </div>
   );

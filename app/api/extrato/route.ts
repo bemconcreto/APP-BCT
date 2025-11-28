@@ -1,3 +1,4 @@
+// app/api/extrato/route.ts
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
@@ -8,95 +9,80 @@ const supabaseAdmin = createClient(
 
 export async function GET(req: Request) {
   try {
-    // Autenticação
+    // autenticação
     const authHeader = req.headers.get("authorization") || "";
     let userId: string | null = null;
 
     if (authHeader.startsWith("Bearer ")) {
       const token = authHeader.split(" ")[1];
-
       const sup = createClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.SUPABASE_SERVICE_ROLE_KEY!
       );
-
       const { data } = await sup.auth.getUser(token);
       userId = data?.user?.id ?? null;
     }
 
     if (!userId) {
-      return NextResponse.json(
-        { success: false, error: "Usuário não autenticado." },
-        { status: 401 }
-      );
+      return NextResponse.json({ success: false, error: "Usuário não autenticado." }, { status: 401 });
     }
 
-    // 1️⃣ BUSCAR VENDAS
+    // 1️⃣ COMPRAS
+    const { data: compras } = await supabaseAdmin
+      .from("compras_bct")
+      .select("id, quantidade, valor_brl, created_at")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
+
+    const comprasFormatadas =
+      compras?.map((c) => ({
+        tipo: "compra",
+        descricao: `Compra de ${c.quantidade} BCT`,
+        valor: -Number(c.valor_brl), // sai reais
+        data: c.created_at,
+      })) ?? [];
+
+    // 2️⃣ VENDAS
     const { data: vendas } = await supabaseAdmin
       .from("vendas_bct")
-      .select("id, tokens_solicitados, valor_liquido, taxa, valor_recebido, status, created_at")
+      .select("id, tokens_solicitados, valor_liquido_brl, created_at")
       .eq("user_id", userId)
       .order("created_at", { ascending: false });
 
     const vendasFormatadas =
       vendas?.map((v) => ({
-        tipo: "Venda de BCT",
-        valor: Number(v.valor_recebido ?? v.valor_liquido ?? 0),
-
-        // 🔥 ALTERAÇÃO SOLICITADA → Mostrar tokens vendidos
-        info: `Tokens: ${Number(v.tokens_solicitados).toFixed(6)}`,
-
-        // 🔥 ALTERAÇÃO SOLICITADA → Status formatado
-        status:
-          v.status === "completed"
-            ? "Confirmado"
-            : v.status === "pending"
-            ? "Processando"
-            : "Cancelado",
-
+        tipo: "venda",
+        descricao: `Venda de ${v.tokens_solicitados} BCT`,
+        valor: Number(v.valor_liquido_brl), // entra reais
         data: v.created_at,
       })) ?? [];
 
-    // 2️⃣ BUSCAR SAQUES
+    // 3️⃣ SAQUES
     const { data: saques } = await supabaseAdmin
       .from("saques")
-      .select("id, valor, chave_pix, status, created_at")
+      .select("id, valor, status, created_at")
       .eq("user_id", userId)
       .order("created_at", { ascending: false });
 
     const saquesFormatados =
       saques?.map((s) => ({
-        tipo: "Saque",
-        valor: -Number(s.valor),
-
-        // Não pediu alteração — apenas mantém como está
-        info: `Chave PIX: ${s.chave_pix}`,
-
-        // 🔥 ALTERAÇÃO SOLICITADA → Status formatado
-        status:
-          s.status === "approved"
-            ? "Confirmado"
-            : s.status === "pending"
-            ? "Processando"
-            : "Cancelado",
-
+        tipo: "saque",
+        descricao: `Saque via PIX (${s.status})`,
+        valor: -Number(s.valor), // saída de reais
         data: s.created_at,
       })) ?? [];
 
-    // 3️⃣ UNIR E ORDENAR
-    const extrato = [...vendasFormatadas, ...saquesFormatados].sort(
-      (a: any, b: any) => new Date(b.data).getTime() - new Date(a.data).getTime()
-    );
+    // 4️⃣ CONSOLIDAR
+    const extrato = [
+      ...comprasFormatadas,
+      ...vendasFormatadas,
+      ...saquesFormatadas,
+    ].sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
 
-    return NextResponse.json({
-      success: true,
-      extrato,
-    });
+    return NextResponse.json({ success: true, extrato });
+
   } catch (err) {
-    console.error("ERRO API EXTRATO:", err);
-    return NextResponse.json(
-      { success: false, error: "Erro interno." },
-      { status: 500 }
-    );
+    console.error("ERRO /api/extrato:", err);
+    return NextResponse.json({ success: false, error: "Erro interno." });
   }
 }

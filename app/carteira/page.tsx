@@ -27,6 +27,7 @@ export default function CarteiraPage() {
         return;
       }
 
+      // ▶ Chama o backend certo
       const res = await fetch("/api/carteira", {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -38,7 +39,8 @@ export default function CarteiraPage() {
       if (!json.success) {
         setMsg("Erro ao carregar saldo.");
       } else {
-        setSaldo(json.saldo_cash);
+        // ▶ Lê o campo saldo (o novo nome)
+        setSaldo(json.saldo);
       }
     } catch {
       setMsg("Erro ao conectar com o servidor.");
@@ -69,7 +71,7 @@ export default function CarteiraPage() {
           Atualizar
         </button>
 
-        {/* 🔥 BOTÃO NOVO — SOLICITAR SAQUE */}
+        {/* Botão de Saque */}
         <Link href="/saque">
           <span className="w-full block bg-yellow-500 hover:bg-yellow-600 text-white py-3 rounded-lg mb-4 text-center cursor-pointer text-lg font-semibold">
             Solicitar Saque

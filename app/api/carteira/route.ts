@@ -26,26 +26,51 @@ export async function GET(req: Request) {
     if (!userId)
       return NextResponse.json({ success: false, error: "Usuário não autenticado" }, { status: 401 });
 
-    // 🔥 BUSCA TODAS AS LINHAS DA WALLET_CASH DO USUÁRIO
-    const { data: rows, error } = await supabaseAdmin
-      .from("wallet_cash")
-      .select("saldo_cash")
-      .eq("user_id", userId);
+    // ▶ COMPRAS
+    const { data: compras } = await supabaseAdmin
+      .from("compras_bct")
+      .select("valor_pago, status")
+      .eq("user_id", userId)
+      .eq("status", "completed");
 
-    if (error) {
-      console.error("ERRO AO CONSULTAR WALLET:", error);
-      return NextResponse.json({ success: false, error: "Erro ao consultar carteira" });
-    }
+    const totalCompras =
+      compras?.reduce(
+        (acc, item) => acc + Number(item.valor_pago ?? 0),
+        0
+      ) ?? 0;
 
-    // 🔥 SOMA TODAS AS LINHAS
-    let total = 0;
-    if (Array.isArray(rows)) {
-      total = rows.reduce((acc: number, r: any) => acc + Number(r.saldo_cash || 0), 0);
-    }
+    // ▶ VENDAS
+    const { data: vendas } = await supabaseAdmin
+      .from("vendas_bct")
+      .select("valor_liquido, status")
+      .eq("user_id", userId)
+      .eq("status", "completed");
+
+    const totalVendas =
+      vendas?.reduce(
+        (acc, item) => acc + Number(item.valor_liquido ?? 0),
+        0
+      ) ?? 0;
+
+    // ▶ SAQUES
+    const { data: saques } = await supabaseAdmin
+      .from("saques")
+      .select("valor, status")
+      .eq("user_id", userId)
+      .neq("status", "canceled");
+
+    const totalSaques =
+      saques?.reduce(
+        (acc, item) => acc + Number(item.valor ?? 0),
+        0
+      ) ?? 0;
+
+    // ▶ SALDO FINAL
+    const saldo = Number(totalCompras + totalVendas - totalSaques);
 
     return NextResponse.json({
       success: true,
-      saldo_cash: Number(total.toFixed(2)),
+      saldo,
     });
 
   } catch (err) {

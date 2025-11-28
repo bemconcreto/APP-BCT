@@ -52,7 +52,6 @@ export default function ExtratoPage() {
         <h1 className="text-3xl font-bold mb-6 text-center">Extrato</h1>
 
         {msg && <p className="text-red-600 mb-4">{msg}</p>}
-
         {loading && <p>Carregando...</p>}
 
         {!loading && items.length === 0 && (
@@ -63,9 +62,14 @@ export default function ExtratoPage() {
           {items.map((item, index) => (
             <div key={index} className="border p-4 rounded-lg bg-gray-50">
               <p className="font-bold text-lg">{item.tipo}</p>
-              <p className="text-gray-700">Valor: R$ {item.valor.toFixed(2)}</p>
+
+              <p className={`text-lg ${item.valor < 0 ? "text-red-600" : "text-green-700"}`}>
+                Valor: R$ {item.valor.toFixed(2)}
+              </p>
+
               <p className="text-gray-700">Info: {item.info}</p>
               <p>Status: <b>{item.status}</b></p>
+
               <p className="text-gray-500 text-sm">
                 {new Date(item.data).toLocaleString("pt-BR")}
               </p>

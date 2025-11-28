@@ -4,6 +4,47 @@ import { useEffect, useState } from "react";
 import { supabase } from "../../src/lib/supabaseClient";
 import Link from "next/link";
 
+function formatarData(dataStr: any) {
+  if (!dataStr) return "Data inválida";
+
+  // já é Date
+  if (dataStr instanceof Date) {
+    return dataStr.toLocaleString("pt-BR");
+  }
+
+  // se for timestamp numérico
+  if (typeof dataStr === "number") {
+    return new Date(dataStr).toLocaleString("pt-BR");
+  }
+
+  // garantir string
+  let s = String(dataStr).trim();
+
+  // formato BR "28/11/2025 14:32:34"
+  if (s.includes("/")) {
+    try {
+      const [datePart, timePart] = s.split(" ");
+      const [dia, mes, ano] = datePart.split("/");
+      const iso = `${ano}-${mes.padStart(2,"0")}-${dia.padStart(2,"0")}T${timePart ?? "00:00:00"}`;
+      return new Date(iso).toLocaleString("pt-BR");
+    } catch {
+      return "Data inválida";
+    }
+  }
+
+  // troca o espaço por T e reduz microssegundos
+  s = s.replace(" ", "T").replace(/\.(\d{3})\d+/, ".$1");
+
+  // se não tiver timezone, adiciona Z (interpreta como UTC)
+  if (!s.endsWith("Z") && !/([+\-]\d{2}:?\d{2})$/.test(s)) {
+    s += "Z";
+  }
+
+  const d = new Date(s);
+  if (isNaN(d.getTime())) return "Data inválida";
+  return d.toLocaleString("pt-BR");
+}
+
 export default function ExtratoPage() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -45,7 +86,6 @@ export default function ExtratoPage() {
     setLoading(false);
   }
 
-  // 🔵 Tradução dos status
   function translateStatus(status: string) {
     if (!status) return "";
 
@@ -59,46 +99,10 @@ export default function ExtratoPage() {
       case "processing":
         return "Processando";
       case "failed":
-      case "canceled":
-        return "Cancelado";
+        return "Falhou";
       default:
         return status;
     }
-  }
-
-  // 🔵 Cor dos status
-  function statusColor(status: string) {
-    if (!status) return "text-gray-700";
-
-    const s = status.toLowerCase();
-
-    if (s === "completed" || s === "paid") return "text-green-700";
-    if (s === "pending" || s === "processing") return "text-yellow-600";
-    if (s === "failed" || s === "canceled") return "text-red-600";
-
-    return "text-gray-700";
-  }
-
-  // 🔵 Cor por tipo
-  function tipoColor(tipo: string) {
-    const t = tipo.toLowerCase();
-
-    if (t.includes("compra")) return "text-green-700";
-    if (t.includes("venda")) return "text-red-700";
-    if (t.includes("saque")) return "text-blue-700";
-
-    return "";
-  }
-
-  // 🔵 Simplificar título
-  function tipoLabel(tipo: string) {
-    const t = tipo.toLowerCase();
-
-    if (t.includes("compra")) return "Compra";
-    if (t.includes("venda")) return "Venda";
-    if (t.includes("saque")) return "Saque";
-
-    return tipo;
   }
 
   return (
@@ -117,30 +121,21 @@ export default function ExtratoPage() {
         <div className="flex flex-col gap-4">
           {items.map((item, index) => (
             <div key={index} className="border p-4 rounded-lg bg-gray-50">
+              <p className="font-bold text-lg">{item.tipo}</p>
 
-              {/* Tipo da operação com cor */}
-              <p className={`font-bold text-lg ${tipoColor(item.tipo)}`}>
-                {tipoLabel(item.tipo)}
-              </p>
-
-              {/* Valor */}
               <p className={`text-lg ${item.valor < 0 ? "text-red-600" : "text-green-700"}`}>
                 Valor: R$ {item.valor.toFixed(2)}
               </p>
 
-              {/* Token */}
               <p className="text-gray-700">{item.info}</p>
 
-              {/* Status com cor */}
-              <p className={`${statusColor(item.status)} font-semibold`}>
-                Status: {translateStatus(item.status)}
+              <p>
+                Status: <b>{translateStatus(item.status)}</b>
               </p>
 
-              {/* Data */}
-              <p className="text-gray-500 text-sm">
-                {new Date(item.data).toLocaleString("pt-BR")}
-              </p>
-
+       <p className="text-gray-500 text-sm">
+  {formatarData(item.data)}
+</p>
             </div>
           ))}
         </div>

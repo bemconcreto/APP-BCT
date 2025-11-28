@@ -23,60 +23,40 @@ export async function GET(req: Request) {
 
     if (!userId) {
       return NextResponse.json(
-        { success: false, error: "Não autorizado." },
+        { success: false, error: "Não autenticado." },
         { status: 401 }
       );
     }
 
-    // Extrato = Compras + Vendas + Saques
-    const { data: compras } = await supabaseAdmin
-      .from("compras_bct")
-      .select("valor_brl, created_at")
-      .eq("user_id", userId);
-
+    // 🔥 BUSCA VENDAS
     const { data: vendas } = await supabaseAdmin
       .from("vendas_bct")
-      .select("valor_liquido_brl, created_at")
-      .eq("user_id", userId);
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
 
+    // 🔥 BUSCA COMPRAS
+    const { data: compras } = await supabaseAdmin
+      .from("compras_bct")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
+
+    // 🔥 BUSCA SAQUES
     const { data: saques } = await supabaseAdmin
       .from("saques")
-      .select("valor, created_at")
-      .eq("user_id", userId);
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
 
-    const extrato: any[] = [];
-
-    compras?.forEach((c) =>
-      extrato.push({
-        tipo: "Compra",
-        valor: c.valor_brl,
-        created_at: c.created_at,
-      })
-    );
-
-    vendas?.forEach((v) =>
-      extrato.push({
-        tipo: "Venda",
-        valor: v.valor_liquido_brl,
-        created_at: v.created_at,
-      })
-    );
-
-    saques?.forEach((s) =>
-      extrato.push({
-        tipo: "Saque",
-        valor: s.valor,
-        created_at: s.created_at,
-      })
-    );
-
-    extrato.sort(
-      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    );
-
-    return NextResponse.json({ success: true, extrato });
+    return NextResponse.json({
+      success: true,
+      vendas,
+      compras,
+      saques
+    });
   } catch (err) {
-    console.error("ERRO API EXTRATO:", err);
+    console.error("ERRO EXTRATO:", err);
     return NextResponse.json({ success: false, error: "Erro interno." });
   }
 }

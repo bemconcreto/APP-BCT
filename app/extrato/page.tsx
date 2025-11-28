@@ -1,19 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "../../src/lib/supabaseClient";
 import Link from "next/link";
 
 export default function ExtratoPage() {
-  const [itens, setItens] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [items, setItems] = useState<any[]>([]);
   const [msg, setMsg] = useState("");
 
   useEffect(() => {
-    carregarExtrato();
+    loadExtrato();
   }, []);
 
-  async function carregarExtrato() {
+  async function loadExtrato() {
     setLoading(true);
     setMsg("");
 
@@ -28,61 +28,128 @@ export default function ExtratoPage() {
       }
 
       const res = await fetch("/api/extrato", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` }
       });
 
-      const json = await res.json();
+      const j = await res.json();
 
-      if (!json.success) {
+      if (!j.success) {
         setMsg("Erro ao carregar extrato.");
-        setItens([]);
-      } else {
-        setItens(json.extrato || []);
+        setLoading(false);
+        return;
       }
-    } catch (e) {
-      console.error(e);
-      setMsg("Erro ao conectar ao servidor.");
+
+      const lista: any[] = [];
+
+      // 🔥 Formatar vendas
+      j.vendas.forEach((v: any) => {
+        lista.push({
+          tipo: "Venda",
+          tokens: v.tokens_solicitados,
+          valor: v.valor_liquido_brl ?? v.valor_brl ?? 0,
+          status: v.status,
+          data: v.created_at
+        });
+      });
+
+      // 🔥 Formatar compras
+      j.compras.forEach((c: any) => {
+        lista.push({
+          tipo: "Compra",
+          tokens: c.tokens,
+          valor: c.valor_total_brl,
+          status: c.status,
+          data: c.created_at
+        });
+      });
+
+      // 🔥 Formatar saques
+      j.saques.forEach((s: any) => {
+        lista.push({
+          tipo: "Saque",
+          tokens: null,
+          valor: s.valor,
+          status: s.status,
+          data: s.created_at
+        });
+      });
+
+      // 🔥 Ordenar tudo por data
+      lista.sort(
+        (a, b) => new Date(b.data).getTime() - new Date(a.data).getTime()
+      );
+
+      setItems(lista);
+
+    } catch (err) {
+      setMsg("Erro ao conectar com o servidor.");
     }
 
     setLoading(false);
   }
 
+  function formatDate(d: string) {
+    const dt = new Date(d);
+    return dt.toLocaleDateString("pt-BR") + " — " + dt.toLocaleTimeString("pt-BR");
+  }
+
+  function statusColor(status: string) {
+    if (status === "completed" || status === "confirmado") return "text-green-600";
+    if (status === "pending" || status === "processando") return "text-yellow-600";
+    return "text-red-600";
+  }
+
+  function tipoColor(tipo: string) {
+    if (tipo === "Compra") return "text-green-700";
+    if (tipo === "Venda" || tipo === "Saque") return "text-red-700";
+    return "text-gray-800";
+  }
+
   return (
     <div className="min-h-screen bg-gray-100 p-8">
-      <div className="max-w-2xl mx-auto bg-white rounded-xl shadow-md p-8">
+      <div className="max-w-2xl mx-auto bg-white p-6 rounded-xl shadow-md">
         <h1 className="text-2xl font-bold mb-6 text-center">Extrato</h1>
 
-        {msg && <p className="text-red-600 mb-4">{msg}</p>}
+        {msg && <p className="text-red-600 mb-4 text-center">{msg}</p>}
 
-        <button
-          onClick={carregarExtrato}
-          className="w-full bg-[#0C3D2E] text-white py-3 rounded-lg mb-6"
-        >
-          Atualizar
-        </button>
+        {loading ? (
+          <p className="text-center text-gray-500">Carregando...</p>
+        ) : (
+          <div className="space-y-4">
+            {items.map((i, idx) => (
+              <div key={idx} className="border p-4 rounded-lg bg-gray-50">
+                <p className={`text-lg font-bold ${tipoColor(i.tipo)}`}>
+                  {i.tipo}
+                </p>
 
-        {loading && <p className="text-center">Carregando...</p>}
+                {i.tokens && (
+                  <p className="text-gray-700">Tokens: {i.tokens}</p>
+                )}
 
-        {!loading && itens.length === 0 && (
-          <p className="text-center text-gray-600">Sem registros por enquanto.</p>
+                <p className="text-gray-700">
+                  Valor: <b>R$ {Number(i.valor).toFixed(2)}</b>
+                </p>
+
+                <p className={`font-semibold ${statusColor(i.status)}`}>
+                  Status: {i.status}
+                </p>
+
+                <p className="text-gray-600 text-sm mt-1">
+                  {formatDate(i.data)}
+                </p>
+              </div>
+            ))}
+
+            {items.length === 0 && (
+              <p className="text-center text-gray-500">Nenhuma operação encontrada.</p>
+            )}
+          </div>
         )}
 
-        <div className="space-y-4">
-          {itens.map((item, index) => (
-            <div key={index} className="border p-4 rounded-lg bg-gray-50">
-              <p><b>Tipo:</b> {item.tipo}</p>
-              <p><b>Valor:</b> R$ {Number(item.valor).toFixed(2)}</p>
-              <p><b>Data:</b> {new Date(item.created_at).toLocaleString()}</p>
-            </div>
-          ))}
-        </div>
-
         <Link href="/">
-          <span className="block text-center text-gray-600 underline mt-6 cursor-pointer">
+          <p className="mt-6 text-center text-gray-700 underline cursor-pointer">
             Voltar ao painel
-          </span>
+          </p>
         </Link>
       </div>
     </div>

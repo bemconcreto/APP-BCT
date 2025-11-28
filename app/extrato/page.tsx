@@ -94,8 +94,8 @@ export default function ExtratoPage() {
   }
 
   function statusColor(status: string) {
-    if (status === "completed" || status === "confirmado") return "text-green-600";
-    if (status === "pending" || status === "processando") return "text-yellow-600";
+    if (status === "Confirmado" || status === "confirmado") return "text-green-600";
+    if (status === "Processando" || status === "processando") return "text-yellow-600";
     return "text-red-600";
   }
 

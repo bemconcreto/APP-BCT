@@ -1,4 +1,5 @@
 // app/api/saque/route.ts
+
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
@@ -50,16 +51,56 @@ export async function POST(req: Request) {
       );
     }
 
-    // ▶ BUSCAR SALDO ATUAL
-    const { data: walletRow } = await supabaseAdmin
-      .from("wallet_cash")
-      .select("saldo_cash")
+    // ----------------------------------------------------------
+    // 🟢 CALCULAR SALDO BASEADO EM COMPRAS + VENDAS - SAQUES
+    // ----------------------------------------------------------
+
+    // Total de COMPRAS confirmadas
+    const { data: compras } = await supabaseAdmin
+      .from("compras_bct")
+      .select("valor_pago, status")
       .eq("user_id", userId)
-      .single();
+      .eq("status", "completed");
 
-    const saldoAtual = Number(walletRow?.saldo_cash ?? 0);
+    const totalCompras =
+      compras?.reduce(
+        (acc, item) => acc + Number(item.valor_pago ?? 0),
+        0
+      ) ?? 0;
 
-    // ▶ VERIFICAÇÃO CORRETA
+    // Total de VENDAS confirmadas
+    const { data: vendas } = await supabaseAdmin
+      .from("vendas_bct")
+      .select("valor_recebidc, valor_liquido, status")
+      .eq("user_id", userId)
+      .eq("status", "completed");
+
+    const totalVendas =
+      vendas?.reduce(
+        (acc, item) =>
+          acc + Number(item.valor_recebidc ?? item.valor_liquido ?? 0),
+        0
+      ) ?? 0;
+
+    // Total de SAQUES já realizados (exceto cancelados)
+    const { data: saquesFeitos } = await supabaseAdmin
+      .from("saques")
+      .select("valor, status")
+      .eq("user_id", userId)
+      .neq("status", "canceled");
+
+    const totalSaques =
+      saquesFeitos?.reduce(
+        (acc, item) => acc + Number(item.valor ?? 0),
+        0
+      ) ?? 0;
+
+    // SALDO FINAL
+    const saldoAtual = Number(totalCompras + totalVendas - totalSaques);
+
+    // ----------------------------------------------------------
+    // 🛑 VALIDAÇÃO DE SALDO
+    // ----------------------------------------------------------
     if (valorNumero > saldoAtual) {
       return NextResponse.json(
         { success: false, error: "Saldo insuficiente na carteira." },
@@ -67,15 +108,9 @@ export async function POST(req: Request) {
       );
     }
 
-    // ▶ DEBITAR SALDO
-    const novoSaldo = Number((saldoAtual - valorNumero).toFixed(2));
-
-    await supabaseAdmin
-      .from("wallet_cash")
-      .update({ saldo_cash: novoSaldo })
-      .eq("user_id", userId);
-
-    // ▶ REGISTRAR SAQUE
+    // ----------------------------------------------------------
+    // 🟡 REGISTRAR SAQUE
+    // ----------------------------------------------------------
     const { data: saque, error: saqueErr } = await supabaseAdmin
       .from("saques")
       .insert({
@@ -98,7 +133,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       success: true,
       saque_id: saque.id,
-      novo_saldo: novoSaldo,
+      saldo_atualizado: saldoAtual - valorNumero,
     });
 
   } catch (err) {

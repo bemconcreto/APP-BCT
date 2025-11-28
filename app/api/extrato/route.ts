@@ -34,14 +34,14 @@ export async function GET(req: Request) {
     // 1️⃣ BUSCAR VENDAS
     const { data: vendas } = await supabaseAdmin
       .from("vendas_bct")
-      .select("id, valor_recebidc, valor_liquido, taxa, tokens, status, created_at")
+      .select("id, valor_recebido, valor_liquido, taxa, tokens, status, created_at")
       .eq("user_id", userId)
       .order("created_at", { ascending: false });
 
     const vendasFormatadas =
       vendas?.map((v) => ({
         tipo: "Venda de BCT",
-        valor: Number(v.valor_recebidc ?? v.valor_liquido ?? 0),
+        valor: Number(v.valor_recebido ?? v.valor_liquido ?? 0),
         info: `Token: ${v.tokens} BCT`,
         status: v.status,
         data: v.created_at,

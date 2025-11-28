@@ -9,80 +9,91 @@ const supabaseAdmin = createClient(
 
 export async function GET(req: Request) {
   try {
-    // autenticação
+    // Autenticação
     const authHeader = req.headers.get("authorization") || "";
     let userId: string | null = null;
 
     if (authHeader.startsWith("Bearer ")) {
       const token = authHeader.split(" ")[1];
+
       const sup = createClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.SUPABASE_SERVICE_ROLE_KEY!
       );
+
       const { data } = await sup.auth.getUser(token);
       userId = data?.user?.id ?? null;
     }
 
     if (!userId) {
-      return NextResponse.json({ success: false, error: "Usuário não autenticado." }, { status: 401 });
+      return NextResponse.json(
+        { success: false, error: "Usuário não autenticado." },
+        { status: 401 }
+      );
     }
 
-    // 1️⃣ COMPRAS
+    /** BUSCA DAS 3 TABELAS **/
+
+    // COMPRAS
     const { data: compras } = await supabaseAdmin
       .from("compras_bct")
-      .select("id, quantidade, valor_brl, created_at")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false });
+      .select("id, tokens, valor_brl, status, created_at")
+      .eq("user_id", userId);
 
-    const comprasFormatadas =
-      compras?.map((c) => ({
-        tipo: "compra",
-        descricao: `Compra de ${c.quantidade} BCT`,
-        valor: -Number(c.valor_brl), // sai reais
-        data: c.created_at,
-      })) ?? [];
-
-    // 2️⃣ VENDAS
+    // VENDAS
     const { data: vendas } = await supabaseAdmin
       .from("vendas_bct")
-      .select("id, tokens_solicitados, valor_liquido_brl, created_at")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false });
+      .select("id, tokens_solicitados, valor_liquido_brl, status, created_at")
+      .eq("user_id", userId);
 
-    const vendasFormatadas =
-      vendas?.map((v) => ({
-        tipo: "venda",
-        descricao: `Venda de ${v.tokens_solicitados} BCT`,
-        valor: Number(v.valor_liquido_brl), // entra reais
-        data: v.created_at,
-      })) ?? [];
-
-    // 3️⃣ SAQUES
+    // SAQUES
     const { data: saques } = await supabaseAdmin
       .from("saques")
       .select("id, valor, status, created_at")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false });
+      .eq("user_id", userId);
 
-    const saquesFormatados =
-      saques?.map((s) => ({
+    /** NORMALIZAÇÃO DOS ITENS **/
+
+    const lista: any[] = [];
+
+    compras?.forEach((c) =>
+      lista.push({
+        tipo: "compra",
+        valor: Number(c.valor_brl),
+        tokens: Number(c.tokens),
+        status: c.status,
+        data: c.created_at,
+      })
+    );
+
+    vendas?.forEach((v) =>
+      lista.push({
+        tipo: "venda",
+        valor: Number(v.valor_liquido_brl),
+        tokens: Number(v.tokens_solicitados),
+        status: v.status,
+        data: v.created_at,
+      })
+    );
+
+    saques?.forEach((s) =>
+      lista.push({
         tipo: "saque",
-        descricao: `Saque via PIX (${s.status})`,
-        valor: -Number(s.valor), // saída de reais
+        valor: Number(s.valor),
+        tokens: null,
+        status: s.status,
         data: s.created_at,
-      })) ?? [];
+      })
+    );
 
-    // 4️⃣ CONSOLIDAR
-    const extrato = [
-      ...comprasFormatadas,
-      ...vendasFormatadas,
-      ...saquesFormatados,
-    ].sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
+    /** ORDENAR MAIS RECENTE PRIMEIRO **/
+    lista.sort(
+      (a, b) => new Date(b.data).getTime() - new Date(a.data).getTime()
+    );
 
-    return NextResponse.json({ success: true, extrato });
-
+    return NextResponse.json({ success: true, extrato: lista });
   } catch (err) {
-    console.error("ERRO /api/extrato:", err);
+    console.error("ERRO API EXTRATO:", err);
     return NextResponse.json({ success: false, error: "Erro interno." });
   }
 }

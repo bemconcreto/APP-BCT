@@ -31,10 +31,26 @@ export async function GET(req: Request) {
       );
     }
 
-    // 1️⃣ BUSCAR VENDAS
+    // 1️⃣ BUSCAR COMPRAS
+    const { data: compras } = await supabaseAdmin
+      .from("compras_bct")
+      .select("id, tokens, valor_total, status, created_at")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
+
+    const comprasFormatadas =
+      compras?.map((c) => ({
+        tipo: "Compra de BCT",
+        valor: Number(c.valor_total ?? 0),
+        info: `Token: ${c.tokens} BCT`,
+        status: c.status,
+        data: c.created_at,
+      })) ?? [];
+
+    // 2️⃣ BUSCAR VENDAS
     const { data: vendas } = await supabaseAdmin
       .from("vendas_bct")
-      .select("id, valor_recebido, valor_liquido, taxa, tokens, status, created_at")
+      .select("id, tokens, valor_recebido, valor_liquido, status, created_at")
       .eq("user_id", userId)
       .order("created_at", { ascending: false });
 
@@ -47,7 +63,7 @@ export async function GET(req: Request) {
         data: v.created_at,
       })) ?? [];
 
-    // 2️⃣ BUSCAR SAQUES
+    // 3️⃣ BUSCAR SAQUES
     const { data: saques } = await supabaseAdmin
       .from("saques")
       .select("id, valor, chave_pix, status, created_at")
@@ -63,8 +79,12 @@ export async function GET(req: Request) {
         data: s.created_at,
       })) ?? [];
 
-    // 3️⃣ UNIR E ORDENAR
-    const extrato = [...vendasFormatadas, ...saquesFormatados].sort(
+    // 4️⃣ UNIR TUDO E ORDENAR
+    const extrato = [
+      ...comprasFormatadas,
+      ...vendasFormatadas,
+      ...saquesFormatados,
+    ].sort(
       (a: any, b: any) => new Date(b.data).getTime() - new Date(a.data).getTime()
     );
 

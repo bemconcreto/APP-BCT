@@ -45,6 +45,25 @@ export default function ExtratoPage() {
     setLoading(false);
   }
 
+  function translateStatus(status: string) {
+    if (!status) return "";
+
+    switch (status.toLowerCase()) {
+      case "completed":
+        return "Confirmado";
+      case "paid":
+        return "Pago";
+      case "pending":
+        return "Pendente";
+      case "processing":
+        return "Processando";
+      case "failed":
+        return "Falhou";
+      default:
+        return status;
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-100 p-8">
       <div className="max-w-3xl mx-auto bg-white rounded-xl shadow-md p-8">
@@ -69,7 +88,9 @@ export default function ExtratoPage() {
 
               <p className="text-gray-700">{item.info}</p>
 
-              <p>Status: <b>{item.status}</b></p>
+              <p>
+                Status: <b>{translateStatus(item.status)}</b>
+              </p>
 
               <p className="text-gray-500 text-sm">
                 {new Date(item.data).toLocaleString("pt-BR")}

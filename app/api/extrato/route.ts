@@ -34,7 +34,7 @@ export async function GET(req: Request) {
     // 1️⃣ BUSCAR VENDAS
     const { data: vendas } = await supabaseAdmin
       .from("vendas_bct")
-      .select("id, valor_liquido, taxa, valor_recebido, status, created_at")
+      .select("id, tokens_solicitados, valor_liquido, taxa, valor_recebido, status, created_at")
       .eq("user_id", userId)
       .order("created_at", { ascending: false });
 
@@ -42,8 +42,18 @@ export async function GET(req: Request) {
       vendas?.map((v) => ({
         tipo: "Venda de BCT",
         valor: Number(v.valor_recebido ?? v.valor_liquido ?? 0),
-        info: `Venda ID: ${v.id}`,
-        status: v.status,
+
+        // 🔥 ALTERAÇÃO SOLICITADA → Mostrar tokens vendidos
+        info: `Tokens: ${Number(v.tokens_solicitados).toFixed(6)}`,
+
+        // 🔥 ALTERAÇÃO SOLICITADA → Status formatado
+        status:
+          v.status === "completed"
+            ? "Confirmado"
+            : v.status === "pending"
+            ? "Processando"
+            : "Cancelado",
+
         data: v.created_at,
       })) ?? [];
 
@@ -58,8 +68,18 @@ export async function GET(req: Request) {
       saques?.map((s) => ({
         tipo: "Saque",
         valor: -Number(s.valor),
+
+        // Não pediu alteração — apenas mantém como está
         info: `Chave PIX: ${s.chave_pix}`,
-        status: s.status,
+
+        // 🔥 ALTERAÇÃO SOLICITADA → Status formatado
+        status:
+          s.status === "approved"
+            ? "Confirmado"
+            : s.status === "pending"
+            ? "Processando"
+            : "Cancelado",
+
         data: s.created_at,
       })) ?? [];
 

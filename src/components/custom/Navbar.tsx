@@ -32,7 +32,7 @@ export function Navbar() {
   return (
     <nav className="bg-[#101820] shadow-lg">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-center w-full">
+        <div className="flex items-center justify-between w-full">
           {/* Logo */}
           <div className="flex items-center">
             <Link href="/inicio" className="flex items-center">

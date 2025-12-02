@@ -30,7 +30,7 @@ export default function Home() {
       <header className="pt-20 pb-8 px-6">
         <div className="max-w-4xl mx-auto text-center">
           {/* central logo */}
-          <div className="flex justify-center mt-4">
+          <div className="flex justify-center mt-[60px]">
             <Image src="/logo-bct2.png" alt="Logo BCT" width={180} height={180} priority />
           </div>
 

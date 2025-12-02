@@ -58,30 +58,6 @@ export default function Home() {
         </div>
       </header>
 
-      {/* STATS / PRICE */}
-      <section className="px-6 pb-12">
-        <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white shadow-md rounded-lg p-6 text-center">
-            <div className="text-sm text-gray-500">Seu saldo em BCT</div>
-            <div className="mt-3 text-3xl font-bold text-[#101820]">Carregando... BCT</div>
-          </div>
-
-          <div className="bg-white shadow-md rounded-lg p-6 text-center">
-            <div className="text-sm text-gray-500">Preço do BCT</div>
-            <div className="mt-2 text-xl font-bold text-[#0C3D2E]">USD: $0.4482</div>
-            <div className="text-gray-600">BRL: R$ 2.39</div>
-            <div className="mt-3 text-sm text-green-600">▲ 0.00%</div>
-            <button className="mt-4 px-4 py-2 rounded bg-[#0C3D2E] text-white">Atualizar Dados</button>
-          </div>
-
-          <div className="bg-white shadow-md rounded-lg p-6 text-center">
-            <div className="text-sm text-gray-500">Negócios</div>
-            <div className="mt-2 text-2xl font-bold text-[#0C3D2E]">1M+</div>
-            <div className="text-gray-600">Tokens negociados</div>
-          </div>
-        </div>
-      </section>
-
       {/* WHY CHOOSE */}
       <section className="px-6 py-12 bg-white">
         <div className="max-w-6xl mx-auto text-center">

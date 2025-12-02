@@ -35,7 +35,7 @@ export function Navbar() {
         <div className="flex items-center justify-center w-full">
           {/* Logo */}
           <div className="flex items-center">
-            <Link href="/inicio" className="flex items-center space-x-2">
+            <Link href="/inicio" className="flex items-center">
  <img
   src="/logo-bct.png"
   alt="Logo BCT"

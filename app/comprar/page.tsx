@@ -36,7 +36,7 @@ export default function ComprarPage() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
-  const tokenPriceUSD = 0.4482;
+  const tokenPriceUSD = 1.00;
 
   // -----------------------------
   // BUSCA O DÓLAR EM TEMPO REAL

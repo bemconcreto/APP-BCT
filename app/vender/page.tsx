@@ -10,7 +10,7 @@ export default function VenderPage() {
   const [tokens, setTokens] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [usdToBrl, setUsdToBrl] = useState<number | null>(null);
-  const [tokenUsd, setTokenUsd] = useState<number>(0.4482);
+  const [tokenUsd, setTokenUsd] = useState<number>(1.00);
   const FEE = 0.10;
   const [msg, setMsg] = useState<string>("");
 

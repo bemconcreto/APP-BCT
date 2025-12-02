@@ -48,7 +48,7 @@ export async function POST(req: Request) {
     }
 
     // ---- PREÇOS ----
-    let tokenUSD = 0.4482;
+    let tokenUSD = 1.00;
     let usdToBrl = 5.30;
 
     // preço do token

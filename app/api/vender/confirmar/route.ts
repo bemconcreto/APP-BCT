@@ -60,7 +60,7 @@ export async function POST(req: Request) {
     const tokensAfterFee = tokensToSell * (1 - FEE_PERCENT);
 
     // 3) Pegar preço do token (USD) e câmbio USD->BRL
-    let tokenPriceUSD = 0.4482; // fallback
+    let tokenPriceUSD = 1.00; // fallback
     try {
       const precoRes = await fetch(`${process.env.NEXT_PUBLIC_APP_URL ?? ""}/api/preco-bct`);
       if (precoRes.ok) {

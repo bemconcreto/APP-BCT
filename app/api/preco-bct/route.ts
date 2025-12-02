@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 // 🔥 PREÇO BASE DO BCT EM USD (fixo do seu projeto)
-const PRECO_BCT_USD = 0.4482;
+const PRECO_BCT_USD = 1.00;
 
 export async function GET() {
   try {

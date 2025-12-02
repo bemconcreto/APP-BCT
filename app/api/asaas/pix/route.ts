@@ -59,11 +59,11 @@ export async function POST(req: Request) {
     // =========================================
     //   CALCULA TOKENS
     // =========================================
-    const precoUSD = 0.4482;
+    const precoUSD = 1.00;
     const dolar = 5.3;
     const precoBRL = precoUSD * dolar;
     const calculatedTokens =
-      tokens ?? Number((Number(amountBRL) / precoBRL).toFixed(6));
+      tokens ?? Number((Number(amountBRL) / precoBRL).toFixed(2));
 
     // =========================================
     //   REGISTRA COMPRA (AQUI DAVA ERRO)

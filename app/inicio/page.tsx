@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { supabase } from "../../src/lib/supabaseClient";
+import { formatReal } from "@/utils/format";
 
 export default function InicioPage() {
   const [priceUSD, setPriceUSD] = useState<number | null>(null);
@@ -91,13 +92,13 @@ export default function InicioPage() {
         <div className="bg-white shadow-md p-6 rounded-xl text-center border mb-10">
           <h2 className="text-xl font-bold text-[#CBA35C]">Preço do BCT</h2>
 
-          <p className="text-gray-700 text-lg mt-3">
-            USD: {priceUSD !== null ? `$${priceUSD.toFixed(2)}` : "Carregando..."}
-          </p>
+<p className="text-gray-700 text-lg mt-3">
+  USD: {priceUSD !== null ? `$${priceUSD.toFixed(2)}` : "Carregando..."}
+</p>
 
-          <p className="text-gray-700 text-lg">
-            BRL: {priceBRL !== null ? `R$ ${priceBRL.toFixed(2)}` : "Carregando..."}
-          </p>
+<p className="text-gray-700 text-lg">
+  BRL: {priceBRL !== null ? formatReal(priceBRL) : "Carregando..."}
+</p>
 
           {variation !== null && (
             <p

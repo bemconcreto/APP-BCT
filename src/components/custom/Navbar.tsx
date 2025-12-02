@@ -39,7 +39,7 @@ export function Navbar() {
  <img
   src="/logo-bct.png"
   alt="Logo BCT"
-  className="w-8 h-8 rounded-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
+  className="w-10 h-10 rounded-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
 />
   <span className="text-white font-bold text-xl font-inter cursor-pointer hover:text-[#12B76A] transition-colors">
     Bem Concreto Token

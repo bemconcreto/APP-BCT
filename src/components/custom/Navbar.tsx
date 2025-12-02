@@ -88,7 +88,7 @@ export function Navbar() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="border-[#12B76A] text-[#12B76A] hover:bg-[#12B76A] hover:text-white"
+                    className="border-[#4C3B34] text-[#8D6E63] hover:bg-[#12B76A] hover:text-white"
                   >
                     Entrar
                   </Button>
@@ -96,7 +96,7 @@ export function Navbar() {
                 <Link href="/cadastro">
                   <Button
                     size="sm"
-                    className="bg-[#12B76A] text-white hover:bg-[#0F9A5A]"
+                    className="bg-[#4C3B34] text-white hover:bg-[#8D6E63]"
                   >
                     Cadastrar
                   </Button>

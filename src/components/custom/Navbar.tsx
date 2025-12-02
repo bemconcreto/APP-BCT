@@ -172,10 +172,11 @@ export function Navbar() {
                   className="block px-3 py-2"
                   onClick={() => setIsMenuOpen(false)}
                 >
-                  <Button
-                    className="w-full bg-[#4C3B34] text-white hover:bg-[#8D6E63]"
-                    Cadastrar
-                  </Button>
+                 <Button
+  className="w-full bg-[#4C3B34] text-white hover:bg-[#8D6E63]"
+>
+  Cadastrar
+</Button>
                 </Link>
               </div>
             )}

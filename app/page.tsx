@@ -43,14 +43,18 @@ export default function Home() {
       <section className="relative py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto text-center">
           <div className="mb-8">
-            <div className="inline-flex items-center space-x-3 mb-6">
-              <div className="w-16 h-16 bg-[#12B76A] rounded-full flex items-center justify-center">
-                <span className="text-white font-bold text-2xl">BCT</span>
-              </div>
-              <span className="text-[#CBA35C] font-bold text-4xl font-inter">
-                Bem Concreto Token
-              </span>
-            </div>
+            <div className="flex items-center">
+  <Link href="/" className="flex items-center space-x-3">
+    <Image
+      src="/logo-bct2.png"
+      width={40}
+      height={40}
+      alt="Bem Concreto"
+      className="rounded-full"
+    />
+
+  </Link>
+</div>
             <h1 className="text-5xl md:text-6xl font-bold text-[#CBA35C] mb-6">
               O Futuro dos
               <span className="text-[#12B76A]"> Investimentos</span>

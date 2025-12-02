@@ -116,7 +116,7 @@ export default function InicioPage() {
             }}
             className="mt-4 bg-[#101820] text-white px-4 py-2 rounded-lg hover:bg-[#125c45]"
           >
-            Atualizar Dados
+            Atualizar valores
           </button>
         </div>
 

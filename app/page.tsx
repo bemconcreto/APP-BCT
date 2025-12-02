@@ -31,7 +31,7 @@ export default function Home() {
         <div className="max-w-4xl mx-auto text-center">
           {/* central logo */}
           <div className="flex justify-center">
-            <Image src="/logo-bct2.png" alt="Logo BCT" width={120} height={120} priority />
+            <Image src="/logo-bct2.png" alt="Logo BCT" width={180} height={180} priority />
           </div>
 
           <h1 className="mt-8 text-3xl md:text-4xl lg:text-5xl font-extrabold text-[#8D6E63] leading-tight">

@@ -30,7 +30,7 @@ export function Navbar() {
   ]
 
   return (
-    <nav className="bg-[#0C3D2E] shadow-lg">
+    <nav className="bg-[#101820] shadow-lg">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           {/* Logo */}
@@ -117,7 +117,7 @@ export function Navbar() {
 
       {/* Mobile Navigation */}
       {isMenuOpen && (
-        <div className="md:hidden bg-[#0C3D2E] border-t border-[#12B76A]/20">
+        <div className="md:hidden bg-[#101820] border-t border-[#12B76A]/20">
           <div className="px-2 pt-2 pb-3 space-y-1">
             {user && navigation.map((item) => {
               const Icon = item.icon

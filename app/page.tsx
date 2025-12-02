@@ -47,11 +47,11 @@ export default function Home() {
               <div className="w-16 h-16 bg-[#12B76A] rounded-full flex items-center justify-center">
                 <span className="text-white font-bold text-2xl">BCT</span>
               </div>
-              <span className="text-[#0C3D2E] font-bold text-4xl font-inter">
+              <span className="text-[#CBA35C] font-bold text-4xl font-inter">
                 Bem Concreto Token
               </span>
             </div>
-            <h1 className="text-5xl md:text-6xl font-bold text-[#0C3D2E] mb-6">
+            <h1 className="text-5xl md:text-6xl font-bold text-[#CBA35C] mb-6">
               O Futuro dos
               <span className="text-[#12B76A]"> Investimentos</span>
             </h1>
@@ -104,7 +104,7 @@ export default function Home() {
       <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-[#0C3D2E] mb-4">
+            <h2 className="text-4xl font-bold text-[#CBA35C] mb-4">
               Por que escolher BCT?
             </h2>
             <p className="text-xl text-[#111827]/70 max-w-2xl mx-auto">
@@ -118,7 +118,7 @@ export default function Home() {
                 <div className="w-12 h-12 bg-[#12B76A]/10 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Zap className="h-6 w-6 text-[#12B76A]" />
                 </div>
-                <CardTitle className="text-[#0C3D2E]">PIX Instantâneo</CardTitle>
+                <CardTitle className="text-[#CBA35C]">PIX Instantâneo</CardTitle>
               </CardHeader>
               <CardContent>
                 <CardDescription className="text-center">
@@ -132,7 +132,7 @@ export default function Home() {
                 <div className="w-12 h-12 bg-[#12B76A]/10 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Shield className="h-6 w-6 text-[#12B76A]" />
                 </div>
-                <CardTitle className="text-[#0C3D2E]">Segurança Total</CardTitle>
+                <CardTitle className="text-[#CBA35C]">Segurança Total</CardTitle>
               </CardHeader>
               <CardContent>
                 <CardDescription className="text-center">
@@ -146,7 +146,7 @@ export default function Home() {
                 <div className="w-12 h-12 bg-[#12B76A]/10 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Globe className="h-6 w-6 text-[#12B76A]" />
                 </div>
-                <CardTitle className="text-[#0C3D2E]">Global</CardTitle>
+                <CardTitle className="text-[#CBA35C]">Global</CardTitle>
               </CardHeader>
               <CardContent>
                 <CardDescription className="text-center">
@@ -160,7 +160,7 @@ export default function Home() {
                 <div className="w-12 h-12 bg-[#12B76A]/10 rounded-full flex items-center justify-center mx-auto mb-4">
                   <TrendingUp className="h-6 w-6 text-[#12B76A]" />
                 </div>
-                <CardTitle className="text-[#0C3D2E]">Rentabilidade</CardTitle>
+                <CardTitle className="text-[#CBA35C]">Rentabilidade</CardTitle>
               </CardHeader>
               <CardContent>
                 <CardDescription className="text-center">
@@ -176,7 +176,7 @@ export default function Home() {
       <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-[#F3F4F6] to-white">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-[#0C3D2E] mb-4">
+            <h2 className="text-4xl font-bold text-[#CBA35C] mb-4">
               Como Funciona
             </h2>
             <p className="text-xl text-[#111827]/70 max-w-2xl mx-auto">
@@ -189,7 +189,7 @@ export default function Home() {
               <div className="w-16 h-16 bg-[#12B76A] text-white rounded-full flex items-center justify-center mx-auto mb-6 text-2xl font-bold">
                 1
               </div>
-              <h3 className="text-xl font-bold text-[#0C3D2E] mb-4">Cadastre-se</h3>
+              <h3 className="text-xl font-bold text-[#CBA35C] mb-4">Cadastre-se</h3>
               <p className="text-[#111827]/70">
                 Crie sua conta em menos de 2 minutos. Verificação automática e segura.
               </p>
@@ -199,7 +199,7 @@ export default function Home() {
               <div className="w-16 h-16 bg-[#12B76A] text-white rounded-full flex items-center justify-center mx-auto mb-6 text-2xl font-bold">
                 2
               </div>
-              <h3 className="text-xl font-bold text-[#0C3D2E] mb-4">Deposite</h3>
+              <h3 className="text-xl font-bold text-[#CBA35C] mb-4">Deposite</h3>
               <p className="text-[#111827]/70">
                 Adicione fundos via PIX instantâneo ou cartão de crédito.
               </p>
@@ -209,7 +209,7 @@ export default function Home() {
               <div className="w-16 h-16 bg-[#12B76A] text-white rounded-full flex items-center justify-center mx-auto mb-6 text-2xl font-bold">
                 3
               </div>
-              <h3 className="text-xl font-bold text-[#0C3D2E] mb-4">Invista</h3>
+              <h3 className="text-xl font-bold text-[#CBA35C] mb-4">Invista</h3>
               <p className="text-[#111827]/70">
                 Compre tokens BCT e acompanhe sua carteira em tempo real.
               </p>
@@ -219,7 +219,7 @@ export default function Home() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-[#0C3D2E]">
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-[#101820]">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-4xl font-bold text-white mb-6">
             Pronto para começar?

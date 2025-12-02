@@ -66,7 +66,7 @@ export default function CarteiraPage() {
 
         <button
           onClick={loadCarteira}
-          className="w-full bg-[#0C3D2E] text-white py-3 rounded-lg mb-4"
+          className="w-full bg-[#101820] text-white py-3 rounded-lg mb-4"
         >
           Atualizar
         </button>

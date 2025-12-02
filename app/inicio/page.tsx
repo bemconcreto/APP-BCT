@@ -79,7 +79,7 @@ export default function InicioPage() {
         </h1>
 
         {/* 🔥 SALDO DO USUÁRIO */}
-        <div className="bg-[#0C3D2E] text-white p-6 rounded-xl text-center shadow-md mb-8">
+        <div className="bg-[#101820] text-white p-6 rounded-xl text-center shadow-md mb-8">
           <h2 className="text-xl font-semibold">Seu saldo de BCT</h2>
 
           <p className="text-3xl font-bold mt-3">
@@ -89,7 +89,7 @@ export default function InicioPage() {
 
         {/* BLOCO DO PREÇO */}
         <div className="bg-white shadow-md p-6 rounded-xl text-center border mb-10">
-          <h2 className="text-xl font-bold text-[#0C3D2E]">Preço do BCT</h2>
+          <h2 className="text-xl font-bold text-[#CBA35C]">Preço do BCT</h2>
 
           <p className="text-gray-700 text-lg mt-3">
             USD: {priceUSD !== null ? `$${priceUSD.toFixed(4)}` : "Carregando..."}
@@ -114,7 +114,7 @@ export default function InicioPage() {
               loadData();
               loadSaldo();
             }}
-            className="mt-4 bg-[#0C3D2E] text-white px-4 py-2 rounded-lg hover:bg-[#125c45]"
+            className="mt-4 bg-[#101820] text-white px-4 py-2 rounded-lg hover:bg-[#125c45]"
           >
             Atualizar Dados
           </button>

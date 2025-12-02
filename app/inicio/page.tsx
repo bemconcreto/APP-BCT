@@ -74,8 +74,8 @@ export default function InicioPage() {
     <div className="min-h-screen bg-gray-100 p-8">
       <div className="max-w-5xl mx-auto bg-white rounded-xl shadow-md p-8">
 
-        <h1 className="text-3xl font-bold text-center mb-6 text-gray-800">
-          Painel Bem Concreto Token
+        <h1 className="text-3xl font-bold text-center mb-6 text-[#7A5D53]">
+          Um pedaço do mundo na palma da sua mão
         </h1>
 
         {/* 🔥 SALDO DO USUÁRIO */}

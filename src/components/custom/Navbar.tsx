@@ -162,7 +162,7 @@ export function Navbar() {
                 >
                   <Button
                     variant="outline"
-                    className="border-[#4C3B34] text-[#8D6E63] hover:bg-[#12B76A] hover:text-white"
+                    className="w-full border-[#4C3B34] text-[#8D6E63] hover:bg-[#12B76A] hover:text-white"
                   >
                     Entrar
                   </Button>
@@ -173,8 +173,7 @@ export function Navbar() {
                   onClick={() => setIsMenuOpen(false)}
                 >
                   <Button
-                    className="bg-[#4C3B34] text-white hover:bg-[#8D6E63]"
-                  >
+                    className="w-full bg-[#4C3B34] text-white hover:bg-[#8D6E63]"
                     Cadastrar
                   </Button>
                 </Link>

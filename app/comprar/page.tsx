@@ -201,11 +201,11 @@ export default function ComprarPage() {
 
         {/* Simulação */}
         <div className="bg-gray-50 border rounded-lg p-4 mb-8">
-          <p>Preço do BCT: US$ {tokenPriceUSD.toFixed(4)}</p>
+          <p>Preço do BCT: US$ {tokenPriceUSD.toFixed(2)}</p>
 
           <p>
             Dólar:{" "}
-            {usdToBRL ? `R$ ${usdToBRL.toFixed(4)}` : "Carregando..."}
+            {usdToBRL ? `R$ ${usdToBRL.toFixed(2)}` : "Carregando..."}
           </p>
 
           <p className="text-lg font-semibold mt-2">

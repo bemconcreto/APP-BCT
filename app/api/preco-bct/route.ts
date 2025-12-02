@@ -21,7 +21,7 @@ export async function GET() {
     return NextResponse.json({
       success: true,
       usd: PRECO_BCT_USD,
-      brl: Number(priceBRL.toFixed(4)),
+      brl: Number(priceBRL.toFixed(2)),
       variation24h: 0, // podendo implementar mais tarde
     });
 
@@ -32,7 +32,7 @@ export async function GET() {
     return NextResponse.json({
       success: true,
       usd: PRECO_BCT_USD,
-      brl: Number((PRECO_BCT_USD * 5.3).toFixed(4)),
+      brl: Number((PRECO_BCT_USD * 5.3).toFixed(2)),
       variation24h: 0,
     });
   }

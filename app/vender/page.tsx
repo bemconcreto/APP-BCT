@@ -137,8 +137,8 @@ export default function VenderPage() {
         <div className="bg-gray-50 border rounded p-4 mb-4">
           <p>Taxa: {Math.round(FEE * 100)}%</p>
           <p>Tokens vendidos: {tokens ? numericTokens.toFixed(6) : "0.000000"}</p>
-          <p>Preço token (USD): ${tokenUsd.toFixed(4)}</p>
-          <p>Dólar: {usdToBrl ? `R$ ${usdToBrl.toFixed(4)}` : "Carregando..."}</p>
+          <p>Preço token (USD): ${tokenUsd.toFixed(2)}</p>
+          <p>Dólar: {usdToBrl ? `R$ ${usdToBrl.toFixed(2)}` : "Carregando..."}</p>
 
           <p className="font-semibold mt-2">
             Estimativa a receber: R$ {estimatedBRL.toFixed(2)}

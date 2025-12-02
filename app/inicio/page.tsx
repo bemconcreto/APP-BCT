@@ -127,45 +127,45 @@ export default function InicioPage() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
 
-          {/* COMPRAR */}
-          <Link href="/comprar">
-            <div className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg p-6 cursor-pointer text-center">
-              <h2 className="text-xl font-semibold">Comprar</h2>
-              <p className="mt-2 text-sm text-blue-100">Adquirir tokens BCT</p>
-            </div>
-          </Link>
+         {/* COMPRAR */}
+<Link href="/comprar">
+  <div className="bg-[#CBA35C] hover:bg-[#b39149] text-white rounded-lg p-6 cursor-pointer text-center">
+    <h2 className="text-xl font-semibold">Comprar</h2>
+    <p className="mt-2 text-sm text-white/80">Adquirir tokens BCT</p>
+  </div>
+</Link>
 
-          {/* VENDER */}
-          <Link href="/vender">
-            <div className="bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg p-6 cursor-pointer text-center">
-              <h2 className="text-xl font-semibold">Vender</h2>
-              <p className="mt-2 text-sm text-yellow-100">Negociar seus tokens</p>
-            </div>
-          </Link>
+{/* VENDER */}
+<Link href="/vender">
+  <div className="bg-[#8D6E63] hover:bg-[#7c5f55] text-white rounded-lg p-6 cursor-pointer text-center">
+    <h2 className="text-xl font-semibold">Vender</h2>
+    <p className="mt-2 text-sm text-white/80">Negociar seus tokens</p>
+  </div>
+</Link>
 
-          {/* CARTEIRA */}
-          <Link href="/carteira">
-            <div className="bg-orange-500 hover:bg-orange-600 text-white rounded-lg p-6 cursor-pointer text-center">
-              <h2 className="text-xl font-semibold">Carteira</h2>
-              <p className="mt-2 text-sm text-orange-100">Saldo em Reais</p>
-            </div>
-          </Link>
+{/* CARTEIRA */}
+<Link href="/carteira">
+  <div className="bg-[#4C3B34] hover:bg-[#3f2f29] text-white rounded-lg p-6 cursor-pointer text-center">
+    <h2 className="text-xl font-semibold">Carteira</h2>
+    <p className="mt-2 text-sm text-white/80">Saldo em Reais</p>
+  </div>
+</Link>
 
-          {/* IMÓVEIS */}
-          <Link href="/imoveis">
-            <div className="bg-[#101820] hover:bg-[#101820] text-white rounded-lg p-6 cursor-pointer text-center">
-              <h2 className="text-xl font-semibold">Imóveis</h2>
-              <p className="mt-2 text-sm text-[#CBA35C]">Ver imóveis tokenizados</p>
-            </div>
-          </Link>
+{/* IMÓVEIS */}
+<Link href="/imoveis">
+  <div className="bg-[#101820] hover:bg-[#0d1318] text-white rounded-lg p-6 cursor-pointer text-center">
+    <h2 className="text-xl font-semibold">Imóveis</h2>
+    <p className="mt-2 text-sm text-[#CBA35C]">Ver imóveis tokenizados</p>
+  </div>
+</Link>
 
-          {/* EXTRATO */}
-          <Link href="/extrato">
-            <div className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg p-6 cursor-pointer text-center">
-              <h2 className="text-xl font-semibold">Extrato</h2>
-              <p className="mt-2 text-sm text-indigo-100">Acompanhar histórico</p>
-            </div>
-          </Link>
+{/* EXTRATO */}
+<Link href="/extrato">
+  <div className="bg-[#3A3F47] hover:bg-[#30353b] text-white rounded-lg p-6 cursor-pointer text-center">
+    <h2 className="text-xl font-semibold">Extrato</h2>
+    <p className="mt-2 text-sm text-white/80">Acompanhar histórico</p>
+  </div>
+</Link>
 
         </div>
       </div>

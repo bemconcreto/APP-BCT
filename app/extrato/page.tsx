@@ -111,7 +111,7 @@ export default function ExtratoPage() {
     if (!tipo) return "text-black";
 
     const t = tipo.toLowerCase();
-    if (t.includes("compra")) return "text-green-700";
+    if (t.includes("compra")) return "text-[#CBA35C]";
     if (t.includes("venda")) return "text-red-600";
     if (t.includes("saque")) return "text-blue-600";
 
@@ -141,7 +141,7 @@ export default function ExtratoPage() {
               </p>
 
               {/* Valor */}
-              <p className={`text-lg ${item.valor < 0 ? "text-red-600" : "text-green-700"}`}>
+              <p className={`text-lg ${item.valor < 0 ? "text-red-600" : "text-[#CBA35C]"}`}>
                 Valor: R$ {item.valor.toFixed(2)}
               </p>
 

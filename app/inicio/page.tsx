@@ -102,7 +102,7 @@ export default function InicioPage() {
           {variation !== null && (
             <p
               className={`mt-2 text-sm font-semibold ${
-                variation >= 0 ? "text-green-600" : "text-red-600"
+                variation >= 0 ? "text-[#CBA35C]" : "text-red-600"
               }`}
             >
               {variation >= 0 ? "▲" : "▼"} {variation.toFixed(2)}%
@@ -153,9 +153,9 @@ export default function InicioPage() {
 
           {/* IMÓVEIS */}
           <Link href="/imoveis">
-            <div className="bg-green-600 hover:bg-green-700 text-white rounded-lg p-6 cursor-pointer text-center">
+            <div className="bg-[#101820] hover:bg-[#101820] text-white rounded-lg p-6 cursor-pointer text-center">
               <h2 className="text-xl font-semibold">Imóveis</h2>
-              <p className="mt-2 text-sm text-green-100">Ver imóveis tokenizados</p>
+              <p className="mt-2 text-sm text-[#CBA35C]">Ver imóveis tokenizados</p>
             </div>
           </Link>
 

@@ -73,7 +73,7 @@ export default function PixContent() {
 
       <button
         onClick={copiarCodigo}
-        className="bg-green-600 text-white px-6 py-3 rounded-lg mb-4"
+        className="bg-[#101820] text-white px-6 py-3 rounded-lg mb-4"
       >
         {copiado ? "COPIADO!" : "Copiar código PIX"}
       </button>

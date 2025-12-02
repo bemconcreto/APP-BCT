@@ -52,7 +52,7 @@ export default function AdminPagamentos() {
 
             {p.status === "pending" && (
               <button
-                className="mt-3 bg-green-700 text-white px-3 py-2 rounded-lg"
+                className="mt-3 bg-[#101820] text-white px-3 py-2 rounded-lg"
                 onClick={() => confirmar(p.id)}
               >
                 Confirmar Pagamento

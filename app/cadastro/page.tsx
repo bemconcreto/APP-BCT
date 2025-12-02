@@ -115,7 +115,7 @@ export default function CadastroPage() {
 
         <button
           onClick={handleGoogleLogin}
-          className="bg-green-600 hover:bg-green-700 text-white w-full py-2 rounded mb-4"
+          className="bg-[#101820] hover:bg-[#101820] text-white w-full py-2 rounded mb-4"
         >
           Entrar com Google
         </button>

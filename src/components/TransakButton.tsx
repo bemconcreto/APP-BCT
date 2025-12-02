@@ -9,7 +9,7 @@ export default function TransakButton({ userAddress }: { userAddress: string }) 
   return (
     <button
       onClick={open}
-      className="bg-green-600 text-white px-4 py-2 rounded w-full hover:bg-green-700 transition"
+      className="bg-[#101820] text-white px-4 py-2 rounded w-full hover:bg-[#101820] transition"
     >
       Comprar com Cartão 💳
     </button>

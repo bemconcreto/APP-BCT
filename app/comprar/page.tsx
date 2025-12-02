@@ -210,7 +210,7 @@ export default function ComprarPage() {
 
           <p className="text-lg font-semibold mt-2">
             Você receberá:{" "}
-            <span className="text-green-700">
+            <span className="text-[#CBA35C]">
               {tokens.toFixed(6)} BCT
             </span>
           </p>
@@ -235,7 +235,7 @@ export default function ComprarPage() {
           <button
             onClick={pagarPix}
             disabled={loading}
-            className="bg-green-600 text-white rounded-lg p-6 hover:bg-green-700"
+            className="bg-[#101820] text-white rounded-lg p-6 hover:bg-[#101820]"
           >
             <h2 className="text-xl font-semibold">PIX</h2>
           </button>

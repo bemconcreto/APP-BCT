@@ -143,11 +143,11 @@ export default function ExtratoPage() {
               </p>
 
               {/* Info */}
-<p className="text-gray-700">
-  {item.info.includes("BCT")
+            <p className="text-gray-700">
+  {item.info
     ? item.info.replace(
-        /([\d.]+)/g,
-       (v: any) => formatBCT(Number(v))
+        /([\d.]+)/g,            // encontra números com ponto
+        (v: string) => formatBCT(Number(v))  // <<<<<< CORRIGIDO E TIPADO
       )
     : item.info}
 </p>

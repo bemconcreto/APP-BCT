@@ -5,6 +5,9 @@ export const dynamic = "force-dynamic";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { supabase } from "../../src/lib/supabaseClient";
+import { formatReal } from "@/utils/format";
+import { formatBCT } from "@/utils/format";
+import { formatNumber } from "@/utils/format";
 
 // -----------------------------
 // PEGAR TOKEN DO SUPABASE
@@ -201,17 +204,17 @@ export default function ComprarPage() {
 
         {/* Simulação */}
         <div className="bg-gray-50 border rounded-lg p-4 mb-8">
-          <p>Preço do BCT: US$ {tokenPriceUSD.toFixed(2)}</p>
+          <p>Preço do BCT: US$ {formatNumber(tokenPriceUSD)}</p>
 
           <p>
             Dólar:{" "}
-            {usdToBRL ? `R$ ${usdToBRL.toFixed(2)}` : "Carregando..."}
+            {usdToBRL ? formatReal (usdToBRL) : "Carregando..."}
           </p>
 
           <p className="text-lg font-semibold mt-2">
             Você receberá:{" "}
             <span className="text-[#CBA35C]">
-              {tokens.toFixed(6)} BCT
+              {formatBCT (tokens)} BCT
             </span>
           </p>
         </div>

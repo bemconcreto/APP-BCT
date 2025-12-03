@@ -147,7 +147,7 @@ export default function ExtratoPage() {
   {item.info.includes("BCT")
     ? item.info.replace(
         /([\d.]+)/g,
-        (v: string) => formatBCT(Number(v))
+       (v: any) => formatBCT(Number(v))
       )
     : item.info}
 </p>

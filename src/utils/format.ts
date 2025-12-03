@@ -21,3 +21,9 @@ export function formatNumber(valor: number | string) {
     maximumFractionDigits: 2,
   });
 }
+export function formatBCT(value: number): string {
+  return value
+    .toFixed(6) // mantém 6 dígitos
+    .replace(".", ",") // troca o ponto pela vírgula
+    .replace(/\B(?=(\d{3})+(?!\d))/g, "."); // adiciona pontos de milhar
+}

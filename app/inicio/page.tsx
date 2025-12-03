@@ -84,7 +84,7 @@ export default function InicioPage() {
           <h2 className="text-xl font-semibold">Seu saldo de BCT</h2>
 
           <p className="text-3xl font-bold mt-3">
-            {saldoBCT !== null ? saldoBCT.toFixed(6) : "Carregando..."} BCT
+          {saldoBCT !== null ? formatBCT(saldoBCT) : "Carregando..."} BCT
           </p>
         </div>
 

@@ -14,7 +14,9 @@ import {
   Settings,
   LogOut,
   User,
-  Building2
+  Building2,
+  Wallet,
+  FileCheck
 } from 'lucide-react'
 
 export function Navbar() {
@@ -25,9 +27,9 @@ export function Navbar() {
     { name: 'Inicio', href: '/inicio', icon: Home },
     { name: 'Comprar', href: '/comprar', icon: ShoppingCart },
     { name: 'Vender', href: '/vender', icon: TrendingUp },
-    { name: 'Carteira', href: '/carteira', icon: TrendingUp },  
+    { name: 'Carteira', href: '/carteira', icon: Wallet },  
     { name: 'Imóveis', href: '/imoveis', icon: Building2 },
-    { name: 'Transparencia', href: '/transparencia', icon: TrendingUp },
+    { name: 'Transparencia', href: '/transparencia', icon: FileCheck },
     { name: 'Extrato', href: '/extrato', icon: History },
   ]
 

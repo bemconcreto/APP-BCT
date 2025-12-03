@@ -168,6 +168,12 @@ BRL: {priceBRL !== null ? formatReal(priceBRL) : "Carregando..."}
     <p className="mt-2 text-sm text-white/80">Acompanhar histórico</p>
   </div>
 </Link>
+<Link href="/transparencia">
+  <div className="bg-[#CBA35C] hover:bg-[#b39149] text-white rounded-lg p-6 cursor-pointer text-center">
+    <h2 className="text-xl font-semibold">Transparência</h2>
+    <p className="mt-2 text-sm text-white/80">Ver subcontas</p>
+  </div>
+</Link>
 
         </div>
       </div>

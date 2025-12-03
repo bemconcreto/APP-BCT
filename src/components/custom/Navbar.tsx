@@ -23,9 +23,11 @@ export function Navbar() {
 
   const navigation = [
     { name: 'Inicio', href: '/inicio', icon: Home },
-    { name: 'Imóveis', href: '/imoveis', icon: Building2 },
     { name: 'Comprar', href: '/comprar', icon: ShoppingCart },
     { name: 'Vender', href: '/vender', icon: TrendingUp },
+    { name: 'Carteira', href: '/carteira', icon: TrendingUp },  
+    { name: 'Imóveis', href: '/imoveis', icon: Building2 },
+    { name: 'Transparencia', href: '/transparencia', icon: TrendingUp },
     { name: 'Extrato', href: '/extrato', icon: History },
   ]
 

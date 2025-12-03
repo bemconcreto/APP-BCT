@@ -24,7 +24,7 @@ export default function TransparenciaPage() {
               Conta Principal — 100%
             </h2>
             <img
-              src="/transparencia/principal.png"
+              src="/transparencia/principal.PNG"
               className="rounded-xl w-full"
               alt="Conta Principal"
             />
@@ -36,7 +36,7 @@ export default function TransparenciaPage() {
               Reserva — 20%
             </h2>
             <img
-              src="/transparencia/reserva.png"
+              src="/transparencia/reserva.PNG"
               className="rounded-xl w-full"
               alt="Subconta Reserva"
             />
@@ -48,7 +48,7 @@ export default function TransparenciaPage() {
               Liquidez — 30%
             </h2>
             <img
-              src="/transparencia/liquidez.png"
+              src="/transparencia/liquidez.PNG"
               className="rounded-xl w-full"
               alt="Subconta Liquidez"
             />
@@ -60,7 +60,7 @@ export default function TransparenciaPage() {
               Imóveis — 30%
             </h2>
             <img
-              src="/transparencia/imoveis.png"
+              src="/transparencia/imoveis.PNG"
               className="rounded-xl w-full"
               alt="Subconta Imóveis"
             />
@@ -72,7 +72,7 @@ export default function TransparenciaPage() {
               Custos — 20%
             </h2>
             <img
-              src="/transparencia/custos.png"
+              src="/transparencia/custos.PNG"
               className="rounded-xl w-full"
               alt="Subconta Custos"
             />

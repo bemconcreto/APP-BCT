@@ -143,7 +143,14 @@ export default function ExtratoPage() {
               </p>
 
               {/* Info */}
-              <p className="text-gray-700">{item.info}</p>
+            <p className="text-gray-700">
+  {item.info.includes("BCT")
+    ? item.info.replace(
+        /([\d.]+)/, 
+        v => formatBCT(Number(v))
+      )
+    : item.info}
+</p>
 
               {/* Status */}
               <p>

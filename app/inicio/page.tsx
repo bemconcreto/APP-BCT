@@ -93,11 +93,11 @@ export default function InicioPage() {
           <h2 className="text-xl font-bold text-[#CBA35C]">Preço do BCT</h2>
 
 <p className="text-gray-700 text-lg mt-3">
-  USD: {priceUSD !== null ? formatReal{priceUSD.toFixed(2)}` : "Carregando..."}
+USD: {priceUSD !== null ? formatReal(priceUSD) : "Carregando..."}
 </p>
 
 <p className="text-gray-700 text-lg">
-  BRL: {priceBRL !== null ? formatReal(priceBRL) : "Carregando..."}
+BRL: {priceBRL !== null ? formatReal(priceBRL) : "Carregando..."}
 </p>
 
           {variation !== null && (

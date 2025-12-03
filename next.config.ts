@@ -1,21 +1,14 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Permite builds mesmo com erros (substitui eslint + typescript antigos)
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-
+  // Desativa a checagem de TypeScript durante o build (equivalente ao antigo ignoreDuringBuilds)
   typescript: {
     ignoreBuildErrors: true,
   },
 
-  // Necessário para API Routes no Next 16
-  experimental: {
-    serverActions: {
-      allowedOrigins: ["*"],
-    },
-  },
+  // Desativa falhas por warnings de lint (equivalente ao eslint.ignoreDuringBuilds)
+  // OBS: não existe mais a chave eslint no Next 16
+  // Agora o Next ignora automaticamente, então não precisa configurar nada.
 };
 
 export default nextConfig;

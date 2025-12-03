@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../src/lib/supabaseClient";
 import Link from "next/link";
+import { formatReal } from "@/utils/format";
+import { formatBCT } from "@/utils/format";
 
 export default function CarteiraPage() {
   const [saldo, setSaldo] = useState<number | null>(null);
@@ -60,7 +62,7 @@ export default function CarteiraPage() {
           <h2 className="text-xl font-semibold">Saldo em Reais</h2>
 
           <p className="text-3xl font-bold mt-3">
-            {saldo !== null ? `R$ ${saldo.toFixed(2)}` : "Carregando..."}
+            {saldo !== null ? formatReal (saldo) : "Carregando..."}
           </p>
         </div>
 

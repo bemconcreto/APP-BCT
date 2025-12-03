@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { supabase } from "../../src/lib/supabaseClient";
 import { formatReal } from "@/utils/format";
+import { formatBCT } from "@/utils/format";
 
 export default function InicioPage() {
   const [priceUSD, setPriceUSD] = useState<number | null>(null);
@@ -84,8 +85,8 @@ export default function InicioPage() {
           <h2 className="text-xl font-semibold">Seu saldo de BCT</h2>
 
           <p className="text-3xl font-bold mt-3">
-          {saldoBCT !== null ? formatBCT(saldoBCT) : "Carregando..."} BCT
-          </p>
+  {saldoBCT !== null ? formatBCT(saldoBCT) : "Carregando..."} BCT
+</p>
         </div>
 
         {/* BLOCO DO PREÇO */}

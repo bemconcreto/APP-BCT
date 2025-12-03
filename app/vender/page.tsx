@@ -4,6 +4,9 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../src/lib/supabaseClient";
 import Link from "next/link";
+import { formatReal } from "@/utils/format";
+import { formatBCT } from "@/utils/format";
+import { formatNumber } from "@/utils/format";
 
 export default function VenderPage() {
   const [saldoBCT, setSaldoBCT] = useState<number | null>(null);
@@ -96,9 +99,7 @@ export default function VenderPage() {
       } else {
         // 🔥 Popup de Sucesso
         setPopupMessage(
-          `Sua venda foi realizada com sucesso! Você receberá R$ ${Number(
-            j.valor_brl
-          ).toFixed(2)} na sua carteira.`
+        `Sua venda foi realizada com sucesso! Você receberá ${formatReal(j.valor_brl)} na sua carteira.`
         );
         setShowPopup(true);
 
@@ -120,7 +121,7 @@ export default function VenderPage() {
 
         <p className="mb-4">
           Saldo disponível:{" "}
-          {saldoBCT !== null ? saldoBCT.toFixed(6) : "Carregando..."} BCT
+        {saldoBCT !== null ? formatBCT(saldoBCT) : "Carregando..."} BCT
         </p>
 
         <label className="block mb-2 font-semibold">
@@ -136,13 +137,13 @@ export default function VenderPage() {
 
         <div className="bg-gray-50 border rounded p-4 mb-4">
           <p>Taxa: {Math.round(FEE * 100)}%</p>
-          <p>Tokens vendidos: {tokens ? numericTokens.toFixed(6) : "0.000000"}</p>
-          <p>Preço token (USD): ${tokenUsd.toFixed(2)}</p>
-          <p>Dólar: {usdToBrl ? `R$ ${usdToBrl.toFixed(2)}` : "Carregando..."}</p>
+        <p>Tokens vendidos: {tokens ? formatBCT(numericTokens) : "0,000000"}</p>
+        <p>Preço token (USD): R$ {formatNumber(tokenUsd)}</p>
+        <p>Dólar: {usdToBrl ? formatReal(usdToBrl) : "Carregando..."}</p>
 
-          <p className="font-semibold mt-2">
-            Estimativa a receber: R$ {estimatedBRL.toFixed(2)}
-          </p>
+        <p className="font-semibold mt-2">
+  Estimativa a receber: {formatReal(estimatedBRL)}
+</p>
         </div>
 
         {msg && <div className="mb-4 text-sm text-red-600">{msg}</div>}

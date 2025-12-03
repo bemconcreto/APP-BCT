@@ -3,25 +3,24 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../src/lib/supabaseClient";
 import Link from "next/link";
+import { formatReal } from "@/utils/format";
+import { formatBCT } from "@/utils/format";
+import { formatNumber } from "@/utils/format";
 
 // ⭐ Função para formatar corretamente qualquer tipo de data
 function formatarData(dataStr: any) {
   if (!dataStr) return "Data inválida";
 
-  // Caso já seja Date
   if (dataStr instanceof Date) {
     return dataStr.toLocaleString("pt-BR");
   }
 
-  // Timestamp número
   if (typeof dataStr === "number") {
     return new Date(dataStr).toLocaleString("pt-BR");
   }
 
-  // Converter para string
   let s = String(dataStr).trim();
 
-  // Formato brasileiro
   if (s.includes("/")) {
     try {
       const [datePart, timePart] = s.split(" ");
@@ -33,10 +32,8 @@ function formatarData(dataStr: any) {
     }
   }
 
-  // Ajustar timestamps longos
   s = s.replace(" ", "T").replace(/\.(\d{3})\d+/, ".$1");
 
-  // Se não tiver timezone, adiciona Z
   if (!s.endsWith("Z") && !/([+\-]\d{2}:?\d{2})$/.test(s)) {
     s += "Z";
   }
@@ -135,17 +132,17 @@ export default function ExtratoPage() {
           {items.map((item, index) => (
             <div key={index} className="border p-4 rounded-lg bg-gray-50">
 
-              {/* Tipo com cor ajustada */}
+              {/* Tipo */}
               <p className={`font-bold text-lg ${corTipo(item.tipo)}`}>
                 {item.tipo}
               </p>
 
-              {/* Valor */}
+              {/* Valor — agora formatado */}
               <p className={`text-lg ${item.valor < 0 ? "text-red-600" : "text-[#CBA35C]"}`}>
-                Valor: R$ {item.valor.toFixed(2)}
+                Valor: {formatReal(item.valor)}
               </p>
 
-              {/* Info (quantidade de tokens, chave pix, etc) */}
+              {/* Info */}
               <p className="text-gray-700">{item.info}</p>
 
               {/* Status */}
@@ -153,7 +150,7 @@ export default function ExtratoPage() {
                 Status: <b>{translateStatus(item.status)}</b>
               </p>
 
-              {/* Data formatada corretamente */}
+              {/* Data */}
               <p className="text-gray-500 text-sm">
                 {formatarData(item.data)}
               </p>

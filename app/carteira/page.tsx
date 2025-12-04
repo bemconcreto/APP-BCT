@@ -59,7 +59,7 @@ export default function CarteiraPage() {
         {msg && <p className="text-red-600 mb-4">{msg}</p>}
 
         <div className="bg-gray-50 border rounded p-6 text-center mb-6">
-          <h2 className="text-xl font-semibold">Saldo em Reais</h2>
+          <h2 className="text-xl font-semibold">Saldo disponível para saque</h2>
 
           <p className="text-3xl font-bold mt-3">
             {saldo !== null ? formatReal (saldo) : "Carregando..."}

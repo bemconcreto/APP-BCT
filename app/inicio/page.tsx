@@ -94,7 +94,7 @@ export default function InicioPage() {
         </div>
 
         {/* 🔥 NOVO BLOCO — SALDO EM REAIS */}
-        <div className="bg-[#101820] text-white p-6 rounded-xl text-center shadow-md mb-8">
+        <div className="bg-[#8D6E63] text-white p-6 rounded-xl text-center shadow-md mb-8">
           <h2 className="text-xl font-semibold">Seu saldo em Reais</h2>
 
           <p className="text-3xl font-bold mt-3">
@@ -162,7 +162,7 @@ export default function InicioPage() {
           <Link href="/carteira">
             <div className="bg-[#4C3B34] hover:bg-[#3f2f29] text-white rounded-lg p-6 cursor-pointer text-center">
               <h2 className="text-xl font-semibold">Carteira</h2>
-              <p className="mt-2 text-sm text-white/80">Saldo em Reais</p>
+              <p className="mt-2 text-sm text-white/80">Saldo disponível em Reais</p>
             </div>
           </Link>
 

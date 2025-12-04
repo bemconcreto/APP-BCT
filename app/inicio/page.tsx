@@ -72,34 +72,47 @@ export default function InicioPage() {
     }
   };
 
+  const saldoReais =
+    saldoBCT !== null && priceBRL !== null ? saldoBCT * priceBRL : null;
+
   return (
     <div className="min-h-screen bg-gray-100 p-8">
       <div className="max-w-5xl mx-auto bg-white rounded-xl shadow-md p-8">
 
-        <h1 className="text-3xl font-bold text-center mb-6 text-[#7A5D53]">
+        {/* 🔥 TEXTO DIMINUÍDO */}
+        <h1 className="text-xl font-bold text-center mb-4 text-[#7A5D53]">
           Um pedaço do mundo na palma da sua mão
         </h1>
 
-        {/* 🔥 SALDO DO USUÁRIO */}
-        <div className="bg-[#101820] text-white p-6 rounded-xl text-center shadow-md mb-8">
+        {/* 🔥 SALDO DO USUÁRIO — SUBIDO */}
+        <div className="bg-[#101820] text-white p-6 rounded-xl text-center shadow-md mb-6">
           <h2 className="text-xl font-semibold">Seu saldo de BCT</h2>
 
           <p className="text-3xl font-bold mt-3">
-  {saldoBCT !== null ? formatBCT(saldoBCT) : "Carregando..."} BCT
-</p>
+            {saldoBCT !== null ? formatBCT(saldoBCT) : "Carregando..."} BCT
+          </p>
+        </div>
+
+        {/* 🔥 NOVO BLOCO — SALDO EM REAIS */}
+        <div className="bg-[#101820] text-white p-6 rounded-xl text-center shadow-md mb-8">
+          <h2 className="text-xl font-semibold">Seu saldo em Reais</h2>
+
+          <p className="text-3xl font-bold mt-3">
+            {saldoReais !== null ? formatReal(saldoReais) : "Carregando..."}
+          </p>
         </div>
 
         {/* BLOCO DO PREÇO */}
         <div className="bg-white shadow-md p-6 rounded-xl text-center border mb-10">
           <h2 className="text-xl font-bold text-[#CBA35C]">Preço do BCT</h2>
 
-<p className="text-gray-700 text-lg mt-3">
-USD: {priceUSD !== null ? formatReal(priceUSD) : "Carregando..."}
-</p>
+          <p className="text-gray-700 text-lg mt-3">
+            USD: {priceUSD !== null ? formatReal(priceUSD) : "Carregando..."}
+          </p>
 
-<p className="text-gray-700 text-lg">
-BRL: {priceBRL !== null ? formatReal(priceBRL) : "Carregando..."}
-</p>
+          <p className="text-gray-700 text-lg">
+            BRL: {priceBRL !== null ? formatReal(priceBRL) : "Carregando..."}
+          </p>
 
           {variation !== null && (
             <p
@@ -122,58 +135,60 @@ BRL: {priceBRL !== null ? formatReal(priceBRL) : "Carregando..."}
           </button>
         </div>
 
-        {/* MENU — ORDEM NOVA: COMPRAR → VENDER → CARTEIRA → IMÓVEIS → EXTRATO */}
+        {/* MENU */}
         <p className="text-center text-gray-600 mb-8">
           Selecione uma das opções abaixo para gerenciar seus investimentos.
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
 
-         {/* COMPRAR */}
-<Link href="/comprar">
-  <div className="bg-[#CBA35C] hover:bg-[#b39149] text-white rounded-lg p-6 cursor-pointer text-center">
-    <h2 className="text-xl font-semibold">Comprar</h2>
-    <p className="mt-2 text-sm text-white/80">Adquirir tokens BCT</p>
-  </div>
-</Link>
+          {/* COMPRAR */}
+          <Link href="/comprar">
+            <div className="bg-[#CBA35C] hover:bg-[#b39149] text-white rounded-lg p-6 cursor-pointer text-center">
+              <h2 className="text-xl font-semibold">Comprar</h2>
+              <p className="mt-2 text-sm text-white/80">Adquirir tokens BCT</p>
+            </div>
+          </Link>
 
-{/* VENDER */}
-<Link href="/vender">
-  <div className="bg-[#8D6E63] hover:bg-[#7c5f55] text-white rounded-lg p-6 cursor-pointer text-center">
-    <h2 className="text-xl font-semibold">Vender</h2>
-    <p className="mt-2 text-sm text-white/80">Negociar seus tokens</p>
-  </div>
-</Link>
+          {/* VENDER */}
+          <Link href="/vender">
+            <div className="bg-[#8D6E63] hover:bg-[#7c5f55] text-white rounded-lg p-6 cursor-pointer text-center">
+              <h2 className="text-xl font-semibold">Vender</h2>
+              <p className="mt-2 text-sm text-white/80">Negociar seus tokens</p>
+            </div>
+          </Link>
 
-{/* CARTEIRA */}
-<Link href="/carteira">
-  <div className="bg-[#4C3B34] hover:bg-[#3f2f29] text-white rounded-lg p-6 cursor-pointer text-center">
-    <h2 className="text-xl font-semibold">Carteira</h2>
-    <p className="mt-2 text-sm text-white/80">Saldo em Reais</p>
-  </div>
-</Link>
+          {/* CARTEIRA */}
+          <Link href="/carteira">
+            <div className="bg-[#4C3B34] hover:bg-[#3f2f29] text-white rounded-lg p-6 cursor-pointer text-center">
+              <h2 className="text-xl font-semibold">Carteira</h2>
+              <p className="mt-2 text-sm text-white/80">Saldo em Reais</p>
+            </div>
+          </Link>
 
-{/* IMÓVEIS */}
-<Link href="/imoveis">
-  <div className="bg-[#101820] hover:bg-[#0d1318] text-white rounded-lg p-6 cursor-pointer text-center">
-    <h2 className="text-xl font-semibold">Imóveis</h2>
-    <p className="mt-2 text-sm text-[#CBA35C]">Ver imóveis tokenizados</p>
-  </div>
-</Link>
+          {/* IMÓVEIS */}
+          <Link href="/imoveis">
+            <div className="bg-[#101820] hover:bg-[#0d1318] text-white rounded-lg p-6 cursor-pointer text-center">
+              <h2 className="text-xl font-semibold">Imóveis</h2>
+              <p className="mt-2 text-sm text-[#CBA35C]">Ver imóveis tokenizados</p>
+            </div>
+          </Link>
 
-{/* EXTRATO */}
-<Link href="/extrato">
-  <div className="bg-[#3A3F47] hover:bg-[#30353b] text-white rounded-lg p-6 cursor-pointer text-center">
-    <h2 className="text-xl font-semibold">Extrato</h2>
-    <p className="mt-2 text-sm text-white/80">Acompanhar histórico</p>
-  </div>
-</Link>
-<Link href="/transparencia">
-  <div className="bg-[#CBA35C] hover:bg-[#b39149] text-white rounded-lg p-6 cursor-pointer text-center">
-    <h2 className="text-xl font-semibold">Transparência</h2>
-    <p className="mt-2 text-sm text-white/80">Ver subcontas</p>
-  </div>
-</Link>
+          {/* EXTRATO */}
+          <Link href="/extrato">
+            <div className="bg-[#3A3F47] hover:bg-[#30353b] text-white rounded-lg p-6 cursor-pointer text-center">
+              <h2 className="text-xl font-semibold">Extrato</h2>
+              <p className="mt-2 text-sm text-white/80">Acompanhar histórico</p>
+            </div>
+          </Link>
+
+          {/* TRANSPARÊNCIA */}
+          <Link href="/transparencia">
+            <div className="bg-[#CBA35C] hover:bg-[#b39149] text-white rounded-lg p-6 cursor-pointer text-center">
+              <h2 className="text-xl font-semibold">Transparência</h2>
+              <p className="mt-2 text-sm text-white/80">Ver subcontas</p>
+            </div>
+          </Link>
 
         </div>
       </div>

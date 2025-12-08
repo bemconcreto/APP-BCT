@@ -33,34 +33,35 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: "Usuário inválido." });
     }
 
-    // ================================
-    // 🔥 BUSCAR DATA DA PRIMEIRA COMPRA
-    // ================================
-    const { data: compras } = await supabaseAdmin
+    // ---- PEGAR PRIMEIRA COMPRA ----
+    const { data: firstBuy } = await supabaseAdmin
       .from("compras_bct")
       .select("created_at")
       .eq("user_id", userId)
       .order("created_at", { ascending: true })
-      .limit(1);
+      .limit(1)
+      .single();
 
-    if (!compras || compras.length === 0) {
+    if (!firstBuy?.created_at) {
       return NextResponse.json({
         success: false,
-        error: "Você ainda não possui compras registradas."
+        error: "Você ainda não possui compras registradas.",
       });
     }
 
-    const primeiraCompra = new Date(compras[0].created_at);
-    const liberaVenda = new Date(primeiraCompra);
-    liberaVenda.setMonth(liberaVenda.getMonth() + 6);
+    const firstBuyDate = new Date(firstBuy.created_at);
+    const now = new Date();
 
-    const agora = new Date();
+    // ---- ADICIONAR 6 MESES ----
+    const unlockDate = new Date(firstBuyDate);
+    unlockDate.setMonth(unlockDate.getMonth() + 6);
 
-    if (agora < liberaVenda) {
+    if (now < unlockDate) {
       return NextResponse.json({
         success: false,
-        error:
-          `Você só poderá vender seus BCT após ${liberaVenda.toLocaleDateString("pt-BR")}.`
+        error: `Você só poderá vender seus BCT a partir de ${unlockDate.toLocaleDateString(
+          "pt-BR"
+        )}.`,
       });
     }
 
@@ -96,11 +97,11 @@ export async function POST(req: Request) {
 
     // ---- CÁLCULO ----
     const valorRecebido = tokensToSell * tokenUSD * usdToBrl;
-    const taxa = valorRecebido * 0.10;
+    const taxa = valorRecebido * 0.1;
     const valorLiquido = valorRecebido - taxa;
 
     // ---- REGISTRAR VENDA ----
-    const { data: venda, error: vendaErr } = await supabaseAdmin
+    const { error: vendaErr } = await supabaseAdmin
       .from("vendas_bct")
       .insert({
         user_id: userId,
@@ -108,19 +109,19 @@ export async function POST(req: Request) {
         valor_recebido: Number(valorRecebido.toFixed(2)),
         taxa: Number(taxa.toFixed(2)),
         valor_liquido: Number(valorLiquido.toFixed(2)),
-        status: "completed"
-      })
-      .select()
-      .single();
+        status: "completed",
+      });
 
     if (vendaErr) {
       console.error("ERRO VENDA:", vendaErr);
-      return NextResponse.json({ success: false, error: "Erro ao registrar venda." });
+      return NextResponse.json({
+        success: false,
+        error: "Erro ao registrar venda.",
+      });
     }
 
     // ---- DEBITAR TOKENS ----
     const novoSaldoBct = Number((saldoBCT - tokensToSell).toFixed(6));
-
     await supabaseAdmin
       .from("wallet_saldos")
       .update({ saldo_bct: novoSaldoBct })
@@ -143,4 +144,11 @@ export async function POST(req: Request) {
     return NextResponse.json({
       success: true,
       valor_liquido: Number(valorLiquido.toFixed(2)),
-     
+      novo_saldo_bct: novoSaldoBct,
+      novo_saldo_cash: novoSaldoCash,
+    });
+  } catch (err) {
+    console.error("ERRO API:", err);
+    return NextResponse.json({ success: false, error: "Erro interno." });
+  }
+}

@@ -11,16 +11,15 @@ export async function POST(req: Request) {
 
     const { nome, numero, mes, ano, cvv, amountBRL, tokens, cpfCnpj, email, phone } = body;
 
-// ...
-
+// 🔒 TRAVA DE COMPRA MÍNIMA
 if (amountBRL < 100) {
-return NextResponse.json(
-  {
-    success: false,
-    error: "Valor mínimo para compra é R$ 100,00.",
-  },
-  { status: 400 }
-);
+  return NextResponse.json(
+    {
+      success: false,
+      error: "Valor mínimo para compra é R$ 100,00.",
+    },
+    { status: 400 }
+  );
 }
 
     // =====================================

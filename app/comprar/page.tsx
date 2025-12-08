@@ -124,49 +124,47 @@ export default function ComprarPage() {
   // -----------------------------
   // PAGAR VIA CARTÃO
   // -----------------------------
-  async function pagarCartao() {
-    const token = await getSupabaseToken();
+async function pagarCartao() {
+  const token = await getSupabaseToken();
 
-    if (!token) return alert("Você precisa estar logado.");
-    if (!cpfCnpj) return alert("Digite seu CPF/CNPJ.");
-    if (!amountBRL || Number(amountBRL) <= 0)
-      return alert("Digite um valor válido.");
+  if (!token) return alert("Você precisa estar logado.");
+  if (!cpfCnpj) return alert("Digite seu CPF/CNPJ.");
+  if (!amountBRL || Number(amountBRL) <= 0)
+    return alert("Digite um valor válido.");
 
-    setLoading(true);
+  setLoading(true);
 
-    try {
-      const res = await fetch("/api/asaas/cartao/criar-pedido", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          amountBRL: Number(amountBRL),
-          tokens: Number(tokens.toFixed(6)),
-          cpfCnpj,
-          email: user?.email ?? "",
-          nome: user?.user_metadata?.full_name ?? "Usuário",
-        }),
-      });
+  try {
+    const res = await fetch("/api/asaas/cartao", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        amountBRL: Number(amountBRL),
+        tokens: Number(tokens.toFixed(6)),
+        cpfCnpj,
+        email: user?.email ?? "",
+        nome: user?.user_metadata?.full_name ?? "Usuário",
+      }),
+    });
 
-      const data = await res.json();
+    const data = await res.json();
 
-      if (!data.success) {
-        alert(
-          "Erro ao iniciar compra com cartão: " +
-            JSON.stringify(data.error)
-        );
-        return;
-      }
-
-      window.location.href = `/comprar/cartao?pedido=${data.id}`;
-    } catch (e) {
-      alert("Erro inesperado ao iniciar pagamento com cartão.");
+    if (!data.success) {
+      alert("Erro ao iniciar pagamento com cartão: " + data.error);
+      return;
     }
 
-    setLoading(false);
+    // Redireciona agora para a tela do cartão SOMENTE SE passou da trava:
+    window.location.href = `/comprar/cartao?pedido=${data.id}`;
+  } catch (e) {
+    alert("Erro inesperado ao iniciar pagamento com cartão.");
   }
+
+  setLoading(false);
+}
 
   // -----------------------------
   // UI
@@ -221,14 +219,13 @@ export default function ComprarPage() {
 
         {/* Botões */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          <button
-            onClick={() => {
-              window.location.href =
-                `/comprar/cartao?amountBRL=${amountBRL}` +
-                `&cpfCnpj=${cpfCnpj}` +
-                `&email=${user?.email}` +
-                `&tokens=${tokens.toFixed(6)}`;
-            }}
+<button
+  onClick={pagarCartao}
+  disabled={loading}
+  className="bg-blue-600 text-white rounded-lg p-6 hover:bg-blue-700"
+>
+  <h2 className="text-xl font-semibold">Cartão</h2>
+</button>
             disabled={loading}
             className="bg-blue-600 text-white rounded-lg p-6 hover:bg-blue-700"
           >

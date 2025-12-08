@@ -94,18 +94,23 @@ export default function VenderPage() {
 
       const j = await res.json();
 
+      // 🔥 AQUI ESTÁ A ALTERAÇÃO:
+      // Se o backend bloquear por causa dos 6 meses → mostra a mensagem
       if (!j.success) {
         setMsg(j.error || "Erro ao processar a venda.");
-      } else {
-        // 🔥 Popup de Sucesso
-        setPopupMessage(
-        `Sua venda foi realizada com sucesso! Você receberá ${formatReal(j.valor_brl)} na sua carteira.`
-        );
-        setShowPopup(true);
-
-        setSaldoBCT(Number(j.novo_saldo_bct));
-        setTokens("");
+        setLoading(false);
+        return;
       }
+
+      // 🔥 Popup de Sucesso
+      setPopupMessage(
+        `Sua venda foi realizada com sucesso! Você receberá ${formatReal(j.valor_liquido)} na sua carteira.`
+      );
+      setShowPopup(true);
+
+      setSaldoBCT(Number(j.novo_saldo_bct));
+      setTokens("");
+
     } catch (e) {
       console.error(e);
       setMsg("Erro interno ao enviar venda.");
@@ -121,7 +126,7 @@ export default function VenderPage() {
 
         <p className="mb-4">
           Saldo disponível:{" "}
-        {saldoBCT !== null ? formatBCT(saldoBCT) : "Carregando..."} BCT
+          {saldoBCT !== null ? formatBCT(saldoBCT) : "Carregando..."} BCT
         </p>
 
         <label className="block mb-2 font-semibold">
@@ -137,13 +142,13 @@ export default function VenderPage() {
 
         <div className="bg-gray-50 border rounded p-4 mb-4">
           <p>Taxa: {Math.round(FEE * 100)}%</p>
-        <p>Tokens vendidos: {tokens ? formatBCT(numericTokens) : "0,000000"}</p>
-        <p>Preço token (USD): R$ {formatNumber(tokenUsd)}</p>
-        <p>Dólar: {usdToBrl ? formatReal(usdToBrl) : "Carregando..."}</p>
+          <p>Tokens vendidos: {tokens ? formatBCT(numericTokens) : "0,000000"}</p>
+          <p>Preço token (USD): R$ {formatNumber(tokenUsd)}</p>
+          <p>Dólar: {usdToBrl ? formatReal(usdToBrl) : "Carregando..."}</p>
 
-        <p className="font-semibold mt-2">
-  Estimativa a receber: {formatReal(estimatedBRL)}
-</p>
+          <p className="font-semibold mt-2">
+            Estimativa a receber: {formatReal(estimatedBRL)}
+          </p>
         </div>
 
         {msg && <div className="mb-4 text-sm text-red-600">{msg}</div>}
@@ -177,7 +182,7 @@ export default function VenderPage() {
 
             <button
               onClick={() => setShowPopup(false)}
-              className="bg-[#101820] hover:bg-[#101820] text-white py-2 px-6 rounded-lg"
+              className="bg-[#101820] text-white py-2 px-6 rounded-lg"
             >
               OK
             </button>

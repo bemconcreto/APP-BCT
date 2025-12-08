@@ -33,6 +33,37 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: "Usuário inválido." });
     }
 
+    // ================================
+    // 🔥 BUSCAR DATA DA PRIMEIRA COMPRA
+    // ================================
+    const { data: compras } = await supabaseAdmin
+      .from("compras_bct")
+      .select("created_at")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: true })
+      .limit(1);
+
+    if (!compras || compras.length === 0) {
+      return NextResponse.json({
+        success: false,
+        error: "Você ainda não possui compras registradas."
+      });
+    }
+
+    const primeiraCompra = new Date(compras[0].created_at);
+    const liberaVenda = new Date(primeiraCompra);
+    liberaVenda.setMonth(liberaVenda.getMonth() + 6);
+
+    const agora = new Date();
+
+    if (agora < liberaVenda) {
+      return NextResponse.json({
+        success: false,
+        error:
+          `Você só poderá vender seus BCT após ${liberaVenda.toLocaleDateString("pt-BR")}.`
+      });
+    }
+
     // ---- PEGAR SALDO DE TOKENS ----
     const { data: saldoRow } = await supabaseAdmin
       .from("wallet_saldos")
@@ -48,17 +79,15 @@ export async function POST(req: Request) {
     }
 
     // ---- PREÇOS ----
-    let tokenUSD = 1.00;
-    let usdToBrl = 5.30;
+    let tokenUSD = 1.0;
+    let usdToBrl = 5.3;
 
-    // preço do token
     try {
       const r = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/preco-bct`);
       const j = await r.json();
       if (j?.usd) tokenUSD = Number(j.usd);
     } catch {}
 
-    // dólar
     try {
       const r = await fetch("https://economia.awesomeapi.com.br/json/last/USD-BRL");
       const j = await r.json();
@@ -114,12 +143,4 @@ export async function POST(req: Request) {
     return NextResponse.json({
       success: true,
       valor_liquido: Number(valorLiquido.toFixed(2)),
-      novo_saldo_bct: novoSaldoBct,
-      novo_saldo_cash: novoSaldoCash
-    });
-
-  } catch (err) {
-    console.error("ERRO API:", err);
-    return NextResponse.json({ success: false, error: "Erro interno." });
-  }
-}
+     

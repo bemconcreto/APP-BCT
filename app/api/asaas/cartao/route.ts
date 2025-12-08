@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
   try {
@@ -15,13 +14,13 @@ export async function POST(req: Request) {
 // ...
 
 if (amountBRL < 100) {
-  return NextResponse.json(
-    {
-      success: false,
-      error: "Valor mínimo para compra é R$ 100,00."
-    },
-    { status: 400 }
-  );
+return NextResponse.json(
+  {
+    success: false,
+    error: "Valor mínimo para compra é R$ 100,00.",
+  },
+  { status: 400 }
+);
 }
 
     // =====================================

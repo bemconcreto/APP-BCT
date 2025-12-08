@@ -5,9 +5,7 @@ export const dynamic = "force-dynamic";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { supabase } from "../../src/lib/supabaseClient";
-import { formatReal } from "@/utils/format";
-import { formatBCT } from "@/utils/format";
-import { formatNumber } from "@/utils/format";
+import { formatReal, formatBCT, formatNumber } from "@/utils/format";
 
 // -----------------------------
 // PEGAR TOKEN DO SUPABASE
@@ -39,7 +37,7 @@ export default function ComprarPage() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
-  const tokenPriceUSD = 1.00;
+  const tokenPriceUSD = 1.0;
 
   // -----------------------------
   // BUSCA O DÓLAR EM TEMPO REAL
@@ -70,7 +68,7 @@ export default function ComprarPage() {
   }, []);
 
   // -----------------------------
-  // CÁLCULO DE TOKENS (CORRIGIDO)
+  // CÁLCULO DE TOKENS
   // -----------------------------
   const valorUSD =
     amountBRL && usdToBRL ? Number(amountBRL) / usdToBRL : 0;
@@ -87,6 +85,9 @@ export default function ComprarPage() {
     if (!cpfCnpj) return alert("Digite seu CPF/CNPJ.");
     if (!amountBRL || Number(amountBRL) <= 0)
       return alert("Digite um valor válido.");
+
+    if (Number(amountBRL) < 100)
+      return alert("Valor mínimo para compra é R$ 100,00.");
 
     setLoading(true);
 
@@ -122,49 +123,52 @@ export default function ComprarPage() {
   }
 
   // -----------------------------
-  // PAGAR VIA CARTÃO
+  // PAGAR VIA CARTÃO (CORRIGIDO)
   // -----------------------------
-async function pagarCartao() {
-  const token = await getSupabaseToken();
+  async function pagarCartao() {
+    const token = await getSupabaseToken();
 
-  if (!token) return alert("Você precisa estar logado.");
-  if (!cpfCnpj) return alert("Digite seu CPF/CNPJ.");
-  if (!amountBRL || Number(amountBRL) <= 0)
-    return alert("Digite um valor válido.");
+    if (!token) return alert("Você precisa estar logado.");
+    if (!cpfCnpj) return alert("Digite seu CPF/CNPJ.");
+    if (!amountBRL || Number(amountBRL) <= 0)
+      return alert("Digite um valor válido.");
 
-  setLoading(true);
+    if (Number(amountBRL) < 100)
+      return alert("Valor mínimo para compra é R$ 100,00.");
 
-  try {
-    const res = await fetch("/api/asaas/cartao", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        amountBRL: Number(amountBRL),
-        tokens: Number(tokens.toFixed(6)),
-        cpfCnpj,
-        email: user?.email ?? "",
-        nome: user?.user_metadata?.full_name ?? "Usuário",
-      }),
-    });
+    setLoading(true);
 
-    const data = await res.json();
+    try {
+      const res = await fetch("/api/asaas/cartao", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          amountBRL: Number(amountBRL),
+          tokens: Number(tokens.toFixed(6)),
+          cpfCnpj,
+          email: user?.email ?? "",
+          nome: user?.user_metadata?.full_name ?? "Usuário",
+        }),
+      });
 
-    if (!data.success) {
-      alert("Erro ao iniciar pagamento com cartão: " + data.error);
-      return;
+      const data = await res.json();
+
+      if (!data.success) {
+        alert("Erro ao iniciar pagamento com cartão: " + data.error);
+        return;
+      }
+
+      // Agora só redireciona se passou da trava
+      window.location.href = `/comprar/cartao?pedido=${data.id}`;
+    } catch (e) {
+      alert("Erro inesperado ao iniciar pagamento com cartão.");
     }
 
-    // Redireciona agora para a tela do cartão SOMENTE SE passou da trava:
-    window.location.href = `/comprar/cartao?pedido=${data.id}`;
-  } catch (e) {
-    alert("Erro inesperado ao iniciar pagamento com cartão.");
+    setLoading(false);
   }
-
-  setLoading(false);
-}
 
   // -----------------------------
   // UI
@@ -204,35 +208,29 @@ async function pagarCartao() {
         <div className="bg-gray-50 border rounded-lg p-4 mb-8">
           <p>Preço do BCT: US$ {formatNumber(tokenPriceUSD)}</p>
 
-          <p>
-            Dólar:{" "}
-            {usdToBRL ? formatReal (usdToBRL) : "Carregando..."}
-          </p>
+          <p>Dólar: {usdToBRL ? formatReal(usdToBRL) : "Carregando..."}</p>
 
           <p className="text-lg font-semibold mt-2">
             Você receberá:{" "}
             <span className="text-[#CBA35C]">
-              {formatBCT (tokens)} BCT
+              {formatBCT(tokens)} BCT
             </span>
           </p>
         </div>
 
         {/* Botões */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-<button
-  onClick={() => {
-    window.location.href =
-      `/comprar/cartao?amountBRL=${amountBRL}` +
-      `&cpfCnpj=${cpfCnpj}` +
-      `&email=${user?.email}` +
-      `&tokens=${tokens.toFixed(6)}`;
-  }}
-  disabled={loading}
-  className="bg-blue-600 text-white rounded-lg p-6 hover:bg-blue-700"
->
-  <h2 className="text-xl font-semibold">Cartão</h2>
-</button>
 
+          {/* BOTÃO DE CARTÃO CORRIGIDO */}
+          <button
+            onClick={pagarCartao}
+            disabled={loading}
+            className="bg-blue-600 text-white rounded-lg p-6 hover:bg-blue-700"
+          >
+            <h2 className="text-xl font-semibold">Cartão</h2>
+          </button>
+
+          {/* PIX */}
           <button
             onClick={pagarPix}
             disabled={loading}

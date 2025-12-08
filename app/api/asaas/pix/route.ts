@@ -14,12 +14,16 @@ export async function POST(req: Request) {
 
     const { amountBRL, cpfCnpj, tokens } = body;
 
-if (amountBRL < 100) {
-  return res.status(400).json({
-    success: false,
-    error: "Valor mínimo para compra é R$ 100,00."
-  });
-}
+    // 🔥 VALIDAÇÃO DE COMPRA MÍNIMA
+    if (amountBRL < 100) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Valor mínimo para compra é R$ 100,00.",
+        },
+        { status: 400 }
+      );
+    }
 
     // =========================================
     //      VALIDA USER VIA TOKEN (CORRETO)

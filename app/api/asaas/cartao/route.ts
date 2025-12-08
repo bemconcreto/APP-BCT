@@ -11,12 +11,12 @@ export async function POST(req: Request) {
 
     const { nome, numero, mes, ano, cvv, amountBRL, tokens, cpfCnpj, email, phone } = body;
 
-    if (!amountBRL || !nome || !numero || !mes || !ano || !cvv) {
-      return NextResponse.json(
-        { success: false, error: "Dados do cartão incompletos." },
-        { status: 400 }
-      );
-    }
+if (amountBRL < 100) {
+  return res.status(400).json({
+    success: false,
+    error: "Valor mínimo para compra é R$ 100,00."
+  });
+}
 
     // =====================================
     // 🔥 VALIDAR USUÁRIO VIA TOKEN (igual PIX)

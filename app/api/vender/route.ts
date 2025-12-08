@@ -46,6 +46,34 @@ export async function POST(req: Request) {
     if (tokensToSell > saldoBCT) {
       return NextResponse.json({ success: false, error: "Saldo insuficiente." });
     }
+    // Buscar primeira compra do usuário
+const { data: primeiraCompra } = await supabase
+  .from("wallet_extrato")
+  .select("data")
+  .eq("user_id", user.id)
+  .eq("tipo", "compra")
+  .order("data", { ascending: true })
+  .limit(1)
+  .single();
+
+// Se nunca comprou, não pode vender
+if (!primeiraCompra) {
+  return res.status(400).json({
+    success: false,
+    error: "Você ainda não realizou nenhuma compra."
+  });
+}
+
+// Validação dos 6 meses
+const seisMesesAtras = new Date();
+seisMesesAtras.setMonth(seisMesesAtras.getMonth() - 6);
+
+if (new Date(primeiraCompra.data) > seisMesesAtras) {
+  return res.status(400).json({
+    success: false,
+    error: "Você só poderá vender seus BCT após 6 meses da primeira compra."
+  });
+}
 
     // ---- PREÇOS ----
     let tokenUSD = 1.00;

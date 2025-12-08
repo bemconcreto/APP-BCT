@@ -38,10 +38,6 @@ export default function ComprarPage() {
   const [loading, setLoading] = useState(false);
 
   const tokenPriceUSD = 1.0;
-
-  // -----------------------------
-  // BUSCA O DÓLAR EM TEMPO REAL
-  // -----------------------------
   const [usdToBRL, setUsdToBRL] = useState<number | null>(null);
 
   useEffect(() => {
@@ -57,9 +53,6 @@ export default function ComprarPage() {
     loadDollar();
   }, []);
 
-  // -----------------------------
-  // CARREGA USUÁRIO AO ABRIR
-  // -----------------------------
   useEffect(() => {
     async function loadUser() {
       setUser(await getUserSession());
@@ -70,9 +63,7 @@ export default function ComprarPage() {
   // -----------------------------
   // CÁLCULO DE TOKENS
   // -----------------------------
-  const valorUSD =
-    amountBRL && usdToBRL ? Number(amountBRL) / usdToBRL : 0;
-
+  const valorUSD = amountBRL && usdToBRL ? Number(amountBRL) / usdToBRL : 0;
   const tokens = valorUSD ? valorUSD / tokenPriceUSD : 0;
 
   // -----------------------------
@@ -83,10 +74,7 @@ export default function ComprarPage() {
 
     if (!token) return alert("Você precisa estar logado.");
     if (!cpfCnpj) return alert("Digite seu CPF/CNPJ.");
-    if (!amountBRL || Number(amountBRL) <= 0)
-      return alert("Digite um valor válido.");
-
-    if (Number(amountBRL) < 100)
+    if (!amountBRL || Number(amountBRL) < 100)
       return alert("Valor mínimo para compra é R$ 100,00.");
 
     setLoading(true);
@@ -110,7 +98,7 @@ export default function ComprarPage() {
       const data = await res.json();
 
       if (!data.success) {
-        alert("Erro ao gerar PIX: " + JSON.stringify(data.error));
+        alert("Erro ao gerar PIX: " + data.error);
         return;
       }
 
@@ -123,17 +111,14 @@ export default function ComprarPage() {
   }
 
   // -----------------------------
-  // PAGAR VIA CARTÃO (CORRIGIDO)
+  // PAGAR VIA CARTÃO (TRAVA FUNCIONANDO)
   // -----------------------------
   async function pagarCartao() {
     const token = await getSupabaseToken();
 
     if (!token) return alert("Você precisa estar logado.");
     if (!cpfCnpj) return alert("Digite seu CPF/CNPJ.");
-    if (!amountBRL || Number(amountBRL) <= 0)
-      return alert("Digite um valor válido.");
-
-    if (Number(amountBRL) < 100)
+    if (!amountBRL || Number(amountBRL) < 100)
       return alert("Valor mínimo para compra é R$ 100,00.");
 
     setLoading(true);
@@ -157,22 +142,18 @@ export default function ComprarPage() {
       const data = await res.json();
 
       if (!data.success) {
-        alert("Erro ao iniciar pagamento com cartão: " + data.error);
+        alert("Erro no cartão: " + data.error);
         return;
       }
 
-      // Agora só redireciona se passou da trava
       window.location.href = `/comprar/cartao?pedido=${data.id}`;
     } catch (e) {
-      alert("Erro inesperado ao iniciar pagamento com cartão.");
+      alert("Erro inesperado no cartão.");
     }
 
     setLoading(false);
   }
 
-  // -----------------------------
-  // UI
-  // -----------------------------
   return (
     <div className="min-h-screen bg-gray-100 p-8">
       <div className="max-w-3xl mx-auto bg-white rounded-xl shadow-md p-8">
@@ -212,16 +193,13 @@ export default function ComprarPage() {
 
           <p className="text-lg font-semibold mt-2">
             Você receberá:{" "}
-            <span className="text-[#CBA35C]">
-              {formatBCT(tokens)} BCT
-            </span>
+            <span className="text-[#CBA35C]">{formatBCT(tokens)} BCT</span>
           </p>
         </div>
 
         {/* Botões */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-
-          {/* BOTÃO DE CARTÃO CORRIGIDO */}
+          {/* BOTÃO CORRIGIDO */}
           <button
             onClick={pagarCartao}
             disabled={loading}
@@ -230,7 +208,6 @@ export default function ComprarPage() {
             <h2 className="text-xl font-semibold">Cartão</h2>
           </button>
 
-          {/* PIX */}
           <button
             onClick={pagarPix}
             disabled={loading}

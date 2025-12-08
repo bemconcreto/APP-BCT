@@ -220,17 +220,18 @@ async function pagarCartao() {
         {/* Botões */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
 <button
-  onClick={pagarCartao}
+  onClick={() => {
+    window.location.href =
+      `/comprar/cartao?amountBRL=${amountBRL}` +
+      `&cpfCnpj=${cpfCnpj}` +
+      `&email=${user?.email}` +
+      `&tokens=${tokens.toFixed(6)}`;
+  }}
   disabled={loading}
   className="bg-blue-600 text-white rounded-lg p-6 hover:bg-blue-700"
 >
   <h2 className="text-xl font-semibold">Cartão</h2>
 </button>
-            disabled={loading}
-            className="bg-blue-600 text-white rounded-lg p-6 hover:bg-blue-700"
-          >
-            <h2 className="text-xl font-semibold">Cartão</h2>
-          </button>
 
           <button
             onClick={pagarPix}

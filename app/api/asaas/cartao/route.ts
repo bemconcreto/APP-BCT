@@ -11,11 +11,9 @@ export async function POST(req: Request) {
 
     const { nome, numero, mes, ano, cvv, amountBRL, tokens, cpfCnpj, email, phone } = body;
 
-// ---------------------------
-// 🔐 TRAVA DE COMPRA MÍNIMA
-// ---------------------------
 const amount = Number(amountBRL);
 
+// 🔒 TRAVA DE COMPRA MÍNIMA
 if (!amount || amount < 100) {
   return NextResponse.json(
     {

@@ -49,12 +49,9 @@ export async function GET() {
 
     /* ================= FILTRA PAGAS ================= */
 
-    const vendasPagas = vendas.filter(
-      (v) =>
-        v.status === "paga" ||
-        v.status === "paid" ||
-        v.status === "confirmada"
-    );
+const vendasPagas = vendas.filter(
+  (v) => Number(v[campoValor]) > 0
+);
 
     const faturamentoTotal = vendasPagas.reduce(
       (acc, v) => acc + Number(v[campoValor] || 0),

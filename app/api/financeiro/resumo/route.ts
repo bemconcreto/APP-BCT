@@ -8,24 +8,27 @@ const supabase = createClient(
 
 export async function GET() {
   try {
-    // ===== FATURAMENTO =====
-    const { data: vendas, error: vendasError } = await supabase
-      .from("vendas")
-      .select("valor_total")
-      .eq("status", "paga");
+    const { data, error } = await supabase
+      .from("vendas") // 👈 vamos validar isso
+      .select("*")
+      .limit(1);
 
-    if (vendasError) throw vendasError;
-
-    const faturamentoTotal =
-      vendas?.reduce((acc, v) => acc + Number(v.valor_total), 0) || 0;
+    if (error) {
+      console.error("❌ SUPABASE ERROR:", error);
+      return NextResponse.json(
+        { error: error.message, details: error },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
-      faturamentoTotal,
+      ok: true,
+      exemplo: data,
     });
   } catch (err) {
-    console.error("❌ ERRO FINANCEIRO:", err);
+    console.error("❌ ERRO GERAL:", err);
     return NextResponse.json(
-      { error: "Erro ao buscar resumo financeiro" },
+      { error: "Erro inesperado" },
       { status: 500 }
     );
   }

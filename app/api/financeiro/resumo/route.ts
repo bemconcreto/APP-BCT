@@ -8,11 +8,11 @@ const supabase = createClient(
 
 export async function GET() {
   try {
-    /* ================= FATURAMENTO ================= */
+    /* ================= BUSCA VENDAS ================= */
 
     const { data: vendas, error } = await supabase
       .from("vendas_bct")
-      .select("valor_total, status");
+      .select("*");
 
     if (error) {
       console.error("❌ ERRO SUPABASE:", error);
@@ -22,13 +22,42 @@ export async function GET() {
       );
     }
 
-    // considera apenas vendas pagas
+    if (!vendas || vendas.length === 0) {
+      return NextResponse.json({
+        faturamentoTotal: 0,
+        vendasBCT: 0,
+        poolLiquidez: 0,
+        poolReserva: 0,
+        poolImoveis: 0,
+      });
+    }
+
+    /* ================= DESCOBRE CAMPO DE VALOR ================= */
+
+    const exemplo = vendas[0];
+
+    const campoValor = Object.keys(exemplo).find((k) =>
+      k.toLowerCase().includes("valor")
+    );
+
+    if (!campoValor) {
+      return NextResponse.json(
+        { error: "Campo de valor não encontrado em vendas_bct" },
+        { status: 500 }
+      );
+    }
+
+    /* ================= FILTRA PAGAS ================= */
+
     const vendasPagas = vendas.filter(
-      (v) => v.status === "paga" || v.status === "paid"
+      (v) =>
+        v.status === "paga" ||
+        v.status === "paid" ||
+        v.status === "confirmada"
     );
 
     const faturamentoTotal = vendasPagas.reduce(
-      (acc, v) => acc + Number(v.valor_total || 0),
+      (acc, v) => acc + Number(v[campoValor] || 0),
       0
     );
 
@@ -48,9 +77,10 @@ export async function GET() {
       poolLiquidez,
       poolReserva,
       poolImoveis,
+      campoValorUsado: campoValor, // 🔍 debug útil
     });
   } catch (err) {
-    console.error("❌ ERRO GERAL FINANCEIRO:", err);
+    console.error("❌ ERRO FINANCEIRO:", err);
     return NextResponse.json(
       { error: "Erro ao gerar resumo financeiro" },
       { status: 500 }

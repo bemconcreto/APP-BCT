@@ -1,42 +1,31 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { createClient } from "@supabase/supabase-js";
 
-export async function GET(req: Request) {
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+
+export async function GET() {
   try {
-    /* 🔐 SEGURANÇA BÁSICA */
-    const auth = req.headers.get("authorization");
+    // ===== FATURAMENTO =====
+    const { data: vendas, error: vendasError } = await supabase
+      .from("vendas")
+      .select("valor_total")
+      .eq("status", "paga");
 
-    if (auth !== `Bearer ${process.env.APP_BCT_API_KEY}`) {
-      return NextResponse.json(
-        { error: "Não autorizado" },
-        { status: 401 }
-      );
-    }
+    if (vendasError) throw vendasError;
 
-    /* 💰 FATURAMENTO TOTAL (vendas pagas) */
-    const faturamento = await prisma.venda.aggregate({
-      where: { status: "paga" },
-      _sum: { valorTotal: true },
-    });
-
-    /* 🧾 TOTAL DE VENDAS */
-    const vendas = await prisma.venda.count({
-      where: { status: "paga" },
-    });
-
-    /* 👥 USUÁRIOS */
-    const usuarios = await prisma.usuario.count();
+    const faturamentoTotal =
+      vendas?.reduce((acc, v) => acc + Number(v.valor_total), 0) || 0;
 
     return NextResponse.json({
-      faturamentoTotal: faturamento._sum.valorTotal || 0,
-      vendasBCT: vendas,
-      usuarios,
+      faturamentoTotal,
     });
-  } catch (error) {
-    console.error("❌ ERRO FINANCEIRO APP-BCT:", error);
-
+  } catch (err) {
+    console.error("❌ ERRO FINANCEIRO:", err);
     return NextResponse.json(
-      { error: "Erro ao gerar resumo financeiro" },
+      { error: "Erro ao buscar resumo financeiro" },
       { status: 500 }
     );
   }

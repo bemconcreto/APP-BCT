@@ -136,35 +136,43 @@
 /* ============================= */
 
 :root {
+  --radius: 0.625rem;
+
+  /* 🎨 CORES – BEM CONCRETO */
   --background: #F7F8F9;
   --foreground: #101820;
 
+  --card: #FFFFFF;
+  --card-foreground: #101820;
+
+  --popover: #FFFFFF;
+  --popover-foreground: #101820;
+
   --primary: #8D6E63;
-  --primary-foreground: #ffffff;
+  --primary-foreground: #FFFFFF;
 
   --secondary: #BFA89C;
   --secondary-foreground: #101820;
 
+  --muted: #F2F2F2;
+  --muted-foreground: #6B7280;
+
   --accent: #8D6E63;
-  --accent-foreground: #ffffff;
+  --accent-foreground: #FFFFFF;
+
+  --destructive: #E5484D;
 
   --border: #E5E7EB;
+  --input: #E5E7EB;
   --ring: #8D6E63;
-}
 
-.dark {
-  --background: #0D0F11;
-  --foreground: #F7F8F9;
-
-  --primary: #8D6E63;
-  --primary-foreground: #ffffff;
-
-  --secondary: #72594F;
-  --secondary-foreground: #ffffff;
-
-  --accent: #8D6E63;
-  --accent-foreground: #ffffff;
-
-  --border: #2A2A2A;
-  --ring: #8D6E63;
+  /* Sidebar */
+  --sidebar: #FFFFFF;
+  --sidebar-foreground: #101820;
+  --sidebar-primary: #8D6E63;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #F2F2F2;
+  --sidebar-accent-foreground: #101820;
+  --sidebar-border: #E5E7EB;
+  --sidebar-ring: #8D6E63;
 }

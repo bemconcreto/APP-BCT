@@ -15,7 +15,7 @@ import {
   User,
   Building2,
   Wallet,
-  FileCheck,
+  FileCheck
 } from 'lucide-react'
 
 export function Navbar() {
@@ -36,57 +36,56 @@ export function Navbar() {
     <nav className="bg-white border-b border-[#E5E7EB]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
+
           {/* LOGO */}
           <Link href="/inicio" className="flex items-center gap-3">
             <img
               src="/logo-bct.png"
-              alt="Bem Concreto Token"
-              className="w-9 h-9 object-contain"
+              alt="Bem Concreto"
+              className="w-10 h-10 object-contain"
             />
-            <span className="font-bold text-lg text-[#8D6E63]">
+            <span className="font-semibold text-lg text-[#101820]">
               Bem Concreto
             </span>
           </Link>
 
           {/* DESKTOP */}
           <div className="hidden md:flex items-center gap-6">
-            {user &&
-              navigation.map((item) => {
-                const Icon = item.icon
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    className="flex items-center gap-1 text-sm font-medium text-[#101820] hover:text-[#8D6E63] transition"
-                  >
-                    <Icon className="w-4 h-4" />
-                    {item.name}
-                  </Link>
-                )
-              })}
+            {user && navigation.map((item) => {
+              const Icon = item.icon
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className="flex items-center gap-1 text-sm font-medium text-[#6B7280] hover:text-[#8D6E63] transition"
+                >
+                  <Icon className="w-4 h-4" />
+                  {item.name}
+                </Link>
+              )
+            })}
 
             {user ? (
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-4 ml-6">
                 <div className="flex items-center gap-2 text-sm text-[#6B7280]">
                   <User className="w-4 h-4" />
                   {user.email}
                 </div>
 
                 <Button
-                  variant="outline"
-                  size="sm"
-                  className="border-[#8D6E63] text-[#8D6E63] hover:bg-[#8D6E63] hover:text-white"
                   onClick={async () => {
                     await signOut()
                     window.location.href = 'https://app-bct.vercel.app/'
                   }}
+                  size="sm"
+                  className="bg-[#8D6E63] hover:bg-[#72594F] text-white"
                 >
                   <LogOut className="w-4 h-4 mr-1" />
                   Sair
                 </Button>
               </div>
             ) : (
-              <div className="flex gap-3">
+              <div className="flex items-center gap-3">
                 <Link href="/login">
                   <Button variant="outline" className="border-[#8D6E63] text-[#8D6E63]">
                     Entrar
@@ -94,7 +93,7 @@ export function Navbar() {
                 </Link>
                 <Link href="/cadastro">
                   <Button className="bg-[#8D6E63] hover:bg-[#72594F] text-white">
-                    Cadastrar
+                    Criar Conta
                   </Button>
                 </Link>
               </div>
@@ -103,8 +102,8 @@ export function Navbar() {
 
           {/* MOBILE BUTTON */}
           <button
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
             className="md:hidden text-[#8D6E63]"
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
           >
             {isMenuOpen ? <X /> : <Menu />}
           </button>
@@ -114,22 +113,21 @@ export function Navbar() {
       {/* MOBILE MENU */}
       {isMenuOpen && (
         <div className="md:hidden bg-white border-t border-[#E5E7EB]">
-          <div className="px-4 py-4 space-y-3">
-            {user &&
-              navigation.map((item) => {
-                const Icon = item.icon
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    onClick={() => setIsMenuOpen(false)}
-                    className="flex items-center gap-2 text-[#101820] hover:text-[#8D6E63]"
-                  >
-                    <Icon className="w-5 h-5" />
-                    {item.name}
-                  </Link>
-                )
-              })}
+          <div className="px-4 py-3 space-y-2">
+            {user && navigation.map((item) => {
+              const Icon = item.icon
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  onClick={() => setIsMenuOpen(false)}
+                  className="flex items-center gap-2 text-sm text-[#6B7280] hover:text-[#8D6E63]"
+                >
+                  <Icon className="w-4 h-4" />
+                  {item.name}
+                </Link>
+              )
+            })}
 
             {user && (
               <button
@@ -137,9 +135,8 @@ export function Navbar() {
                   await signOut()
                   window.location.href = 'https://app-bct.vercel.app/'
                 }}
-                className="flex items-center gap-2 text-[#8D6E63] pt-4"
+                className="mt-4 w-full text-left text-sm text-[#8D6E63]"
               >
-                <LogOut className="w-5 h-5" />
                 Sair
               </button>
             )}

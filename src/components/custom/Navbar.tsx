@@ -4,19 +4,18 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useAuthContext } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
-import { 
-  Menu, 
-  X, 
-  Home, 
-  ShoppingCart, 
-  TrendingUp, 
-  History, 
-  Settings,
+import {
+  Menu,
+  X,
+  Home,
+  ShoppingCart,
+  TrendingUp,
+  History,
   LogOut,
   User,
   Building2,
   Wallet,
-  FileCheck
+  FileCheck,
 } from 'lucide-react'
 
 export function Navbar() {
@@ -24,84 +23,77 @@ export function Navbar() {
   const { user, signOut } = useAuthContext()
 
   const navigation = [
-    { name: 'Inicio', href: '/inicio', icon: Home },
+    { name: 'Início', href: '/inicio', icon: Home },
     { name: 'Comprar', href: '/comprar', icon: ShoppingCart },
     { name: 'Vender', href: '/vender', icon: TrendingUp },
-    { name: 'Carteira', href: '/carteira', icon: Wallet },  
+    { name: 'Carteira', href: '/carteira', icon: Wallet },
     { name: 'Imóveis', href: '/imoveis', icon: Building2 },
-    { name: 'Transparencia', href: '/transparencia', icon: FileCheck },
+    { name: 'Transparência', href: '/transparencia', icon: FileCheck },
     { name: 'Extrato', href: '/extrato', icon: History },
   ]
 
   return (
-    <nav className="bg-[#101820] shadow-lg">
+    <nav className="bg-white border-b border-[#E5E7EB]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between w-full">
-          {/* Logo */}
-          <div className="flex items-center">
-            <Link href="/inicio" className="flex items-center">
- <img
-  src="/logo-bct.png"
-  alt="Logo BCT"
-  className="w-10 h-10 rounded-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
-/>
-  <span className="text-white font-bold text-xl font-inter cursor-pointer hover:text-[#12B76A] transition-colors">
-    Bem Concreto Token
-  </span>
-</Link>
-          </div>
+        <div className="flex h-16 items-center justify-between">
+          {/* LOGO */}
+          <Link href="/inicio" className="flex items-center gap-3">
+            <img
+              src="/logo-bct.png"
+              alt="Bem Concreto Token"
+              className="w-9 h-9 object-contain"
+            />
+            <span className="font-bold text-lg text-[#8D6E63]">
+              Bem Concreto
+            </span>
+          </Link>
 
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
-            {user && navigation.map((item) => {
-              const Icon = item.icon
-              return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className="text-[#F3F4F6] hover:text-[#12B76A] px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 flex items-center space-x-1"
-                >
-                  <Icon className="w-4 h-4" />
-                  <span>{item.name}</span>
-                </Link>
-              )
-            })}
-            
+          {/* DESKTOP */}
+          <div className="hidden md:flex items-center gap-6">
+            {user &&
+              navigation.map((item) => {
+                const Icon = item.icon
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className="flex items-center gap-1 text-sm font-medium text-[#101820] hover:text-[#8D6E63] transition"
+                  >
+                    <Icon className="w-4 h-4" />
+                    {item.name}
+                  </Link>
+                )
+              })}
+
             {user ? (
-              <div className="flex items-center space-x-4">
-                <div className="flex items-center space-x-2 text-[#F3F4F6]">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2 text-sm text-[#6B7280]">
                   <User className="w-4 h-4" />
-                  <span className="text-sm">{user.email}</span>
+                  {user.email}
                 </div>
+
                 <Button
-  onClick={async () => {
-    await signOut();
-    window.location.href = "https://app-bct.vercel.app/";
-  }}
-  variant="outline"
-  size="sm"
-  className="border-[#12B76A] text-[#12B76A] hover:bg-[#12B76A] hover:text-white"
->
-  <LogOut className="w-4 h-4 mr-1" />
-  Sair
-</Button>
+                  variant="outline"
+                  size="sm"
+                  className="border-[#8D6E63] text-[#8D6E63] hover:bg-[#8D6E63] hover:text-white"
+                  onClick={async () => {
+                    await signOut()
+                    window.location.href = 'https://app-bct.vercel.app/'
+                  }}
+                >
+                  <LogOut className="w-4 h-4 mr-1" />
+                  Sair
+                </Button>
               </div>
             ) : (
-              <div className="flex items-center space-x-4">
+              <div className="flex gap-3">
                 <Link href="/login">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="border-[#4C3B34] text-[#8D6E63] hover:bg-[#12B76A] hover:text-white"
-                  >
+                  <Button variant="outline" className="border-[#8D6E63] text-[#8D6E63]">
                     Entrar
                   </Button>
                 </Link>
                 <Link href="/cadastro">
-                  <Button
-                    size="sm"
-                    className="bg-[#4C3B34] text-white hover:bg-[#8D6E63]"
-                  >
+                  <Button className="bg-[#8D6E63] hover:bg-[#72594F] text-white">
                     Cadastrar
                   </Button>
                 </Link>
@@ -109,80 +101,47 @@ export function Navbar() {
             )}
           </div>
 
-          {/* Mobile menu button */}
-          <div className="md:hidden flex items-center">
-            <button
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="text-[#F3F4F6] hover:text-[#12B76A] p-2"
-            >
-              {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </button>
-          </div>
+          {/* MOBILE BUTTON */}
+          <button
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            className="md:hidden text-[#8D6E63]"
+          >
+            {isMenuOpen ? <X /> : <Menu />}
+          </button>
         </div>
       </div>
 
-      {/* Mobile Navigation */}
+      {/* MOBILE MENU */}
       {isMenuOpen && (
-        <div className="md:hidden bg-[#101820] border-t border-[#12B76A]/20">
-          <div className="px-2 pt-2 pb-3 space-y-1">
-            {user && navigation.map((item) => {
-              const Icon = item.icon
-              return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className="text-[#F3F4F6] hover:text-[#12B76A] block px-3 py-2 rounded-md text-base font-medium flex items-center space-x-2"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  <Icon className="w-5 h-5" />
-                  <span>{item.name}</span>
-                </Link>
-              )
-            })}
-            
-            {user ? (
-              <div className="pt-4 border-t border-[#12B76A]/20">
-                <div className="px-3 py-2 text-[#F3F4F6] text-sm">
-                  {user.email}
-                </div>
-                <button
-  onClick={async () => {
-    await signOut();
-    setIsMenuOpen(false);
-    window.location.href = "https://app-bct.vercel.app/";
-  }}
-  className="text-[#F3F4F6] hover:text-[#12B76A] block px-3 py-2 rounded-md text-base font-medium flex items-center space-x-2 w-full text-left"
->
-  <LogOut className="w-5 h-5" />
-  <span>Sair</span>
-</button>
-              </div>
-            ) : (
-              <div className="pt-4 border-t border-[#12B76A]/20 space-y-2">
-                <Link
-                  href="/login"
-                  className="block px-3 py-2"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  <Button
-                    variant="outline"
-                    className="w-full border-[#4C3B34] text-[#8D6E63] hover:bg-[#12B76A] hover:text-white"
+        <div className="md:hidden bg-white border-t border-[#E5E7EB]">
+          <div className="px-4 py-4 space-y-3">
+            {user &&
+              navigation.map((item) => {
+                const Icon = item.icon
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    onClick={() => setIsMenuOpen(false)}
+                    className="flex items-center gap-2 text-[#101820] hover:text-[#8D6E63]"
                   >
-                    Entrar
-                  </Button>
-                </Link>
-                <Link
-                  href="/cadastro"
-                  className="block px-3 py-2"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                 <Button
-  className="w-full bg-[#4C3B34] text-white hover:bg-[#8D6E63]"
->
-  Cadastrar
-</Button>
-                </Link>
-              </div>
+                    <Icon className="w-5 h-5" />
+                    {item.name}
+                  </Link>
+                )
+              })}
+
+            {user && (
+              <button
+                onClick={async () => {
+                  await signOut()
+                  window.location.href = 'https://app-bct.vercel.app/'
+                }}
+                className="flex items-center gap-2 text-[#8D6E63] pt-4"
+              >
+                <LogOut className="w-5 h-5" />
+                Sair
+              </button>
             )}
           </div>
         </div>

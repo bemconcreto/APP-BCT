@@ -131,3 +131,40 @@
     @apply bg-background text-foreground;
   }
 }
+/* ============================= */
+/* BEM CONCRETO – BRAND OVERRIDE */
+/* ============================= */
+
+:root {
+  --background: #F7F8F9;
+  --foreground: #101820;
+
+  --primary: #8D6E63;
+  --primary-foreground: #ffffff;
+
+  --secondary: #BFA89C;
+  --secondary-foreground: #101820;
+
+  --accent: #8D6E63;
+  --accent-foreground: #ffffff;
+
+  --border: #E5E7EB;
+  --ring: #8D6E63;
+}
+
+.dark {
+  --background: #0D0F11;
+  --foreground: #F7F8F9;
+
+  --primary: #8D6E63;
+  --primary-foreground: #ffffff;
+
+  --secondary: #72594F;
+  --secondary-foreground: #ffffff;
+
+  --accent: #8D6E63;
+  --accent-foreground: #ffffff;
+
+  --border: #2A2A2A;
+  --ring: #8D6E63;
+}

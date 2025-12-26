@@ -9,16 +9,26 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: '#6B4A3E',
-        secondary: '#BFA89C',
-        dark: '#0D0F11',
-        light: '#F2F2F2',
-        accent: '#12B76A',
-        background: "var(--background)",
-        foreground: "var(--foreground)",
+        /* === IDENTIDADE BEM CONCRETO === */
+        primary: "#8D6E63",       // marrom principal
+        primaryDark: "#72594F",
+        secondary: "#BFA89C",
+
+        background: "#F7F8F9",    // fundo landing
+        surface: "#FFFFFF",
+
+        text: "#101820",
+        muted: "#6B7280",
+
+        success: "#12B76A",
+        border: "#E5E7EB",
       },
       fontFamily: {
-        sans: ['Inter', 'sans-serif'],
+        sans: ["Inter", "ui-sans-serif", "system-ui"],
+      },
+      borderRadius: {
+        lg: "0.75rem",
+        xl: "1rem",
       },
     },
   },
